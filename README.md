@@ -7,10 +7,14 @@ Sistema de control financiero familiar DCDG, refactorizado desde el monolito
 2. **API de finanzas** (`netlify/functions/`) — backend que **SilvIA** consume por
    WhatsApp para **registrar facturas, pagos y gastos** (Opción B del doc de integración).
 
-> **Nota sobre la migración:** el archivo fuente `DCDG_Captura_v5.html` no estaba
-> disponible en el entorno; los módulos de la PWA se reconstruyeron fielmente a
-> partir de la especificación detallada del documento de contexto (secciones 3.1,
-> 4, 5, 6 y 9). Al reconectar la app original, contrastar contra estos módulos.
+> **Paridad con el monolito:** la PWA modular replica la funcionalidad de
+> `legacy/DCDG_Captura_v5.html` (setup/ajustes, captura por foto/galería/texto,
+> creación de CET, pantalla de confirmación con dropdowns de categoría, aviso de
+> umbral < $10.000, aviso iWin, badge de confianza, resolución tarjeta→cuenta,
+> carga dinámica de `⚙️ CUENTAS`, escritura a `Registro Gastos` y préstamo en
+> `EMPRESAS`, historial local). El mapeo monolito→módulos está en
+> [`legacy/README.md`](legacy/README.md). Fix aplicado: modelo `claude-sonnet-4-6`
+> (configurable) en vez del deprecado.
 
 ---
 
@@ -23,16 +27,19 @@ finanzas_dcdg/
 │   ├── vite.config.js
 │   ├── public/manifest.json
 │   └── src/
-│       ├── main.js                     # Orquestador de UI
+│       ├── main.js                     # Orquestador de UI (todas las pantallas)
 │       ├── config/
 │       │   ├── env.js                  # Config centralizada (reemplaza hardcode)
+│       │   ├── categories.js           # Taxonomía CATS (14 categorías)
+│       │   ├── prompt.js               # System prompt DCDG (SYS)
 │       │   ├── rules.js                # Reglas de clasificación DCDG (fuente única)
-│       │   ├── accounts.js             # Mapa tarjetas → cuentas
+│       │   ├── accounts.js             # Mapa tarjetas → cuentas + resolveCard/isIwin
 │       │   └── iwin.js                 # Filtros cuentas iWin / Delca2
 │       ├── services/
 │       │   ├── claude.js               # Wrapper Anthropic (navegador)
-│       │   ├── sheets.js               # Wrapper Sheets (batchUpdate + emoji-safe)
-│       │   └── auth.js                 # Google OAuth (GIS)
+│       │   ├── sheets.js               # Wrapper Sheets (values:append + loadCuentas)
+│       │   ├── auth.js                 # Google OAuth (GIS)
+│       │   └── history.js              # Historial local (localStorage)
 │       └── utils/
 │           ├── imageProcessor.js       # HEIC→JPEG, resize
 │           └── formatters.js           # COP, fechas, montos
@@ -51,7 +58,8 @@ finanzas_dcdg/
 │   ├── api-resumen.js                  # GET|POST /api/resumen
 │   └── api-clasificar.js               # POST /api/clasificar
 ├── silvia/finanzas-tools.js            # Tools delgadas para pegar en SilvIA (sl-crm-live)
-├── scripts/                            # Google Apps Scripts (EmailBot, etc.)
+├── scripts/                            # Google Apps Scripts (EmailBot v4, Corregir)
+├── legacy/DCDG_Captura_v5.html         # Monolito original (referencia de paridad)
 ├── docs/                               # arquitectura, reglas, cuentas
 ├── tests/                              # node --test (reglas, formatters, finanzas)
 ├── netlify.toml

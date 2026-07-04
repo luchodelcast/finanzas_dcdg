@@ -87,13 +87,69 @@ export async function appendRow(sheetName, rowValues) {
   });
 }
 
-/** Lee un rango con la API de values (para nombres SIN emoji). */
+/** Lee un rango con la API de values. */
 export async function readRange(rangeA1) {
   const cfg = getConfig();
   const data = await authedFetch(
     `${BASE}/${cfg.spreadsheetId}/values/${encodeURIComponent(rangeA1)}`
   );
   return data.values || [];
+}
+
+/**
+ * Agrega una fila con la API `values:append` (como el monolito).
+ * Válido para hojas SIN emoji en el nombre (Registro Gastos, EMPRESAS).
+ * Devuelve el status HTTP crudo para poder detectar 401 y re-autenticar.
+ */
+export async function appendValues(sheetName, rowValues, rangeCols = 'A:J') {
+  const cfg = getConfig();
+  const token = await getAccessToken();
+  const range = encodeURIComponent(`'${sheetName}'!${rangeCols}`);
+  const url =
+    `${BASE}/${cfg.spreadsheetId}/values/${range}:append` +
+    `?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ values: [rowValues] }),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const e = await res.json();
+      detail = e?.error?.message || '';
+    } catch (_) {
+      detail = await res.text().catch(() => '');
+    }
+    const err = new Error(`Sheets ${res.status}: ${detail}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * Carga las cuentas activas desde `⚙️ CUENTAS` (B4:I100).
+ * Portado de `loadCuentas` del monolito. La hoja tiene emoji, pero la API de
+ * lectura `values` acepta el rango entrecomillado sin problema (el bug de emoji
+ * solo afecta a `:append`).
+ * @returns {Promise<Array>} cuentas normalizadas.
+ */
+export async function loadCuentas() {
+  const rows = await readRange("'⚙️ CUENTAS'!B4:I100");
+  return rows
+    .filter((row) => row[0] && row[6] !== 'No')
+    .map((row) => ({
+      name: row[0] || '',
+      banco: row[1] || '',
+      titular: row[2] || '',
+      moneda: row[3] || 'COP',
+      tipo: row[4] || 'Normal',
+      tipoEspecial: row[5] || 'Normal',
+      activa: row[6] !== 'No',
+      tarjeta: String(row[7] || '').trim(),
+    }))
+    .filter((c) => c.name && c.activa);
 }
 
 /** Invalida el cache de sheetIds (tras crear/renombrar hojas). */

@@ -115,10 +115,29 @@ export async function registrarMovimiento(mov = {}) {
   await appendRow(config.sheetGastos(), fila);
 
   // 5) Adelanto de honorarios (tarjeta Jeeves por gasto personal) → EMPRESAS.
+  //    Formato de 13 columnas idéntico al del monolito (doEmpresasSheet):
+  //    #, Empresa, Dirección, Mes, Año, Concepto, Titular, Valor Original,
+  //    Moneda, Valor COP, Estado, Plazo, Notas.
   let adelanto = null;
   if (evalMov.adelanto_empresas) {
-    // EMPRESAS: Fecha | Flujo | Monto | Concepto | Origen
-    const filaEmp = [fecha, 'Adelanto', monto, `${descripcion} (TC iWin)`, origen];
+    const mesNum = mesDeISO(fecha);
+    const anio = Number(fecha.slice(0, 4)) || new Date().getFullYear();
+    const mesNombre = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][mesNum - 1];
+    const filaEmp = [
+      '',
+      'Superlikers',
+      'Empresa → Familia',
+      mesNombre,
+      anio,
+      `Adelanto honorarios LADCC · ${descripcion}`,
+      fila[7] || 'Luis',
+      monto,
+      'COP',
+      monto,
+      'Pendiente',
+      '',
+      `Registrado vía ${origen} · ${fecha}`,
+    ];
     await appendRow(config.sheetEmpresas(), filaEmp);
     adelanto = { hoja: config.sheetEmpresas(), monto };
   }

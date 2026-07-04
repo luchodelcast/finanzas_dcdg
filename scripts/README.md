@@ -1,16 +1,18 @@
 # Google Apps Scripts — DCDG Finanzas
 
-Scripts que viven adjuntos al libro de Google Sheets DCDG. Aún **no migrados** a
-este repo porque sus fuentes (`.gs`) no estaban disponibles en el entorno de la
-refactorización; se documentan aquí para completar la migración cuando se
-exporten desde el editor de Apps Script.
+Scripts que viven adjuntos al libro de Google Sheets DCDG. Se versionan aquí
+como referencia; el editor de Apps Script sigue siendo el runtime.
 
 | Archivo | Función | Estado |
 |---|---|---|
-| `DCDG_EmailBot_v4.gs` | Bot email horario: parsea alertas Bancolombia/Nequi, clasifica con `claude-haiku-4-5-20251001`, deduplica y escribe en `Registro Gastos`. | Activo (verificar trigger) |
-| `DCDG_CrearHojas.gs` | Crea hojas `⚙️ CUENTAS` y `EMPRESAS`. | Ejecutado |
-| `DCDG_Restructurar.gs` | Crea secciones DGP y Sebas en Presupuesto. | Ejecutado |
-| `DCDG_Corregir.gs` | Fixes post-restructuración + columnas tarjeta. | Ejecutado |
+| `DCDG_EmailBot_v4.gs` | Bot email horario: parsea alertas Bancolombia/Nequi/Colpatria/Serfinanza y CETs, clasifica con `claude-haiku-4-5-20251001`, deduplica y escribe en `Registro Gastos` (col K auto-resuelta). | ✅ En repo · Activo (verificar trigger) |
+| `DCDG_Corregir.gs` | 4 fixes post-restructuración + columnas tarjeta débito en CUENTAS/Registro Gastos/2026 COP. | ✅ En repo · Ejecutado |
+| `DCDG_CrearHojas.gs` | Crea hojas `⚙️ CUENTAS` y `EMPRESAS`. | Pendiente exportar |
+| `DCDG_Restructurar.gs` | Crea secciones DGP y Sebas en Presupuesto. | Pendiente exportar |
+
+Las constantes duras de estos scripts (cuentas iWin, mapa de tarjetas, reglas de
+clasificación) son la misma fuente conceptual que `app/src/config/` — al
+modificar una, sincronizar la otra.
 
 ## Notas de migración (del doc de contexto)
 
