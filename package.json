@@ -1,0 +1,27 @@
+{
+  "name": "dcdg-finanzas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sistema de control financiero familiar DCDG — PWA modular + API para SilvIA (WhatsApp).",
+  "scripts": {
+    "dev": "vite --config app/vite.config.js",
+    "build": "vite build --config app/vite.config.js",
+    "preview": "vite preview --config app/vite.config.js",
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "keywords": [
+    "finanzas",
+    "dcdg",
+    "pwa",
+    "silvia",
+    "whatsapp",
+    "anthropic",
+    "google-sheets"
+  ],
+  "author": "Luis Alberto Del Castillo Cadavid",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

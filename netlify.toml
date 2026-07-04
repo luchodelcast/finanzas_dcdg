@@ -1,0 +1,25 @@
+# Netlify — DCDG Finanzas
+# PWA (Vite) + API de finanzas (Functions v2) que consume SilvIA.
+
+[build]
+  base = "."
+  command = "npm run build"
+  publish = "app/dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Las rutas /api/* se resuelven por el `config.path` exportado en cada función.
+# Redirect explícito de respaldo por si se usa el naming por archivo.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = false
+
+# SPA fallback para la PWA.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
