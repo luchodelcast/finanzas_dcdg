@@ -1,69 +1,472 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1220" />
-    <link rel="manifest" href="/manifest.json" />
-    <title>DCDG Finanzas</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-      :root { color-scheme: light dark; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: #0b1220; color: #e6edf6; -webkit-tap-highlight-color: transparent;
-      }
-      header { padding: 16px; font-weight: 700; font-size: 20px; border-bottom: 1px solid #1e2a3d; }
-      main { padding: 16px; max-width: 640px; margin: 0 auto; }
-      textarea, input, select {
-        width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #26344c;
-        background: #111a2b; color: inherit; font-size: 16px; margin: 6px 0;
-      }
-      button {
-        width: 100%; padding: 14px; border: 0; border-radius: 10px; font-size: 16px;
-        font-weight: 600; background: #3b82f6; color: white; margin: 8px 0; cursor: pointer;
-      }
-      button.secondary { background: #1e293b; color: #cbd5e1; }
-      .card { background: #0f1830; border: 1px solid #1e2a3d; border-radius: 14px; padding: 16px; margin: 12px 0; }
-      .muted { color: #93a4bd; font-size: 13px; }
-      .row { display: flex; gap: 8px; }
-      .status { padding: 10px 12px; border-radius: 10px; margin: 8px 0; font-size: 14px; display: none; }
-      .status.err { background: #3b1219; color: #fecaca; display: block; }
-      .status.ok { background: #0f2b1c; color: #bbf7d0; display: block; }
-      .status.info { background: #0f2036; color: #bfdbfe; display: block; }
-    </style>
-  </head>
-  <body>
-    <header>💰 DCDG Finanzas</header>
-    <main>
-      <div id="status" class="status"></div>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DCDG $">
+<meta name="theme-color" content="#1F3B6E">
+<title>DCDG · Finanzas</title>
+<link rel="manifest" href="/manifest.json">
+<script src="https://accounts.google.com/gsi/client" async></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231F3B6E'/><text y='23' x='7' font-size='17' font-family='sans-serif' fill='white' font-weight='700'>$</text></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --navy:#1F3B6E;--navy-d:#131E3A;--blue:#2E5FA3;--blue-l:#E6F1FB;
+  --teal:#0F6E56;--teal-l:#E1F5EE;--teal-m:#5DCAA5;
+  --gold:#F0A500;--gold-l:#FFF3CD;
+  --red:#C0392B;--red-l:#FDECEA;
+  --green:#1A7A4A;--green-l:#D6F0E3;
+  --purple:#534AB7;--purple-l:#EEEDFE;
+  --gray:#F4F5F6;--gray-m:#D1D5DB;--gray-d:#6B7280;
+  --text:#111827;--white:#FFFFFF;
+  --r:12px;--r-s:8px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --sh-m:0 4px 12px rgba(0,0,0,.1);
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;background:var(--gray);color:var(--text);font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+#app{min-height:100vh;display:flex;flex-direction:column;max-width:430px;margin:0 auto;overflow-x:hidden}
 
-      <div class="card">
-        <div class="row">
-          <button id="btnLogin" class="secondary">Conectar Google</button>
-          <button id="btnCfg" class="secondary">Ajustes</button>
-        </div>
-      </div>
+/* HEADER */
+.hdr{background:var(--navy);color:#fff;padding-top:max(52px,calc(env(safe-area-inset-top) + 14px));padding-bottom:14px;padding-left:18px;padding-right:18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.hdr-l .title{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.hdr-l .sub{font-size:11px;opacity:.65;margin-top:1px}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.conn-badge{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.85;white-space:nowrap}
+.conn-dot{width:7px;height:7px;min-width:7px;border-radius:50%;background:var(--red)}
+.conn-dot.on{background:#4ADE80}
+.ico-btn{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.12);border:none;color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.ico-btn:active{background:rgba(255,255,255,.22)}
 
-      <div class="card">
-        <label class="muted">Registrar gasto (texto o foto)</label>
-        <textarea id="texto" rows="3" placeholder="Ej: gasté 45.000 en Éxito con la 2331"></textarea>
-        <input id="foto" type="file" accept="image/*" capture="environment" />
-        <button id="btnClasificar">Clasificar</button>
-      </div>
+/* SCREENS */
+.scr{flex:1;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));display:none;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden}
+.scr.on{display:flex}
 
-      <div id="resultado" class="card" style="display:none">
-        <label class="muted">Revisar y confirmar</label>
-        <input id="rCategoria" placeholder="Categoría" />
-        <input id="rSubcategoria" placeholder="Subcategoría" />
-        <input id="rDescripcion" placeholder="Descripción / comercio" />
-        <input id="rMonto" placeholder="Monto (COP)" />
-        <input id="rMetodo" placeholder="Método de pago / cuenta" />
-        <input id="rQuien" placeholder="Quién pagó (Luis / Carolina)" />
-        <button id="btnGuardar">Guardar en Sheets</button>
+/* CARDS */
+.card{background:#fff;border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.card-ttl{font-size:11px;font-weight:700;color:var(--gray-d);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px}
+
+/* SETUP SCREEN */
+.logo-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px}
+.logo{width:60px;height:60px;background:var(--navy);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;margin-bottom:12px;box-shadow:var(--sh-m)}
+.setup-ttl{font-size:22px;font-weight:700;color:var(--navy);text-align:center}
+.setup-sub{font-size:13px;color:var(--gray-d);text-align:center;margin-top:4px;line-height:1.5}
+.step-row{display:flex;gap:10px;margin-bottom:10px}
+.step-num{width:22px;height:22px;min-width:22px;background:var(--navy);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+.step-txt{font-size:12px;color:var(--gray-d);line-height:1.55}
+.step-txt a{color:var(--blue);text-decoration:none}
+.step-txt b{color:var(--text);font-weight:600}
+
+/* FIELDS */
+.fld{margin-bottom:13px}
+.fld:last-child{margin-bottom:0}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--gray-d);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;max-width:100%;border:1.5px solid var(--gray-m);border-radius:var(--r-s);padding:10px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--text);transition:border-color .15s;-webkit-appearance:none;box-sizing:border-box}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--blue)}
+.fld textarea{resize:vertical;min-height:72px;line-height:1.5}
+.fld .big-amt{font-size:26px;font-weight:800;color:var(--navy);text-align:right;letter-spacing:-1px}
+.fld .big-amt:focus{border-color:var(--teal)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:14px 18px;border-radius:10px;font-size:15px;font-weight:700;border:none;cursor:pointer;width:100%;transition:transform .1s,filter .15s;letter-spacing:-.2px}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--teal);color:#fff}
+.btn-p:active{filter:brightness(.93)}
+.btn-s{background:#fff;color:var(--text);border:1.5px solid var(--gray-m)}
+.btn-s:active{background:var(--gray)}
+.btn-d{background:var(--red-l);color:var(--red)}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{flex:1}
+
+/* HOME ACTION BUTTONS */
+.act-btn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:12px;border:none;cursor:pointer;text-align:left;width:100%;transition:transform .1s}
+.act-btn:active{transform:scale(.98)}
+.act-btn + .act-btn{margin-top:10px}
+.act-ico{width:46px;height:46px;min-width:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.act-txt strong{display:block;font-size:16px;font-weight:700;margin-bottom:2px;color:var(--text)}
+.act-txt span{font-size:12px;color:var(--gray-d)}
+.a-cam{background:linear-gradient(135deg,#E1F5EE,#b2e8d5);border:1.5px solid var(--teal-m)}
+.a-cam .act-ico{background:var(--teal);color:#fff}
+.a-txt{background:linear-gradient(135deg,#E6F1FB,#c4dbf5);border:1.5px solid #85B7EB}
+.a-txt .act-ico{background:var(--blue);color:#fff}
+.a-cet{background:linear-gradient(135deg,#FFF3CD,#fde68a);border:1.5px solid #F0A500}
+.a-cet .act-ico{background:#854F0B;color:#fff}
+
+/* HISTORY ITEMS */
+.h-item{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray)}
+.h-item:last-child{border-bottom:none}
+.h-name{font-size:14px;font-weight:600}
+.h-meta{font-size:11px;color:var(--gray-d);margin-top:2px}
+.h-amt{font-size:16px;font-weight:800;color:var(--navy);text-align:right}
+.h-who{font-size:11px;color:var(--gray-d);margin-top:2px;text-align:right}
+
+/* CONFIDENCE */
+.cfb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.cfb.alta{background:var(--green-l);color:var(--green)}
+.cfb.media{background:var(--gold-l);color:#854F0B}
+.cfb.baja{background:var(--red-l);color:var(--red)}
+
+/* THRESHOLD WARN */
+.tw{background:var(--gold-l);border:1.5px solid #E8C450;border-radius:10px;padding:11px 13px;font-size:13px;color:#633806;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.tw-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* IWIN NOTICE */
+.iwin-notice{background:var(--purple-l);border:1.5px solid #AFA9EC;border-radius:10px;padding:11px 13px;font-size:13px;color:#3C3489;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.iwin-notice b{font-weight:700;display:block;margin-bottom:2px}
+
+/* IMG PREVIEW */
+.img-prev{width:100%;max-height:180px;object-fit:contain;border-radius:var(--r-s);background:var(--gray)}
+
+/* PROCESSING */
+.proc-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spin{width:44px;height:44px;border:3.5px solid var(--gray-m);border-top-color:var(--navy);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc-msg{font-size:15px;color:var(--gray-d);font-weight:500}
+
+/* SUCCESS */
+.suc-ico{width:68px;height:68px;background:var(--green-l);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 14px}
+.suc-ttl{font-size:22px;font-weight:800;text-align:center;color:var(--green)}
+.suc-sub{text-align:center;color:var(--gray-d);font-size:13px;margin-top:6px}
+.suc-amt{font-size:32px;font-weight:800;color:var(--navy);text-align:center;letter-spacing:-1px;margin:12px 0}
+
+/* TEXT INPUT CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.chip{background:var(--gray);border:1px solid var(--gray-m);border-radius:20px;padding:5px 11px;font-size:12px;color:var(--text);cursor:pointer;transition:all .15s}
+.chip:active{background:var(--teal-l);border-color:var(--teal)}
+
+/* TOAST */
+.toast{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(10px);background:rgba(17,24,39,.92);backdrop-filter:blur(8px);color:#fff;padding:10px 17px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* EMPTY STATE */
+.empty{color:var(--gray-d);font-size:13px;text-align:center;padding:20px 0}
+
+/* SECTION HEADER */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec-hdr .card-ttl{margin:0}
+.sec-link{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-weight:600}
+
+@media(prefers-color-scheme:dark){
+  :root{--gray:#111827;--text:#F9FAFB;--gray-m:#374151;--gray-d:#9CA3AF;--white:#1F2937}
+  .card,.fld input,.fld select,.fld textarea,.btn-s{background:#1F2937;color:#F9FAFB;border-color:#374151}
+  .act-btn{border-color:rgba(255,255,255,.12)}
+  .a-cam{background:linear-gradient(135deg,rgba(14,78,60,.4),rgba(18,99,74,.3))}
+  .a-txt{background:linear-gradient(135deg,rgba(30,67,115,.4),rgba(46,95,163,.3))}
+  .h-item{border-color:#374151}
+  .chip{background:#374151;border-color:#4B5563;color:#E5E7EB}
+  .hdr{background:var(--navy-d)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── HEADER ── -->
+<div class="hdr" id="hdr">
+  <div class="hdr-l">
+    <div class="title">DCDG · Finanzas</div>
+    <div class="sub" id="hdr-sub">Cargando…</div>
+  </div>
+  <div class="hdr-r">
+    <div class="conn-badge">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-lbl" style="color:#fff">Sin conectar</span>
+    </div>
+    <button class="ico-btn" data-go="settings" title="Configuración">⚙</button>
+  </div>
+</div>
+
+<!-- ── SETUP ── -->
+<div class="scr" id="scr-setup">
+  <div class="logo-wrap">
+    <div class="logo">$</div>
+    <div class="setup-ttl">Configuración inicial</div>
+    <div class="setup-sub">Completa esto una sola vez y la app<br>queda lista para siempre.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl">1 · IA de clasificación (Claude)</div>
+    <div class="fld">
+      <label>Anthropic API Key</label>
+      <input type="password" id="s-ak" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
+    </div>
+    <p style="font-size:12px;color:var(--gray-d);line-height:1.55">
+      Obtén tu llave en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--blue);font-weight:600">console.anthropic.com</a>.
+      Se guarda <strong>solo en este dispositivo</strong> (localStorage).
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl">2 · Google Sheets</div>
+    <div class="fld">
+      <label>Google OAuth Client ID</label>
+      <input type="text" id="s-gc" placeholder="123456789.apps.googleusercontent.com" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="fld">
+      <label>ID del Spreadsheet</label>
+      <input type="text" id="s-si" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74O…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="fld">
+      <label>Pestaña del libro</label>
+      <input type="text" id="s-st" placeholder="Registro Gastos" value="Registro Gastos">
+    </div>
+    <div class="fld">
+      <label>Pestaña préstamos empresas</label>
+      <input type="text" id="s-se" placeholder="EMPRESAS" value="EMPRESAS">
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-m)">
+      <div class="step-row"><div class="step-num">1</div><div class="step-txt">Ve a <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → crea un proyecto</div></div>
+      <div class="step-row"><div class="step-num">2</div><div class="step-txt">Activa la <b>Google Sheets API</b> en "Biblioteca"</div></div>
+      <div class="step-row"><div class="step-num">3</div><div class="step-txt">Crea credencial OAuth 2.0 · tipo "Aplicación web" · añade como origen autorizado la URL donde sirves esta app (p.ej. tu dominio de Netlify)</div></div>
+      <div class="step-row"><div class="step-num">4</div><div class="step-txt">Copia el <b>Client ID</b> y el <b>ID del Spreadsheet</b> arriba</div></div>
+    </div>
+  </div>
+
+  <button class="btn btn-p" data-act="saveSetup">Guardar y comenzar →</button>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="scr" id="scr-settings">
+  <div class="card">
+    <div class="card-ttl">Configuración</div>
+    <div class="fld"><label>Anthropic API Key</label><input type="password" id="cfg-ak" autocomplete="off"></div>
+    <div class="fld"><label>Google Client ID</label><input type="text" id="cfg-gc" autocomplete="off" spellcheck="false"></div>
+    <div class="fld"><label>ID del Spreadsheet</label><input type="text" id="cfg-si" autocomplete="off" spellcheck="false"></div>
+    <div class="fld"><label>Pestaña del libro</label><input type="text" id="cfg-st"></div>
+    <div class="fld"><label>Pestaña préstamos empresas</label><input type="text" id="cfg-se"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-s" data-go="home">Cancelar</button>
+    <button class="btn btn-p" data-act="saveCfg">Guardar</button>
+  </div>
+  <button class="btn btn-d" data-act="signOut">Desconectar Google</button>
+  <button class="btn btn-s" style="color:var(--red);font-size:13px" data-act="resetAll">Borrar todo (reset)</button>
+</div>
+
+<!-- ── HOME ── -->
+<div class="scr" id="scr-home">
+  <div class="card">
+    <div class="card-ttl">Nuevo registro</div>
+    <button class="act-btn a-cam" data-act="trigCam">
+      <div class="act-ico">📷</div>
+      <div class="act-txt"><strong>Tomar foto</strong><span>Captura el recibo con la cámara</span></div>
+    </button>
+    <input type="file" id="cam-in" accept="image/*" capture="environment" style="display:none">
+    <button class="act-btn a-cam" data-act="trigGal" style="margin-top:10px">
+      <div class="act-ico">🖼️</div>
+      <div class="act-txt"><strong>Elegir de galería</strong><span>Apple Wallet, screenshots, fotos guardadas</span></div>
+    </button>
+    <input type="file" id="gal-in" accept="image/*" style="display:none">
+    <button class="act-btn a-txt" data-go="text" style="margin-top:10px">
+      <div class="act-ico">✏️</div>
+      <div class="act-txt"><strong>Entrada manual</strong><span>Describe el gasto con texto</span></div>
+    </button>
+    <button class="act-btn a-cet" data-go="cet" style="margin-top:10px">
+      <div class="act-ico">📋</div>
+      <div class="act-txt"><strong>Crear CET</strong><span>Comprobante electrónico de transacción</span></div>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl">Últimos registros</div>
+      <button class="sec-link" data-go="history">Ver todos</button>
+    </div>
+    <div id="home-hist"><div class="empty">Aún no hay registros</div></div>
+  </div>
+</div>
+
+<!-- ── TEXT INPUT ── -->
+<div class="scr" id="scr-text">
+  <div class="card">
+    <div class="card-ttl">Describe el gasto</div>
+    <div class="chips">
+      <div class="chip" data-ex>$45.000 Tienda D1</div>
+      <div class="chip" data-ex>Almuerzo Cucinare $85k Caro</div>
+      <div class="chip" data-ex>Uber $18.500 TC Colpatria</div>
+      <div class="chip" data-ex>Farmatodo $32.000 efectivo</div>
+    </div>
+    <div class="fld">
+      <textarea id="ti-val" rows="4" placeholder="Ej: Pagué $120.000 en Olimpica con débito Bancolombia"></textarea>
+    </div>
+    <div class="fld">
+      <label>Fecha</label>
+      <input type="date" id="ti-dt">
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-s" data-go="home">Cancelar</button>
+    <button class="btn btn-p" data-act="doText">Analizar →</button>
+  </div>
+</div>
+
+<!-- ── PROCESSING ── -->
+<div class="scr" id="scr-proc">
+  <div class="proc-wrap">
+    <div class="spin"></div>
+    <div class="proc-msg" id="proc-msg">Analizando…</div>
+  </div>
+</div>
+
+<!-- ── CONFIRM ── -->
+<div class="scr" id="scr-conf">
+  <div id="img-wrap" style="display:none"><img id="img-prev" class="img-prev" alt="Recibo"></div>
+
+  <div id="tw-wrap" style="display:none" class="tw">
+    <div class="tw-icon">⚠️</div>
+    <div>Monto menor a $10.000. ¿Deseas registrarlo igualmente?</div>
+  </div>
+
+  <div id="iwin-wrap" style="display:none" class="iwin-notice">
+    <div style="font-size:16px;flex-shrink:0;margin-top:1px">🏢</div>
+    <div><b>Pago con tarjeta iWin / Superlikers</b>Se registrará el gasto Y un préstamo Superlikers → LADCC en la hoja EMPRESAS por el mismo monto.</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="card-ttl" style="margin:0">Confirmar registro</div>
+      <div class="cfb alta" id="cf-badge">Alta</div>
+    </div>
+
+    <div class="fld">
+      <label>Monto (COP)</label>
+      <input type="number" class="big-amt" id="cf-monto" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="fld"><label>Fecha</label><input type="date" id="cf-fecha"></div>
+
+    <div class="row2">
+      <div class="fld"><label>Categoría</label><select id="cf-cat"></select></div>
+      <div class="fld"><label>Subcategoría</label><select id="cf-sub"></select></div>
+    </div>
+
+    <div class="fld"><label>Comercio / descripción</label><input type="text" id="cf-desc" placeholder="Nombre del establecimiento"></div>
+
+    <div class="row2">
+      <div class="fld">
+        <label>¿Quién pagó?</label>
+        <select id="cf-who">
+          <option value="Luis">Luis (LADCC)</option>
+          <option value="Carolina">Carolina (CMDG)</option>
+        </select>
       </div>
-    </main>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+      <div class="fld">
+        <label>Método de pago</label>
+        <select id="cf-mth"></select>
+      </div>
+    </div>
+
+    <div class="fld"><label>Notas (opcional)</label><input type="text" id="cf-note" placeholder="Detalle adicional"></div>
+    <div class="fld">
+      <label>Tarjeta (últimos 4 dígitos)</label>
+      <input type="text" id="cf-tarjeta" placeholder="Ej: 2331" maxlength="4" inputmode="numeric">
+      <div id="cf-tarjeta-resolved" style="font-size:11px;color:var(--teal);margin-top:4px;font-weight:600"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-d" data-go="home" style="flex:.55">✕ Cancelar</button>
+    <button class="btn btn-p" data-act="submit">✓ Registrar en Sheets</button>
+  </div>
+</div>
+
+<!-- ── SUCCESS ── -->
+<div class="scr" id="scr-ok">
+  <div class="card" style="padding:28px 20px">
+    <div class="suc-ico">✓</div>
+    <div class="suc-ttl">¡Registrado!</div>
+    <div class="suc-amt" id="ok-amt"></div>
+    <div class="suc-sub" id="ok-det"></div>
+  </div>
+  <button class="btn btn-p" data-go="home">+ Nuevo registro</button>
+  <button class="btn btn-s" data-go="history">Ver historial</button>
+</div>
+
+<!-- ── HISTORY ── -->
+<div class="scr" id="scr-history">
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl" style="margin:0">Historial de registros</div>
+      <button class="sec-link" style="color:var(--red)" data-act="clearHist">Limpiar</button>
+    </div>
+    <div id="hist-list"><div class="empty">Sin registros aún</div></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── CET ── -->
+<div class="scr" id="scr-cet">
+  <div class="card">
+    <div class="card-ttl">Comprobante Electrónico de Transacción</div>
+
+    <div class="row2">
+      <div class="fld">
+        <label>Fecha</label>
+        <input type="date" id="cet-fecha">
+      </div>
+      <div class="fld">
+        <label>Moneda</label>
+        <select id="cet-moneda">
+          <option value="COP">COP</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label>Monto</label>
+      <input type="number" class="big-amt" id="cet-monto" placeholder="0" inputmode="numeric">
+    </div>
+
+    <div class="fld">
+      <label>Cuenta origen</label>
+      <select id="cet-desde"></select>
+    </div>
+
+    <div class="fld">
+      <label>Tipo de destino</label>
+      <select id="cet-tipo-dest">
+        <option value="externo">Proveedor / entidad externa</option>
+        <option value="cuenta-luis">Cuenta propia Luis</option>
+        <option value="cuenta-caro">Cuenta Carolina</option>
+      </select>
+    </div>
+
+    <div class="fld" id="cet-dest-externo-wrap">
+      <label>Destino (proveedor / entidad)</label>
+      <input type="text" id="cet-dest-externo" placeholder="Ej: Air-e, Bancolombia, ETB…">
+    </div>
+
+    <div class="fld" id="cet-dest-cuenta-wrap" style="display:none">
+      <label>Cuenta destino</label>
+      <select id="cet-dest-cuenta"></select>
+    </div>
+
+    <div class="fld">
+      <label>Concepto</label>
+      <input type="text" id="cet-concepto" placeholder="Ej: pago factura enero energía eléctrica apto Bonavista">
+    </div>
+
+    <!-- Preview asunto -->
+    <div style="background:var(--gray);border-radius:var(--r-s);padding:11px 13px;margin-top:4px">
+      <div style="font-size:10px;font-weight:700;color:var(--gray-d);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Asunto generado</div>
+      <div id="cet-preview" style="font-size:13px;font-weight:600;color:var(--navy);word-break:break-word;line-height:1.5">—</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-s" data-go="home" style="flex:.45">✕ Cancelar</button>
+    <button class="btn btn-p" style="background:#854F0B" data-act="abrirMailCET">📧 Abrir en Mail</button>
+  </div>
+  <button class="btn btn-p" data-act="registrarCET">✓ Registrar en Sheets</button>
+</div>
+
+</div><!-- /#app -->
+<div class="toast" id="toast"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
 </html>

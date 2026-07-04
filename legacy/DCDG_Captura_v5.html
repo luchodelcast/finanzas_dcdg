@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DCDG $">
+<title>DCDG · Captura v5</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231F3B6E'/><text y='23' x='7' font-size='17' font-family='sans-serif' fill='white' font-weight='700'>$</text></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --navy:#1F3B6E;--navy-d:#131E3A;--blue:#2E5FA3;--blue-l:#E6F1FB;
+  --teal:#0F6E56;--teal-l:#E1F5EE;--teal-m:#5DCAA5;
+  --gold:#F0A500;--gold-l:#FFF3CD;
+  --red:#C0392B;--red-l:#FDECEA;
+  --green:#1A7A4A;--green-l:#D6F0E3;
+  --purple:#534AB7;--purple-l:#EEEDFE;
+  --gray:#F4F5F6;--gray-m:#D1D5DB;--gray-d:#6B7280;
+  --text:#111827;--white:#FFFFFF;
+  --r:12px;--r-s:8px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --sh-m:0 4px 12px rgba(0,0,0,.1);
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;background:var(--gray);color:var(--text);font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+#app{min-height:100vh;display:flex;flex-direction:column;max-width:430px;margin:0 auto;overflow-x:hidden}
+
+/* HEADER */
+.hdr{background:var(--navy);color:#fff;padding-top:max(52px,calc(env(safe-area-inset-top) + 14px));padding-bottom:14px;padding-left:18px;padding-right:18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.hdr-l .title{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.hdr-l .sub{font-size:11px;opacity:.65;margin-top:1px}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.conn-badge{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.85;white-space:nowrap}
+.conn-dot{width:7px;height:7px;min-width:7px;border-radius:50%;background:var(--red)}
+.conn-dot.on{background:#4ADE80}
+.ico-btn{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.12);border:none;color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.ico-btn:active{background:rgba(255,255,255,.22)}
+
+/* SCREENS */
+.scr{flex:1;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));display:none;flex-direction:column;gap:14px;overflow-y:auto;overflow-x:hidden}
+.scr.on{display:flex}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.card-ttl{font-size:11px;font-weight:700;color:var(--gray-d);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px}
+
+/* SETUP SCREEN */
+.logo-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px}
+.logo{width:60px;height:60px;background:var(--navy);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;margin-bottom:12px;box-shadow:var(--sh-m)}
+.setup-ttl{font-size:22px;font-weight:700;color:var(--navy);text-align:center}
+.setup-sub{font-size:13px;color:var(--gray-d);text-align:center;margin-top:4px;line-height:1.5}
+.step-row{display:flex;gap:10px;margin-bottom:10px}
+.step-num{width:22px;height:22px;min-width:22px;background:var(--navy);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+.step-txt{font-size:12px;color:var(--gray-d);line-height:1.55}
+.step-txt a{color:var(--blue);text-decoration:none}
+.step-txt b{color:var(--text);font-weight:600}
+
+/* FIELDS */
+.fld{margin-bottom:13px}
+.fld:last-child{margin-bottom:0}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--gray-d);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;max-width:100%;border:1.5px solid var(--gray-m);border-radius:var(--r-s);padding:10px 12px;font-size:15px;font-family:inherit;background:#fff;color:var(--text);transition:border-color .15s;-webkit-appearance:none;box-sizing:border-box}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--blue)}
+.fld textarea{resize:vertical;min-height:72px;line-height:1.5}
+.fld .big-amt{font-size:26px;font-weight:800;color:var(--navy);text-align:right;letter-spacing:-1px}
+.fld .big-amt:focus{border-color:var(--teal)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:14px 18px;border-radius:10px;font-size:15px;font-weight:700;border:none;cursor:pointer;width:100%;transition:transform .1s,filter .15s;letter-spacing:-.2px}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--teal);color:#fff}
+.btn-p:active{filter:brightness(.93)}
+.btn-s{background:#fff;color:var(--text);border:1.5px solid var(--gray-m)}
+.btn-s:active{background:var(--gray)}
+.btn-d{background:var(--red-l);color:var(--red)}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{flex:1}
+
+/* HOME ACTION BUTTONS */
+.act-btn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:12px;border:none;cursor:pointer;text-align:left;width:100%;transition:transform .1s}
+.act-btn:active{transform:scale(.98)}
+.act-btn + .act-btn{margin-top:10px}
+.act-ico{width:46px;height:46px;min-width:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.act-txt strong{display:block;font-size:16px;font-weight:700;margin-bottom:2px;color:var(--text)}
+.act-txt span{font-size:12px;color:var(--gray-d)}
+.a-cam{background:linear-gradient(135deg,#E1F5EE,#b2e8d5);border:1.5px solid var(--teal-m)}
+.a-cam .act-ico{background:var(--teal);color:#fff}
+.a-txt{background:linear-gradient(135deg,#E6F1FB,#c4dbf5);border:1.5px solid #85B7EB}
+.a-txt .act-ico{background:var(--blue);color:#fff}
+.a-cet{background:linear-gradient(135deg,#FFF3CD,#fde68a);border:1.5px solid #F0A500}
+.a-cet .act-ico{background:#854F0B;color:#fff}
+
+/* HISTORY ITEMS */
+.h-item{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--gray)}
+.h-item:last-child{border-bottom:none}
+.h-name{font-size:14px;font-weight:600}
+.h-meta{font-size:11px;color:var(--gray-d);margin-top:2px}
+.h-amt{font-size:16px;font-weight:800;color:var(--navy);text-align:right}
+.h-who{font-size:11px;color:var(--gray-d);margin-top:2px;text-align:right}
+
+/* CONFIDENCE */
+.cfb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.cfb.alta{background:var(--green-l);color:var(--green)}
+.cfb.media{background:var(--gold-l);color:#854F0B}
+.cfb.baja{background:var(--red-l);color:var(--red)}
+
+/* THRESHOLD WARN */
+.tw{background:var(--gold-l);border:1.5px solid #E8C450;border-radius:10px;padding:11px 13px;font-size:13px;color:#633806;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.tw-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* IWIN NOTICE */
+.iwin-notice{background:var(--purple-l);border:1.5px solid #AFA9EC;border-radius:10px;padding:11px 13px;font-size:13px;color:#3C3489;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.iwin-notice b{font-weight:700;display:block;margin-bottom:2px}
+
+/* ACCOUNTS LOADING */
+.accts-loading{font-size:12px;color:var(--gray-d);text-align:center;padding:6px 0}
+.acct-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;margin-left:6px}
+.acct-badge.iwin{background:var(--purple-l);color:var(--purple)}
+.acct-badge.usd{background:var(--blue-l);color:var(--blue)}
+
+/* IMG PREVIEW */
+.img-prev{width:100%;max-height:180px;object-fit:contain;border-radius:var(--r-s);background:var(--gray)}
+
+/* PROCESSING */
+.proc-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spin{width:44px;height:44px;border:3.5px solid var(--gray-m);border-top-color:var(--navy);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.proc-msg{font-size:15px;color:var(--gray-d);font-weight:500}
+
+/* SUCCESS */
+.suc-ico{width:68px;height:68px;background:var(--green-l);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 14px}
+.suc-ttl{font-size:22px;font-weight:800;text-align:center;color:var(--green)}
+.suc-sub{text-align:center;color:var(--gray-d);font-size:13px;margin-top:6px}
+.suc-amt{font-size:32px;font-weight:800;color:var(--navy);text-align:center;letter-spacing:-1px;margin:12px 0}
+
+/* TEXT INPUT CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.chip{background:var(--gray);border:1px solid var(--gray-m);border-radius:20px;padding:5px 11px;font-size:12px;color:var(--text);cursor:pointer;transition:all .15s}
+.chip:active{background:var(--teal-l);border-color:var(--teal)}
+
+/* TOAST */
+.toast{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(10px);background:rgba(17,24,39,.92);backdrop-filter:blur(8px);color:#fff;padding:10px 17px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* EMPTY STATE */
+.empty{color:var(--gray-d);font-size:13px;text-align:center;padding:20px 0}
+
+/* SECTION HEADER */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec-hdr .card-ttl{margin:0}
+.sec-link{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;font-weight:600}
+
+@media(prefers-color-scheme:dark){
+  :root{--gray:#111827;--text:#F9FAFB;--gray-m:#374151;--gray-d:#9CA3AF;--white:#1F2937}
+  .card,.fld input,.fld select,.fld textarea,.btn-s{background:#1F2937;color:#F9FAFB;border-color:#374151}
+  .act-btn{border-color:rgba(255,255,255,.12)}
+  .a-cam{background:linear-gradient(135deg,rgba(14,78,60,.4),rgba(18,99,74,.3))}
+  .a-txt{background:linear-gradient(135deg,rgba(30,67,115,.4),rgba(46,95,163,.3))}
+  .h-item{border-color:#374151}
+  .chip{background:#374151;border-color:#4B5563;color:#E5E7EB}
+  .hdr{background:var(--navy-d)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── HEADER ── -->
+<div class="hdr" id="hdr">
+  <div class="hdr-l">
+    <div class="title">DCDG · Finanzas</div>
+    <div class="sub" id="hdr-sub">Cargando…</div>
+  </div>
+  <div class="hdr-r">
+    <div class="conn-badge">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-lbl" style="color:#fff">Sin conectar</span>
+    </div>
+    <button class="ico-btn" onclick="go('settings')" title="Configuración">⚙</button>
+  </div>
+</div>
+
+<!-- ── SETUP ── -->
+<div class="scr" id="scr-setup">
+  <div class="logo-wrap">
+    <div class="logo">$</div>
+    <div class="setup-ttl">Configuración inicial</div>
+    <div class="setup-sub">Completa esto una sola vez y la app<br>queda lista para siempre.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl">1 · IA de clasificación (Claude)</div>
+    <div class="fld">
+      <label>Anthropic API Key</label>
+      <input type="password" id="s-ak" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
+    </div>
+    <p style="font-size:12px;color:var(--gray-d);line-height:1.55">
+      Obtén tu llave en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--blue);font-weight:600">console.anthropic.com</a>.
+      Se guarda <strong>solo en este dispositivo</strong> (localStorage).
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl">2 · Google Sheets</div>
+    <div class="fld">
+      <label>Google OAuth Client ID</label>
+      <input type="text" id="s-gc" placeholder="123456789.apps.googleusercontent.com" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="fld">
+      <label>ID del Spreadsheet</label>
+      <input type="text" id="s-si" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74O…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="fld">
+      <label>Pestaña del libro</label>
+      <input type="text" id="s-st" placeholder="Registro Gastos" value="Registro Gastos">
+    </div>
+    <div class="fld">
+      <label>Pestaña préstamos empresas</label>
+      <input type="text" id="s-se" placeholder="EMPRESAS" value="EMPRESAS">
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-m)">
+      <div class="step-row"><div class="step-num">1</div><div class="step-txt">Ve a <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> → crea un proyecto</div></div>
+      <div class="step-row"><div class="step-num">2</div><div class="step-txt">Activa la <b>Google Sheets API</b> en "Biblioteca"</div></div>
+      <div class="step-row"><div class="step-num">3</div><div class="step-txt">Crea credencial OAuth 2.0 · tipo "Aplicación web" · añade como origen autorizado la URL donde sirves esta app (p.ej. tu dominio de Netlify)</div></div>
+      <div class="step-row"><div class="step-num">4</div><div class="step-txt">Copia el <b>Client ID</b> y el <b>ID del Spreadsheet</b> arriba</div></div>
+    </div>
+  </div>
+
+  <button class="btn btn-p" onclick="saveSetup()">Guardar y comenzar →</button>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="scr" id="scr-settings">
+  <div class="card">
+    <div class="card-ttl">Configuración</div>
+    <div class="fld"><label>Anthropic API Key</label><input type="password" id="cfg-ak" autocomplete="off"></div>
+    <div class="fld"><label>Google Client ID</label><input type="text" id="cfg-gc" autocomplete="off" spellcheck="false"></div>
+    <div class="fld"><label>ID del Spreadsheet</label><input type="text" id="cfg-si" autocomplete="off" spellcheck="false"></div>
+    <div class="fld"><label>Pestaña del libro</label><input type="text" id="cfg-st"></div>
+    <div class="fld"><label>Pestaña préstamos empresas</label><input type="text" id="cfg-se"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-s" onclick="go('home')">Cancelar</button>
+    <button class="btn btn-p" onclick="saveCfg()">Guardar</button>
+  </div>
+  <button class="btn btn-d" onclick="signOut()">Desconectar Google</button>
+  <button class="btn btn-s" style="color:var(--red);font-size:13px" onclick="if(confirm('¿Borrar toda la configuración?')){localStorage.clear();location.reload()}">Borrar todo (reset)</button>
+</div>
+
+<!-- ── HOME ── -->
+<div class="scr" id="scr-home">
+  <div class="card">
+    <div class="card-ttl">Nuevo registro</div>
+    <button class="act-btn a-cam" onclick="trigCam()">
+      <div class="act-ico">📷</div>
+      <div class="act-txt"><strong>Tomar foto</strong><span>Captura el recibo con la cámara</span></div>
+    </button>
+    <input type="file" id="cam-in" accept="image/*" capture="environment" style="display:none" onchange="onImg(this)">
+    <button class="act-btn a-cam" onclick="trigGal()" style="margin-top:10px">
+      <div class="act-ico">🖼️</div>
+      <div class="act-txt"><strong>Elegir de galería</strong><span>Apple Wallet, screenshots, fotos guardadas</span></div>
+    </button>
+    <input type="file" id="gal-in" accept="image/*" style="display:none" onchange="onImg(this)">
+    <button class="act-btn a-txt" onclick="go('text')" style="margin-top:10px">
+      <div class="act-ico">✏️</div>
+      <div class="act-txt"><strong>Entrada manual</strong><span>Describe el gasto con texto</span></div>
+    </button>
+    <button class="act-btn a-cet" onclick="go('cet')" style="margin-top:10px">
+      <div class="act-ico">📋</div>
+      <div class="act-txt"><strong>Crear CET</strong><span>Comprobante electrónico de transacción</span></div>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl">Últimos registros</div>
+      <button class="sec-link" onclick="go('history')">Ver todos</button>
+    </div>
+    <div id="home-hist"><div class="empty">Aún no hay registros</div></div>
+  </div>
+</div>
+
+<!-- ── TEXT INPUT ── -->
+<div class="scr" id="scr-text">
+  <div class="card">
+    <div class="card-ttl">Describe el gasto</div>
+    <div class="chips">
+      <div class="chip" onclick="setEx(this)">$45.000 Tienda D1</div>
+      <div class="chip" onclick="setEx(this)">Almuerzo Cucinare $85k Caro</div>
+      <div class="chip" onclick="setEx(this)">Uber $18.500 TC Colpatria</div>
+      <div class="chip" onclick="setEx(this)">Farmatodo $32.000 efectivo</div>
+    </div>
+    <div class="fld">
+      <textarea id="ti-val" rows="4" placeholder="Ej: Pagué $120.000 en Olimpica con débito Bancolombia"></textarea>
+    </div>
+    <div class="fld">
+      <label>Fecha</label>
+      <input type="date" id="ti-dt">
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-s" onclick="go('home')">Cancelar</button>
+    <button class="btn btn-p" onclick="doText()">Analizar →</button>
+  </div>
+</div>
+
+<!-- ── PROCESSING ── -->
+<div class="scr" id="scr-proc">
+  <div class="proc-wrap">
+    <div class="spin"></div>
+    <div class="proc-msg" id="proc-msg">Analizando…</div>
+  </div>
+</div>
+
+<!-- ── CONFIRM ── -->
+<div class="scr" id="scr-conf">
+  <div id="img-wrap" style="display:none"><img id="img-prev" class="img-prev" alt="Recibo"></div>
+
+  <div id="tw-wrap" style="display:none" class="tw">
+    <div class="tw-icon">⚠️</div>
+    <div>Monto menor a $10.000. ¿Deseas registrarlo igualmente?</div>
+  </div>
+
+  <div id="iwin-wrap" style="display:none" class="iwin-notice">
+    <div style="font-size:16px;flex-shrink:0;margin-top:1px">🏢</div>
+    <div><b>Pago con tarjeta iWin / Superlikers</b>Se registrará el gasto Y un préstamo Superlikers → LADCC en la hoja EMPRESAS por el mismo monto.</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="card-ttl" style="margin:0">Confirmar registro</div>
+      <div class="cfb alta" id="cf-badge">Alta</div>
+    </div>
+
+    <div class="fld">
+      <label>Monto (COP)</label>
+      <input type="number" class="big-amt" id="cf-monto" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="fld"><label>Fecha</label><input type="date" id="cf-fecha"></div>
+
+    <div class="row2">
+      <div class="fld"><label>Categoría</label><select id="cf-cat" onchange="fillSubs()"></select></div>
+      <div class="fld"><label>Subcategoría</label><select id="cf-sub"></select></div>
+    </div>
+
+    <div class="fld"><label>Comercio / descripción</label><input type="text" id="cf-desc" placeholder="Nombre del establecimiento"></div>
+
+    <div class="row2">
+      <div class="fld">
+        <label>¿Quién pagó?</label>
+        <select id="cf-who">
+          <option value="Luis">Luis (LADCC)</option>
+          <option value="Carolina">Carolina (CMDG)</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label>Método de pago</label>
+        <select id="cf-mth">
+          <option>Débito Bancolombia</option>
+          <option>TC Colpatria</option>
+          <option>TC Serfinanza</option>
+          <option>Nequi</option>
+          <option>TC iWin (Superlikers)</option>
+          <option>Mercury USD</option>
+          <option>DollarApp</option>
+          <option>Efectivo</option>
+          <option>Otro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fld"><label>Notas (opcional)</label><input type="text" id="cf-note" placeholder="Detalle adicional"></div>
+    <div class="fld">
+      <label>Tarjeta (últimos 4 dígitos)</label>
+      <input type="text" id="cf-tarjeta" placeholder="Ej: 2331" maxlength="4" inputmode="numeric"
+        oninput="onTarjetaInput(this.value)">
+      <div id="cf-tarjeta-resolved" style="font-size:11px;color:var(--teal);margin-top:4px;font-weight:600"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-d" onclick="go('home')" style="flex:.55">✕ Cancelar</button>
+    <button class="btn btn-p" onclick="submit()">✓ Registrar en Sheets</button>
+  </div>
+</div>
+
+<!-- ── SUCCESS ── -->
+<div class="scr" id="scr-ok">
+  <div class="card" style="padding:28px 20px">
+    <div class="suc-ico">✓</div>
+    <div class="suc-ttl">¡Registrado!</div>
+    <div class="suc-amt" id="ok-amt"></div>
+    <div class="suc-sub" id="ok-det"></div>
+  </div>
+  <button class="btn btn-p" onclick="go('home')">+ Nuevo registro</button>
+  <button class="btn btn-s" onclick="go('history')">Ver historial</button>
+</div>
+
+<!-- ── HISTORY ── -->
+<div class="scr" id="scr-history">
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl" style="margin:0">Historial de registros</div>
+      <button class="sec-link" style="color:var(--red)" onclick="if(confirm('¿Borrar historial local?')){hist=[];save();renderH();renderHomeH()}">Limpiar</button>
+    </div>
+    <div id="hist-list"><div class="empty">Sin registros aún</div></div>
+  </div>
+  <button class="btn btn-s" onclick="go('home')">← Volver</button>
+</div>
+
+<!-- ── CET ── -->
+<div class="scr" id="scr-cet">
+  <div class="card">
+    <div class="card-ttl">Comprobante Electrónico de Transacción</div>
+
+    <div class="row2">
+      <div class="fld">
+        <label>Fecha</label>
+        <input type="date" id="cet-fecha">
+      </div>
+      <div class="fld">
+        <label>Moneda</label>
+        <select id="cet-moneda">
+          <option value="COP">COP</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label>Monto</label>
+      <input type="number" class="big-amt" id="cet-monto" placeholder="0" inputmode="numeric" oninput="actualizarCET()">
+    </div>
+
+    <div class="fld">
+      <label>Cuenta origen</label>
+      <select id="cet-desde" onchange="actualizarCET()">
+        <option value="0965">Cta 0965 · Luis (principal)</option>
+        <option value="3355">Cta 3355 · Luis (ahorros)</option>
+        <option value="4549">Cta 4549 · Luis/DCDG</option>
+        <option value="3164">Cta 3164 · Carolina (Sebas)</option>
+        <option value="5688">Cta 5688 · Carolina (Ahinoa)</option>
+      </select>
+    </div>
+
+    <div class="fld">
+      <label>Tipo de destino</label>
+      <select id="cet-tipo-dest" onchange="onCetTipoDest()">
+        <option value="externo">Proveedor / entidad externa</option>
+        <option value="cuenta-luis">Cuenta propia Luis</option>
+        <option value="cuenta-caro">Cuenta Carolina</option>
+      </select>
+    </div>
+
+    <div class="fld" id="cet-dest-externo-wrap">
+      <label>Destino (proveedor / entidad)</label>
+      <input type="text" id="cet-dest-externo" placeholder="Ej: Air-e, Bancolombia, ETB…" oninput="actualizarCET()">
+    </div>
+
+    <div class="fld" id="cet-dest-cuenta-wrap" style="display:none">
+      <label>Cuenta destino</label>
+      <select id="cet-dest-cuenta" onchange="actualizarCET()">
+        <option value="0965">Cta 0965 · Luis (principal)</option>
+        <option value="3355">Cta 3355 · Luis (ahorros)</option>
+        <option value="4549">Cta 4549 · Luis/DCDG</option>
+        <option value="3164">Cta 3164 · Carolina (Sebas)</option>
+        <option value="5688">Cta 5688 · Carolina (Ahinoa)</option>
+      </select>
+    </div>
+
+    <div class="fld">
+      <label>Concepto</label>
+      <input type="text" id="cet-concepto" placeholder="Ej: pago factura enero energía eléctrica apto Bonavista" oninput="actualizarCET()">
+    </div>
+
+    <!-- Preview asunto -->
+    <div style="background:var(--gray);border-radius:var(--r-s);padding:11px 13px;margin-top:4px">
+      <div style="font-size:10px;font-weight:700;color:var(--gray-d);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Asunto generado</div>
+      <div id="cet-preview" style="font-size:13px;font-weight:600;color:var(--navy);word-break:break-word;line-height:1.5">—</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-s" onclick="go('home')" style="flex:.45">✕ Cancelar</button>
+    <button class="btn btn-p" style="background:#854F0B" onclick="abrirMailCET()">📧 Abrir en Mail</button>
+  </div>
+  <button class="btn btn-p" onclick="registrarCET()">✓ Registrar en Sheets</button>
+</div>
+
+</div><!-- /#app -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CATEGORIES ──────────────────────────────────────────
+const CATS = {
+  'Alimentación':          ['Mercado','Restaurante','Domicilios'],
+  'Transporte':            ['Uber/Taxi','Gasolina/EDS','Vehículos/Lavado','SOAT Vehículo','Bus/Metro'],
+  'Personal LADCC':        ['Gastos Personales LADCC'],
+  'Personal CMDG':         ['Gastos Personales CMDG'],
+  'Salud':                 ['Salud: Medicamentos','Salud: Citas Médicas','Salud: Otros'],
+  'Entretenimiento':       ['Suscripciones Online','Ocio y entretenimiento'],
+  'Regalos y celebraciones':['Regalo','Celebración'],
+  'Educación':             ['Colegio','Útiles y materiales','Extracurriculares'],
+  'Gastos Luhijo - Luciano':['Meriendas y Almuerzos Colegio','Actividades','Otros hijos'],
+  'Hogar/Aseo':            ['Artículos del hogar','Productos de aseo'],
+  'Ropa':                  ['Ropa adultos','Ropa niños','Calzado'],
+  'Viajes':                ['Tiquetes','Hotel','Gastos en viaje'],
+  'Gastos Bancarios':      ['4x1000','Cuota manejo','Comisiones'],
+  'Imprevistos':           ['Otros'],
+};
+
+// ── DCDG SYSTEM PROMPT ──────────────────────────────────
+const SYS = `Eres el clasificador de transacciones financieras de la familia DCDG (Del Castillo Diazgranados) en Barranquilla, Colombia.
+
+Personas: LADCC = Luis Alberto Del Castillo, CMDG = Carolina María Del Castillo.
+
+Reglas de clasificación (en orden de prioridad):
+MERCADO: Tienda D1, Tiendas Ara, Dollarcity, Olimpica/STO, Makro, Éxito, Oxxo, Tienda ARA → Alimentación / Mercado / LADCC
+RESTAURANTE: Cucinare, Fiordi, Kike Lopez, Narcobollo, Crepes & Waffles, Buffalo Grill, La Casona, Maema, Mr Bono, Picadas → Alimentación / Restaurante / LADCC
+DOMICILIOS: Rappi, iFood, Domicilios.com → Alimentación / Domicilios / LADCC
+TRANSPORTE: Uber, InDriver, Cabify → Transporte / Uber/Taxi / CMDG
+GASOLINA: EDS, Terpel, Biomax, Zeuss, gasolinera, estación de servicio → Transporte / Gasolina/EDS / LADCC
+VEHÍCULO: Prontowash, lavadero, taller → Transporte / Vehículos/Lavado / LADCC
+SOAT: SOAT, seguro obligatorio → Transporte / SOAT Vehículo / LADCC
+SALUD FARMA: Farmatodo, Cruz Verde, Droguería → Salud / Salud: Medicamentos / LADCC
+SALUD CITA: clínica, médico, Sanitas, AXA Colpatria cita → Salud / Salud: Citas Médicas / LADCC
+SUSCRIPCIONES: Netflix, Spotify, Amazon, Google Play, Apple, Disney, HBO, YouTube → Entretenimiento / Suscripciones Online / LADCC
+BIOFOOD: Biofood → Gastos Luhijo - Luciano / Meriendas y Almuerzos Colegio / LADCC
+COLEGIO: Colegio Alemán, colegio → Educación / Colegio / LADCC
+BANCARIO: Impto Gobierno, 4x1000 → Gastos Bancarios / 4x1000 / LADCC
+IWIN/SUPERLIKERS: Si el pago se realizó con tarjeta iWin, Jeeves, Superlikers o mencionan "iWin" como método de pago → metodo_pago = "TC iWin (Superlikers)", iwin_prestamo = true
+TARJETAS DÉBITO: Si ves los últimos 4 dígitos de una tarjeta en el comprobante, extráelos en tarjeta_ultimos4 y usa la regla correspondiente:
+  2331 → metodo_pago = "Bcol Aho 0965 · Débito 2331 (Luis)", quien_pago = "Luis"
+  6940 → metodo_pago = "Bcol Aho 3355 · Débito 6940 (Luis)", quien_pago = "Luis"
+  5773 → metodo_pago = "Bcol Aho 4549 · Débito 5773 (Luis/DCDG)", quien_pago = "Luis"
+  4550 → metodo_pago = "Bcol Aho 3164 · Débito 4550 (Carolina)", quien_pago = "Carolina"
+  1360 → metodo_pago = "Bcol Aho 5688 · Débito 1360 (Ahinoa)", quien_pago = "Carolina"
+TRANSFERENCIAS propias (entre cuentas LADCC/CMDG): marcar como Personal LADCC o Personal CMDG según quién paga.
+Pagos explícitamente de Carolina: cc = CMDG.
+
+FECHA: si no ves fecha, usa hoy ${new Date().toISOString().split('T')[0]}.
+MONEDA: $ sin símbolo = COP. $ con "USD" o "dólares" = USD.
+BAJO UMBRAL: si monto < 10000 COP, bajo_umbral = true.
+CONFIANZA: "alta" si la regla es exacta, "media" si infieres por contexto, "baja" si no puedes determinar.
+
+Devuelve ÚNICAMENTE JSON válido, sin markdown, sin explicaciones:
+{"fecha":"YYYY-MM-DD","monto":0,"moneda":"COP","comercio":"","descripcion":"","categoria":"","subcategoria":"","quien_pago":"Luis","cc":"LADCC","metodo_pago":"Débito Bancolombia","notas":"","confianza":"alta","bajo_umbral":false,"iwin_prestamo":false,"tarjeta_ultimos4":""}`;
+
+// ── STATE ────────────────────────────────────────────────
+let cfg = {}, tkClient = null, gTok = null, pending = false;
+let hist = [], curImg = null, curIsIwin = false;
+
+// Dynamic accounts loaded from ⚙️ CUENTAS
+let cuentas = [];
+
+// Card → account mapping (loaded dynamically from CUENTAS, with known fallbacks)
+const TARJETAS_MAP = {
+  '2331': 'Bcol Aho 0965 · Débito 2331 (Luis)',
+  '6940': 'Bcol Aho 3355 · Débito 6940 (Luis)',
+  '5773': 'Bcol Aho 4549 · Débito 5773 (Luis/DCDG)',
+  '4550': 'Bcol Aho 3164 · Débito 4550 (Carolina)',
+  '1360': 'Bcol Aho 5688 · Débito 1360 (Ahinoa)',
+};
+
+// Resolve card number to account name
+function resolveCard(digits) {
+  if (!digits || digits.length !== 4) return null;
+  // Check loaded accounts first
+  for (const c of cuentas) {
+    if (c.name && c.name.includes(digits)) return c.name;
+  }
+  // Fallback to static map
+  return TARJETAS_MAP[digits] || null;
+}
+
+// Called when user types in tarjeta field
+function onTarjetaInput(val) {
+  const resolved = V('cf-tarjeta-resolved');
+  if (val.length === 4) {
+    const account = resolveCard(val);
+    if (account) {
+      resolved.textContent = '✓ ' + account;
+      resolved.style.color = 'var(--teal)';
+      // Auto-select the matching method in dropdown
+      const mth = V('cf-mth');
+      for (let i = 0; i < mth.options.length; i++) {
+        if (mth.options[i].value.includes(val) || mth.options[i].value === account) {
+          mth.selectedIndex = i;
+          // Re-check iWin
+          curIsIwin = isIwinAccount(mth.value);
+          V('iwin-wrap').style.display = curIsIwin ? 'flex' : 'none';
+          break;
+        }
+      }
+    } else {
+      resolved.textContent = '⚠ Tarjeta no registrada en ⚙️ CUENTAS';
+      resolved.style.color = 'var(--gold)';
+    }
+  } else {
+    resolved.textContent = '';
+  }
+}
+const CUENTAS_FALLBACK = [
+  {name:'Débito Bancolombia',    tipoEspecial:'Normal'},
+  {name:'TC Colpatria',          tipoEspecial:'Normal'},
+  {name:'TC Serfinanza 6014',    tipoEspecial:'Normal'},
+  {name:'Nequi',                 tipoEspecial:'Normal'},
+  {name:'TC iWin (Superlikers)', tipoEspecial:'iWin-Adelanto'},
+  {name:'Mercury USD',           tipoEspecial:'USD-Internacional'},
+  {name:'DollarApp',             tipoEspecial:'USD-Internacional'},
+  {name:'Efectivo',              tipoEspecial:'Normal'},
+];
+
+// ── INIT ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  cfg = JSON.parse(localStorage.getItem('dcdg_cfg') || '{}');
+  hist = JSON.parse(localStorage.getItem('dcdg_hist') || '[]');
+  initCats();
+  document.getElementById('ti-dt').value = today();
+  document.getElementById('hdr-sub').textContent = fmtDate(new Date());
+  if (!cfg.ak || !cfg.gc || !cfg.si) {
+    if (cfg.ak) V('s-ak').value = cfg.ak;
+    if (cfg.gc) V('s-gc').value = cfg.gc;
+    if (cfg.si) V('s-si').value = cfg.si;
+    V('s-st').value = cfg.st || 'Registro Gastos';
+    V('s-se').value = cfg.se || 'EMPRESAS';
+    go('setup');
+  } else {
+    go('home');
+    renderHomeH();
+    tryGIS();
+  }
+});
+
+// ── HELPERS ──────────────────────────────────────────────
+const V = id => document.getElementById(id);
+const today = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => d.toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'});
+const fmtCOP = n => n ? '$' + Math.round(n).toLocaleString('es-CO') : '$0';
+const save = () => localStorage.setItem('dcdg_hist', JSON.stringify(hist));
+
+function go(s) {
+  document.querySelectorAll('.scr').forEach(x => x.classList.remove('on'));
+  const el = V('scr-' + s);
+  if (el) el.classList.add('on');
+  if (s === 'settings') {
+    V('cfg-ak').value = cfg.ak || '';
+    V('cfg-gc').value = cfg.gc || '';
+    V('cfg-si').value = cfg.si || '';
+    V('cfg-st').value = cfg.st || 'Registro Gastos';
+    V('cfg-se').value = cfg.se || 'EMPRESAS';
+  }
+  if (s === 'history') renderH();
+  if (s === 'cet') initCET();
+}
+
+function toast(msg, dur=3000) {
+  const t = V('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── SETUP & SETTINGS ─────────────────────────────────────
+function saveSetup() {
+  const ak = V('s-ak').value.trim();
+  const gc = V('s-gc').value.trim();
+  const si = V('s-si').value.trim();
+  const st = V('s-st').value.trim() || 'Registro Gastos';
+  const se = V('s-se').value.trim() || 'EMPRESAS';
+  if (!ak) { toast('Ingresa tu Anthropic API Key'); return; }
+  if (!gc) { toast('Ingresa el Google Client ID'); return; }
+  if (!si) { toast('Ingresa el ID del Spreadsheet'); return; }
+  cfg = {ak, gc, si, st, se};
+  localStorage.setItem('dcdg_cfg', JSON.stringify(cfg));
+  go('home');
+  renderHomeH();
+  tryGIS();
+  toast('✓ Configuración guardada');
+}
+
+function saveCfg() {
+  cfg.ak = V('cfg-ak').value.trim() || cfg.ak;
+  cfg.gc = V('cfg-gc').value.trim() || cfg.gc;
+  cfg.si = V('cfg-si').value.trim() || cfg.si;
+  cfg.st = V('cfg-st').value.trim() || cfg.st;
+  cfg.se = V('cfg-se').value.trim() || cfg.se || 'EMPRESAS';
+  localStorage.setItem('dcdg_cfg', JSON.stringify(cfg));
+  tryGIS();
+  go('home');
+  toast('✓ Configuración actualizada');
+}
+
+// ── GOOGLE AUTH ──────────────────────────────────────────
+function tryGIS() {
+  if (!cfg.gc) return;
+  if (typeof google === 'undefined') { setTimeout(tryGIS, 600); return; }
+  try {
+    tkClient = google.accounts.oauth2.initTokenClient({
+      client_id: cfg.gc,
+      scope: 'https://www.googleapis.com/auth/spreadsheets',
+      callback: onTok,
+    });
+    setConn(false);
+  } catch(e) { console.warn('GIS init:', e); }
+}
+
+function onTok(r) {
+  if (r.error) { toast('Auth error: ' + r.error); return; }
+  gTok = r.access_token;
+  setConn(true);
+  loadCuentas(); // Load accounts dynamically after auth
+  if (pending) { pending = false; doSheet(); }
+}
+
+function setConn(on) {
+  V('conn-dot').className = 'conn-dot' + (on ? ' on' : '');
+  V('conn-lbl').textContent = on ? 'Conectado' : 'Sin conectar';
+}
+
+// ── LOAD ACCOUNTS FROM ⚙️ CUENTAS ────────────────────────
+async function loadCuentas() {
+  if (!gTok || !cfg.si) return;
+  try {
+    const sheetName = encodeURIComponent("'⚙️ CUENTAS'!B4:I100");
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${cfg.si}/values/${sheetName}`;
+    const r = await fetch(url, {
+      headers: {'Authorization': 'Bearer ' + gTok}
+    });
+    if (!r.ok) { buildAccountsDropdown(CUENTAS_FALLBACK); return; }
+    const data = await r.json();
+    const rows = data.values || [];
+    // Filter active accounts (col H index 6 = Activa, col I index 7 = Tarjeta)
+    cuentas = rows
+      .filter(row => row[0] && row[6] !== 'No')
+      .map(row => ({
+        name:         row[0] || '',
+        banco:        row[1] || '',
+        titular:      row[2] || '',
+        moneda:       row[3] || 'COP',
+        tipo:         row[4] || 'Normal',
+        tipoEspecial: row[5] || 'Normal',
+        activa:       row[6] !== 'No',
+        tarjeta:      (row[7] || '').toString().trim()
+      }))
+      .filter(c => c.name && c.activa);
+
+    // Enrich TARJETAS_MAP with any cards defined in the sheet
+    for (const c of cuentas) {
+      if (c.tarjeta && c.tarjeta !== '—' && c.tarjeta.length === 4) {
+        TARJETAS_MAP[c.tarjeta] = c.name;
+      }
+    }
+
+    if (cuentas.length > 0) {
+      buildAccountsDropdown(cuentas);
+      toast(`✓ ${cuentas.length} cuentas cargadas`, 2000);
+    } else {
+      buildAccountsDropdown(CUENTAS_FALLBACK);
+    }
+  } catch(e) {
+    buildAccountsDropdown(CUENTAS_FALLBACK);
+  }
+}
+
+function buildAccountsDropdown(accounts) {
+  const sel = V('cf-mth');
+  const currentVal = sel.value;
+  sel.innerHTML = '';
+  accounts.forEach(acct => {
+    const o = document.createElement('option');
+    o.value = acct.name;
+    // Add badge suffix for special types
+    if (acct.tipoEspecial === 'iWin-Adelanto') {
+      o.textContent = acct.name + ' 🏢';
+      o.dataset.tipoEspecial = 'iWin-Adelanto';
+    } else if (acct.tipoEspecial === 'USD-Internacional') {
+      o.textContent = acct.name + ' 💵';
+      o.dataset.tipoEspecial = 'USD-Internacional';
+    } else {
+      o.textContent = acct.name;
+      o.dataset.tipoEspecial = 'Normal';
+    }
+    sel.appendChild(o);
+  });
+  // Restore previous selection if still exists
+  if (currentVal) {
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === currentVal) { sel.selectedIndex = i; break; }
+    }
+  }
+}
+
+function isIwinAccount(accountName) {
+  // Check in loaded accounts first
+  const acct = cuentas.find(c => c.name === accountName);
+  if (acct) return acct.tipoEspecial === 'iWin-Adelanto';
+  // Fallback: name-based detection
+  const n = (accountName || '').toLowerCase();
+  return n.includes('iwin') || n.includes('jeeves') || n.includes('corporativo');
+}
+
+function signOut() {
+  gTok = null; setConn(false);
+  toast('Desconectado');
+  go('home');
+}
+
+// ── CAMERA / IMAGE ────────────────────────────────────────
+function trigCam() { V('cam-in').click(); }
+function trigGal() { V('gal-in').click(); }
+
+function onImg(inp) {
+  const f = inp.files[0]; if (!f) return;
+  inp.value = '';
+
+  go('proc'); V('proc-msg').textContent = 'Cargando imagen…';
+
+  // Use ObjectURL + Canvas to handle HEIC, HEIF, large files
+  // This converts any format to JPEG automatically
+  const objUrl = URL.createObjectURL(f);
+  const img = new Image();
+
+  img.onload = () => {
+    // Resize to max 1200px (saves tokens, avoids memory issues on mobile)
+    const MAX = 1200;
+    let w = img.width, h = img.height;
+    if (w > MAX || h > MAX) {
+      if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+      else       { w = Math.round(w * MAX / h); h = MAX; }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+    URL.revokeObjectURL(objUrl);
+
+    const fullJpeg = canvas.toDataURL('image/jpeg', 0.85);
+    const data     = fullJpeg.split(',')[1];
+    const prev     = canvas.toDataURL('image/jpeg', 0.5); // smaller for preview
+
+    curImg = { data, mt: 'image/jpeg', prev };
+    doImg();
+  };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(objUrl);
+    go('home');
+    toast('No se pudo leer la imagen. Prueba tomar una foto directamente.');
+  };
+
+  img.src = objUrl;
+}
+
+// ── CLAUDE API ────────────────────────────────────────────
+async function doImg() {
+  if (!curImg) return;
+  go('proc'); V('proc-msg').textContent = 'Leyendo el recibo…';
+  try {
+    const content = [
+      {type:'image', source:{type:'base64', media_type:curImg.mt, data:curImg.data}},
+      {type:'text', text:'Extrae los datos de esta transacción o recibo.'}
+    ];
+    showConf(await callClaude(content));
+  } catch(e) { toast('Error: ' + e.message); go('home'); }
+}
+
+async function doText() {
+  const txt = V('ti-val').value.trim();
+  const dt  = V('ti-dt').value;
+  if (!txt) { toast('Escribe el gasto primero'); return; }
+  curImg = null;
+  go('proc'); V('proc-msg').textContent = 'Clasificando…';
+  try {
+    const content = [{type:'text', text:`Fecha: ${dt}\nDescripción: ${txt}`}];
+    const d = await callClaude(content);
+    if (!d.fecha || d.fecha === 'YYYY-MM-DD') d.fecha = dt;
+    showConf(d);
+  } catch(e) { toast('Error: ' + e.message); go('text'); }
+}
+
+async function callClaude(content) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': cfg.ak,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system: SYS,
+      messages: [{role:'user', content}]
+    })
+  });
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || 'API error'); }
+  const res = await r.json();
+  const raw = res.content[0].text.trim().replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+  return JSON.parse(raw);
+}
+
+// ── CONFIRM SCREEN ────────────────────────────────────────
+function showConf(d) {
+  // Image preview
+  const iw = V('img-wrap');
+  if (curImg) { V('img-prev').src = curImg.prev; iw.style.display='block'; }
+  else iw.style.display='none';
+
+  // Threshold warning
+  V('tw-wrap').style.display = (d.monto > 0 && d.monto < 10000) ? 'flex' : 'none';
+
+  // iWin notice — use smart detection
+  const detectedIwin = !!(d.iwin_prestamo || isIwinAccount(d.metodo_pago||''));
+  curIsIwin = detectedIwin;
+  V('iwin-wrap').style.display = curIsIwin ? 'flex' : 'none';
+
+  // Confidence
+  const cb = V('cf-badge');
+  cb.textContent = {alta:'✓ Alta confianza', media:'~ Confianza media', baja:'? Baja confianza'}[d.confianza] || 'Media';
+  cb.className = 'cfb ' + (d.confianza||'media');
+
+  // Fill fields
+  V('cf-monto').value  = d.monto || '';
+  V('cf-fecha').value  = d.fecha || today();
+  V('cf-desc').value   = d.comercio || d.descripcion || '';
+  V('cf-note').value   = d.notas || '';
+
+  // Tarjeta — pre-fill if Claude detected card number
+  const tarjeta = d.tarjeta_ultimos4 || '';
+  V('cf-tarjeta').value = tarjeta;
+  if (tarjeta) onTarjetaInput(tarjeta);
+
+  // Category
+  const catSel = V('cf-cat');
+  for (let i=0; i<catSel.options.length; i++) {
+    if (catSel.options[i].value === d.categoria) { catSel.selectedIndex=i; break; }
+  }
+  fillSubs();
+
+  // Subcategory
+  const subSel = V('cf-sub');
+  if (d.subcategoria) {
+    for (let i=0; i<subSel.options.length; i++) {
+      if (subSel.options[i].value === d.subcategoria) { subSel.selectedIndex=i; break; }
+    }
+  }
+
+  // Who
+  V('cf-who').value = d.quien_pago === 'Carolina' ? 'Carolina' : 'Luis';
+
+  // Method — fuzzy match against loaded accounts, then fallback keywords
+  const mth = V('cf-mth');
+  const mp = (d.metodo_pago||'').toLowerCase();
+  let matched = false;
+  // Try exact match first
+  for (let i=0; i<mth.options.length; i++) {
+    if (mth.options[i].value.toLowerCase() === mp) { mth.selectedIndex=i; matched=true; break; }
+  }
+  // Try keyword match
+  if (!matched) {
+    const terms = [['iwin','iWin'],['jeeves','iWin'],['nequi','Nequi'],
+                   ['colpatria','Colpatria'],['serfinanza','Serfinanza'],
+                   ['mercury','Mercury'],['dollar','Dollar'],['efectivo','Efectivo'],
+                   ['bancolombia','Bancolombia']];
+    for (const [k,v] of terms) {
+      if (mp.includes(k)) {
+        for (let i=0;i<mth.options.length;i++) {
+          if (mth.options[i].value.toLowerCase().includes(v.toLowerCase())) {
+            mth.selectedIndex=i; matched=true; break;
+          }
+        }
+        if (matched) break;
+      }
+    }
+  }
+
+  // Update iWin notice when user changes method manually
+  const onMthChange = () => {
+    const iwin = isIwinAccount(mth.value);
+    V('iwin-wrap').style.display = iwin ? 'flex' : 'none';
+    curIsIwin = iwin;
+  };
+  mth.removeEventListener('change', mth._iwinListener);
+  mth._iwinListener = onMthChange;
+  mth.addEventListener('change', onMthChange);
+
+  go('conf');
+}
+
+function initCats() {
+  const sel = V('cf-cat');
+  sel.innerHTML = '';
+  Object.keys(CATS).forEach(c => {
+    const o = document.createElement('option');
+    o.value = o.textContent = c;
+    sel.appendChild(o);
+  });
+  fillSubs();
+}
+
+function fillSubs() {
+  const cat = V('cf-cat').value;
+  const sel = V('cf-sub');
+  sel.innerHTML = '';
+  (CATS[cat]||[]).forEach(s => {
+    const o = document.createElement('option');
+    o.value = o.textContent = s;
+    sel.appendChild(o);
+  });
+}
+
+// ── SUBMIT TO SHEETS ──────────────────────────────────────
+async function submit() {
+  if (!gTok) { pending = true; tkClient.requestAccessToken(); return; }
+  doSheet();
+}
+
+async function doSheet() {
+  go('proc'); V('proc-msg').textContent = 'Guardando en Sheets…';
+  const fecha  = V('cf-fecha').value;
+  const monto  = parseFloat(V('cf-monto').value) || 0;
+  const cat    = V('cf-cat').value;
+  const sub    = V('cf-sub').value;
+  const desc   = V('cf-desc').value;
+  const quien  = V('cf-who').value;
+  const metodo = V('cf-mth').value;
+  const notas  = V('cf-note').value;
+  const tarjeta = V('cf-tarjeta').value.trim();
+  const mes    = new Date(fecha + 'T12:00:00').getMonth() + 1;
+  const isIwin = curIsIwin || isIwinAccount(metodo);
+
+  // Cols A-J: fecha, mes, cat, sub, desc, monto, metodo, quien, notas, tarjeta
+  const row = [fecha, mes, cat, sub, desc, monto, metodo, quien, notas, tarjeta];
+  const range = encodeURIComponent(`'${cfg.st}'!A:J`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${cfg.si}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  try {
+    // 1. Write to Registro Gastos
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {'Authorization':'Bearer '+gTok, 'Content-Type':'application/json'},
+      body: JSON.stringify({values:[row]})
+    });
+
+    if (r.status === 401) {
+      gTok = null; setConn(false); pending = true;
+      tkClient.requestAccessToken(); return;
+    }
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message||'Error Sheets'); }
+
+    // 2. If iWin payment, also write loan to EMPRESAS sheet
+    if (isIwin) {
+      await doEmpresasSheet(fecha, mes, monto, desc, quien);
+    }
+
+    // Local history
+    hist.unshift({fecha, monto, cat, sub, desc, quien,
+                  ts: new Date().toISOString(),
+                  iwin: isIwin});
+    if (hist.length > 100) hist.pop();
+    save(); renderHomeH();
+
+    // Success screen
+    V('ok-amt').textContent = fmtCOP(monto);
+    V('ok-det').textContent = `${cat} · ${quien} · ${fecha}${isIwin ? ' · 🏢 Préstamo iWin registrado' : ''}`;
+    go('ok');
+
+  } catch(e) { toast('Error: ' + e.message); go('conf'); }
+}
+
+// ── WRITE LOAN TO EMPRESAS SHEET ─────────────────────────
+async function doEmpresasSheet(fecha, mes, monto, desc, quien) {
+  const sheetName = cfg.se || 'EMPRESAS';
+  // Columns: #, Empresa, Dirección, Mes, Año, Concepto, Titular, Valor Original, Moneda, Valor COP, Estado, Plazo estimado, Notas
+  const año = new Date(fecha + 'T12:00:00').getFullYear();
+  const mesNombre = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mes-1];
+  const rowE = [
+    '', // # auto
+    'Superlikers',
+    'Empresa → Familia',
+    mesNombre,
+    año,
+    `Adelanto honorarios LADCC · ${desc}`,
+    quien,
+    monto,
+    'COP',
+    monto,
+    'Pendiente',
+    '',
+    `Registrado vía app DCDG · ${fecha}`
+  ];
+  const rangeE = encodeURIComponent(`'${sheetName}'!A:M`);
+  const urlE = `https://sheets.googleapis.com/v4/spreadsheets/${cfg.si}/values/${rangeE}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const re = await fetch(urlE, {
+    method: 'POST',
+    headers: {'Authorization':'Bearer '+gTok, 'Content-Type':'application/json'},
+    body: JSON.stringify({values:[rowE]})
+  });
+  if (!re.ok) {
+    const e = await re.json();
+    toast('⚠️ Gasto OK pero error en EMPRESAS: ' + (e.error?.message||''));
+  }
+}
+
+// ── HISTORY ───────────────────────────────────────────────
+function hItemHTML(h, short) {
+  const iwinTag = h.iwin ? ' <span style="font-size:10px;background:#EEEDFE;color:#534AB7;padding:1px 5px;border-radius:4px;font-weight:600">iWin</span>' : '';
+  return `<div class="h-item">
+    <div><div class="h-name">${h.desc||h.cat}${iwinTag}</div><div class="h-meta">${h.sub||h.cat}${short?'':' · '+h.fecha}</div></div>
+    <div><div class="h-amt">${fmtCOP(h.monto)}</div><div class="h-who">${h.quien}</div></div>
+  </div>`;
+}
+
+function renderHomeH() {
+  const c = V('home-hist');
+  c.innerHTML = hist.length ? hist.slice(0,3).map(h=>hItemHTML(h,true)).join('') : '<div class="empty">Aún no hay registros</div>';
+}
+
+function renderH() {
+  const c = V('hist-list');
+  c.innerHTML = hist.length ? hist.map(h=>hItemHTML(h,false)).join('') : '<div class="empty">Sin registros aún</div>';
+}
+
+// ── MISC ──────────────────────────────────────────────────
+// ── CET ──────────────────────────────────────────────────────────
+
+function initCET() {
+  V('cet-fecha').value = today();
+  actualizarCET();
+}
+
+function onCetTipoDest() {
+  const tipo = V('cet-tipo-dest').value;
+  const esExterno = tipo === 'externo';
+  V('cet-dest-externo-wrap').style.display = esExterno ? 'block' : 'none';
+  V('cet-dest-cuenta-wrap').style.display  = esExterno ? 'none'  : 'block';
+  actualizarCET();
+}
+
+function cetFechaCorta(fechaISO) {
+  // "2026-04-05" → "050426"
+  const [y, m, d] = fechaISO.split('-');
+  return d + m + y.slice(2);
+}
+
+function cetDestino() {
+  const tipo = V('cet-tipo-dest').value;
+  if (tipo === 'externo') return V('cet-dest-externo').value.trim();
+  return 'Cta ' + V('cet-dest-cuenta').value;
+}
+
+function generarAsuntoCET() {
+  const fecha   = V('cet-fecha').value;
+  const moneda  = V('cet-moneda').value;
+  const monto   = V('cet-monto').value || '0';
+  const desde   = V('cet-desde').value;
+  const destino = cetDestino();
+  const concepto= V('cet-concepto').value.trim();
+  if (!fecha || !monto || !destino) return null;
+  return `CET ${cetFechaCorta(fecha)} por ${moneda} ${parseInt(monto).toLocaleString('es-CO')} desde Cta ${desde} a ${destino}${concepto ? ' - ' + concepto : ''}`;
+}
+
+function actualizarCET() {
+  const asunto = generarAsuntoCET();
+  V('cet-preview').textContent = asunto || '—';
+}
+
+function abrirMailCET() {
+  const asunto = generarAsuntoCET();
+  if (!asunto) { toast('Completa los campos obligatorios'); return; }
+  const mailto = `mailto:cetladca@gmail.com?subject=${encodeURIComponent(asunto)}`;
+  window.open(mailto, '_blank');
+}
+
+async function registrarCET() {
+  if (!gTok) { pending = true; tkClient.requestAccessToken(); return; }
+
+  const asunto  = generarAsuntoCET();
+  if (!asunto) { toast('Completa los campos obligatorios'); return; }
+
+  const fecha   = V('cet-fecha').value;
+  const monto   = parseFloat(V('cet-monto').value) || 0;
+  const moneda  = V('cet-moneda').value;
+  const desde   = V('cet-desde').value;
+  const destino = cetDestino();
+  const concepto= V('cet-concepto').value.trim();
+  const mes     = new Date(fecha + 'T12:00:00').getMonth() + 1;
+  const tipo    = V('cet-tipo-dest').value;
+
+  // Clasificar según tipo de transacción
+  let cat, sub, quien;
+  if (tipo === 'cuenta-luis') {
+    cat = 'Personal LADCC'; sub = 'Gastos Personales LADCC'; quien = 'Luis';
+  } else if (tipo === 'cuenta-caro') {
+    cat = 'Personal CMDG'; sub = 'Gastos Personales CMDG'; quien = 'Luis';
+  } else {
+    // Gasto externo — usar el concepto para clasificar
+    cat = 'Imprevistos'; sub = 'Otros'; quien = 'Luis';
+  }
+
+  const tarjeta = desde; // últimos 4 de cuenta origen
+  const metodo  = resolveCard(tarjeta) || ('Bcol Cta ' + desde);
+  const notas   = asunto; // el asunto completo queda en notas como referencia
+
+  go('proc'); V('proc-msg').textContent = 'Registrando CET…';
+
+  const row = [fecha, mes, cat, sub, concepto || destino, monto, metodo, quien, notas, tarjeta];
+  const range = encodeURIComponent(`'${cfg.st}'!A:J`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${cfg.si}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {'Authorization':'Bearer '+gTok, 'Content-Type':'application/json'},
+      body: JSON.stringify({values:[row]})
+    });
+    if (r.status === 401) { gTok = null; setConn(false); pending = true; tkClient.requestAccessToken(); return; }
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message||'Error Sheets'); }
+
+    hist.unshift({fecha, monto, cat, sub, desc: concepto||destino, quien, ts: new Date().toISOString()});
+    if (hist.length > 100) hist.pop();
+    save(); renderHomeH();
+
+    V('ok-amt').textContent = (moneda === 'USD' ? 'USD ' : '$') + monto.toLocaleString('es-CO');
+    V('ok-det').textContent = `CET registrado · ${destino} · ${fecha}`;
+    go('ok');
+
+    // Also open mail with pre-filled subject
+    setTimeout(() => {
+      window.open(`mailto:cetladca@gmail.com?subject=${encodeURIComponent(asunto)}`, '_blank');
+    }, 800);
+
+  } catch(e) { toast('Error: ' + e.message); go('cet'); }
+}
+
+function setEx(el) { V('ti-val').value = el.textContent; }
+</script>
+</body>
+</html>

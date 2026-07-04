@@ -58,3 +58,64 @@ export const NOMBRES_CUENTAS = CUENTAS.map((c) => c.nombre);
 
 /** Personas que pueden figurar como "quién pagó". */
 export const PERSONAS = ['Luis', 'Carolina'];
+
+// ─────────────────────────────────────────────────────────────
+// Compatibilidad con el monolito: nombres largos de método de pago
+// (los mismos que usan el EmailBot y el prompt DCDG). Se usan en la PWA
+// para el select de método de pago y la resolución tarjeta→cuenta.
+// ─────────────────────────────────────────────────────────────
+
+/** Mapa últimos 4 de tarjeta → nombre largo de cuenta (portado del monolito). */
+export const TARJETAS_MAP = {
+  '2331': 'Bcol Aho 0965 · Débito 2331 (Luis)',
+  '6940': 'Bcol Aho 3355 · Débito 6940 (Luis)',
+  '5773': 'Bcol Aho 4549 · Débito 5773 (Luis/DCDG)',
+  '4550': 'Bcol Aho 3164 · Débito 4550 (Carolina)',
+  '1360': 'Bcol Aho 5688 · Débito 1360 (Ahinoa)',
+};
+
+/**
+ * Cuentas cargadas dinámicamente desde ⚙️ CUENTAS (estado mutable de la PWA).
+ * Cada item: { name, banco, titular, moneda, tipo, tipoEspecial, activa, tarjeta }.
+ */
+let _cuentasDinamicas = [];
+
+/** Reemplaza las cuentas dinámicas y enriquece TARJETAS_MAP con sus tarjetas. */
+export function setCuentasDinamicas(lista) {
+  _cuentasDinamicas = Array.isArray(lista) ? lista : [];
+  for (const c of _cuentasDinamicas) {
+    const t = String(c.tarjeta || '').trim();
+    if (t && t !== '—' && t.length === 4) TARJETAS_MAP[t] = c.name;
+  }
+  return _cuentasDinamicas;
+}
+
+/** Devuelve las cuentas dinámicas actuales. */
+export function getCuentasDinamicas() {
+  return _cuentasDinamicas;
+}
+
+/**
+ * Resuelve el nombre de cuenta a partir de los últimos 4 dígitos.
+ * Portado de `resolveCard`: primero cuentas dinámicas, luego el mapa estático.
+ */
+export function resolveCard(digits) {
+  const d = String(digits || '').trim();
+  if (d.length !== 4) return null;
+  for (const c of _cuentasDinamicas) {
+    if (c.name && c.name.includes(d)) return c.name;
+  }
+  return TARJETAS_MAP[d] || null;
+}
+
+/**
+ * ¿El nombre de cuenta corresponde a la tarjeta corporativa iWin?
+ * Portado de `isIwinAccount`: primero por tipoEspecial en cuentas dinámicas,
+ * luego por keywords en el nombre.
+ */
+export function isIwinAccount(accountName) {
+  const acct = _cuentasDinamicas.find((c) => c.name === accountName);
+  if (acct) return acct.tipoEspecial === 'iWin-Adelanto';
+  const n = String(accountName || '').toLowerCase();
+  return n.includes('iwin') || n.includes('jeeves') || n.includes('corporativo') || n.includes('superlikers');
+}
