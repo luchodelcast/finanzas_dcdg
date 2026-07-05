@@ -1,4 +1,8 @@
-// _lib/dedup.js — Detección de movimientos duplicados en Registro Gastos.
+// _lib/dedup.js — Detección de movimientos duplicados (función pura).
+//
+// NOTA: con la migración a Postgres, el camino vivo de registro usa
+// `repo.findPosibleDuplicado` (misma lógica, en SQL). Esta función pura se
+// conserva porque documenta y testea el criterio de forma aislada.
 //
 // Función pura y testeable: recibe las filas ya leídas del Sheet (A..L) y los
 // datos del nuevo movimiento, y decide si hay un posible duplicado. Criterio

@@ -20,7 +20,11 @@ export const config = {
   anthropicModel: () => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
   anthropicModelFast: () => env('ANTHROPIC_MODEL_FAST', 'claude-haiku-4-5-20251001'),
 
-  // Sheets
+  // Base de datos (Neon Postgres) — fuente de verdad del sistema.
+  databaseUrl: () => requireEnv('DATABASE_URL'),
+  databaseUrlOrNull: () => env('DATABASE_URL', null),
+
+  // Sheets (ahora espejo de exportación, ya no fuente de verdad)
   spreadsheetId: () => requireEnv('GOOGLE_SPREADSHEET_ID'),
   sheetGastos: () => env('SHEET_GASTOS', 'Registro Gastos'),
   sheetEmpresas: () => env('SHEET_EMPRESAS', 'EMPRESAS'),

@@ -7,6 +7,7 @@
 
 import { authorize, parseBody, ok, bad } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
+import { queryMovimientos } from './repo.js';
 import { clasificar } from './classify.js';
 import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson } from './anthropic.js';
@@ -96,6 +97,28 @@ export async function pwaClasificarHandler(req) {
     }
     const raw = await callAnthropic({ content, system: buildSystemPrompt(), maxTokens: 600 });
     return ok(extractJson(raw));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Handler de CONSULTA de movimientos (lista/búsqueda) desde la DB. Para SilvIA
+ * ("muéstrame los gastos de restaurantes de julio") y el futuro dashboard.
+ * Acepta filtros por query o body: desde, hasta, categoria, quien, texto, limit.
+ */
+export async function movimientosHandler(req) {
+  const auth = authorize(req);
+  if (!auth.ok) return auth.response;
+  const url = new URL(req.url);
+  const body = req.method === 'POST' ? await parseBody(req) : {};
+  const g = (k) => url.searchParams.get(k) || body[k];
+  try {
+    const rows = await queryMovimientos({
+      desde: g('desde'), hasta: g('hasta'), categoria: g('categoria'),
+      quien: g('quien'), texto: g('texto'), limit: g('limit'),
+    });
+    return ok({ ok: true, movimientos: rows, n: rows.length });
   } catch (e) {
     return bad(e.message, 422);
   }

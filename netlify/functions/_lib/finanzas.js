@@ -1,21 +1,29 @@
 /**
  * _lib/finanzas.js — Lógica de negocio financiera DCDG (backend, fuente de verdad).
  *
- * Registra movimientos que llegan por SilvIA/WhatsApp (o cualquier cliente de la
- * API) en el Google Sheet DCDG. Soporta tres tipos:
+ * Registra movimientos que llegan por SilvIA/WhatsApp, la PWA o cualquier cliente
+ * de la API. La FUENTE DE VERDAD es Postgres (Neon); el Google Sheet quedó como
+ * espejo de exportación (se escribe best-effort, no bloquea). Soporta tres tipos:
  *   - "gasto":   gasto familiar diario.
  *   - "pago":    pago de una obligación (servicios, tarjeta, cuota).
  *   - "factura": factura recibida / cuenta por pagar registrada como movimiento.
  *
- * Todos se escriben en `Registro Gastos` (columnas A-J; K es fórmula en la hoja),
- * etiquetando el tipo y el origen en la columna I (Notas). Aplica las reglas de
- * negocio iWin/Delca2 (sección 10) y, si corresponde, registra el adelanto de
- * honorarios en la hoja `EMPRESAS`.
+ * Robustez: cada movimiento lleva una llave de idempotencia (UNIQUE en la DB), así
+ * los reintentos y las escrituras en carrera colapsan en una sola fila —sin depender
+ * de heurísticas. El dedup por ventana de fechas se conserva como PREGUNTA humana.
+ * Aplica las reglas iWin/Delca2 y registra el adelanto/retiro en `empresas_mov`.
  */
 
-import { config } from './env.js';
-import { appendRow, readRange, updateValues } from './sheets.js';
-import { matchDuplicate } from './dedup.js';
+import {
+  insertMovimiento,
+  findPosibleDuplicado,
+  updateMovimientoCuenta,
+  insertEmpresa,
+  logEvento,
+  queryResumen,
+} from './repo.js';
+import { mirrorMovimiento, mirrorEmpresa } from './sheet-mirror.js';
+import { deriveIdempotencyKey } from './idempotency.js';
 import { clasificar } from './classify.js';
 import { evaluarMovimiento } from '../../../app/src/config/iwin.js';
 import { cuentaPorTarjeta } from '../../../app/src/config/accounts.js';
@@ -36,19 +44,8 @@ const ETIQUETA_TIPO = {
 };
 
 /**
- * Registra un movimiento financiero.
- * @param {Object} mov
- * @param {'gasto'|'pago'|'factura'} mov.tipo
- * @param {number|string} mov.monto
- * @param {string} mov.descripcion
- * @param {string} [mov.quien_pago]     Luis | Carolina
- * @param {string} [mov.metodo_pago]    nombre de cuenta / tarjeta
- * @param {string} [mov.fecha]          YYYY-MM-DD (def hoy)
- * @param {string} [mov.categoria]
- * @param {string} [mov.subcategoria]
- * @param {string} [mov.tarjeta_ultimos4]
- * @param {string} [mov.notas]
- * @param {string} [mov.origen]         etiqueta de canal (def "SilvIA")
+ * Registra un movimiento financiero en la DB (y lo espeja en el Sheet).
+ * @param {Object} mov  (ver JSDoc de campos abajo)
  * @returns {Promise<Object>} resultado con lo escrito o el motivo de omisión.
  */
 export async function registrarMovimiento(mov = {}) {
@@ -58,9 +55,7 @@ export async function registrarMovimiento(mov = {}) {
   }
 
   const monto = parseMonto(mov.monto);
-  if (monto == null || monto <= 0) {
-    throw new Error('monto inválido o ausente');
-  }
+  if (monto == null || monto <= 0) throw new Error('monto inválido o ausente');
   const descripcion = String(mov.descripcion || '').trim();
   if (!descripcion) throw new Error('descripcion requerida');
 
@@ -99,27 +94,22 @@ export async function registrarMovimiento(mov = {}) {
   const origen = String(mov.origen || 'SilvIA');
   const titular = String(mov.quien_pago || '').trim() || 'Luis';
 
-  // 4) Deduplicación a nivel del Sheet (fuente-agnóstica): revisa las filas
-  //    recientes por misma fecha + monto + comercio. Protege API, PWA y SilvIA.
+  // 4) Dedup "humano" (ventana ±3 días · monto ±1 · comercio) vía SQL. Sirve para
+  //    preguntar antes de escribir cuando NO es un reintento exacto.
   let dup = null;
   try {
-    const previas = await readRange(`${config.sheetGastos()}!A2:L`);
-    dup = matchDuplicate(previas, { fecha, monto, descripcion });
-  } catch (_) {
-    /* si falla la lectura, seguimos como alta normal (no bloquear el registro) */
-  }
+    dup = await findPosibleDuplicado({ fecha, monto, descripcion });
+  } catch (_) { /* si la consulta falla, seguimos como alta normal */ }
 
   if (dup) {
     // 4a) La fila ya existe pero le faltaba la cuenta y ahora la traemos →
-    //     ACTUALIZAR esa fila en vez de crear otra (evita el duplicado del
-    //     flujo "regístralo… ah, y fue con la tarjeta X").
-    if (!dup.metodoActual && (metodo || tarjeta)) {
-      const g = config.sheetGastos();
-      if (metodo) await updateValues(`${g}!G${dup.rowNumber}`, [[metodo]]);
-      if (tarjeta) await updateValues(`${g}!J${dup.rowNumber}`, [[tarjeta]]);
-      const emp = await escribirEmpresas(evalMov, { descripcion, titular, monto, fecha, origen });
+    //     ACTUALIZAR esa fila (evita el duplicado del "regístralo… ah, fue con la X").
+    if (!dup.metodo_pago && (metodo || tarjeta)) {
+      const row = await updateMovimientoCuenta(dup.id, { metodo_pago: metodo, tarjeta });
+      const emp = await registrarEmpresas(evalMov, { descripcion, titular, monto, fecha, origen, movimiento_id: dup.id });
+      await logEvento('actualizacion', origen, { id: dup.id, metodo, tarjeta });
       return {
-        ok: true, registrado: true, actualizado: true, fila: dup.rowNumber,
+        ok: true, registrado: true, actualizado: true, id: dup.id,
         tipo, fecha, categoria, subcategoria, monto, monto_fmt: formatCOP(monto),
         metodo_pago: metodo, quien_pago: titular, tarjeta,
         adelanto_empresas: emp.adelanto, retiro_delca2: emp.retiroDelca2,
@@ -129,100 +119,102 @@ export async function registrarMovimiento(mov = {}) {
     // 4b) Duplicado genuino (ya tiene la info) → NO escribir; preguntar. Solo se
     //     registra si el llamador confirma explícitamente (confirmar: true).
     if (!mov.confirmar) {
+      await logEvento('duplicado', origen, { id: dup.id, monto, descripcion, fecha });
       return {
         ok: true,
         registrado: false,
         posible_duplicado: {
-          fila: dup.rowNumber, fecha, monto, monto_fmt: formatCOP(monto),
-          descripcion, categoria, subcategoria, metodo_actual: dup.metodoActual,
+          id: dup.id, fecha, monto, monto_fmt: formatCOP(monto),
+          descripcion, categoria, subcategoria, metodo_actual: dup.metodo_pago,
         },
         mensaje: `Parece que ya está registrado: ${categoria}${subcategoria ? '/' + subcategoria : ''} ${formatCOP(monto)} "${descripcion}" del ${fecha}. ¿Lo anoto igual?`,
       };
     }
-    // confirmar === true → cae al alta normal (registro forzado).
   }
 
-  // 5) Alta normal. Fila A-L: A-J como siempre, K vacío (cuenta auto-resuelta) y
-  //    L = timestamp de creación (para poder distinguir filas después).
+  // 5) Alta. Llave de idempotencia: si el llamador confirma un duplicado genuino,
+  //    se fuerza una llave única para que SÍ entre una segunda fila.
+  let idempotencyKey = deriveIdempotencyKey({ tipo, fecha, monto, descripcion,
+    idempotency_key: mov.idempotency_key, source_msg_id: mov.source_msg_id });
+  if (mov.confirmar && !mov.idempotency_key && !mov.source_msg_id) {
+    idempotencyKey += ':forced:' + Date.now();
+  }
+
   const notasBase = ETIQUETA_TIPO[tipo].replace('SilvIA', origen);
   const notas = [notasBase, mov.notas].filter(Boolean).join(' — ');
-  const fila = [
-    fecha,                 // A Fecha
-    mesDeISO(fecha),       // B Mes
-    categoria,             // C Categoría
-    subcategoria,          // D Subcategoría
-    descripcion,           // E Descripción / Comercio
-    monto,                 // F Monto (número)
-    metodo,                // G Método de pago
-    titular,               // H Quién pagó
-    notas,                 // I Notas
-    tarjeta,               // J Tarjeta (últimos 4)
-    '',                    // K Cuenta auto-resuelta (fórmula en la hoja)
-    nowISO(),              // L Registrado (timestamp UTC)
-  ];
-  await appendRow(config.sheetGastos(), fila);
 
-  const emp = await escribirEmpresas(evalMov, { descripcion, titular, monto, fecha, origen });
+  const { inserted, row } = await insertMovimiento({
+    fecha, tipo, categoria, subcategoria, descripcion, monto,
+    metodo_pago: metodo, quien_pago: titular, tarjeta, notas, origen,
+    idempotency_key: idempotencyKey,
+  });
+
+  // Reintento exacto (misma llave) → ya estaba; no duplicamos ni re-espejamos.
+  if (!inserted) {
+    return {
+      ok: true, registrado: false, ya_existia: true, id: row && row.id,
+      tipo, fecha, monto, monto_fmt: formatCOP(monto),
+      mensaje: `Ya estaba anotado ✅ ${formatCOP(monto)} "${descripcion}" (${fecha}). No lo dupliqué.`,
+    };
+  }
+
+  const movId = row.id;
+  const emp = await registrarEmpresas(evalMov, { descripcion, titular, monto, fecha, origen, movimiento_id: movId });
+  await logEvento('alta', origen, { id: movId, tipo, monto, categoria });
+
+  // Espejo al Sheet (best-effort). Fila A-L como el layout histórico.
+  mirrorMovimiento([
+    fecha, mesDeISO(fecha), categoria, subcategoria, descripcion, monto,
+    metodo, titular, notas, tarjeta, '', new Date(row.creado_en || Date.now()).toISOString(),
+  ]);
 
   return {
     ok: true,
     registrado: true,
-    tipo,
-    fecha,
-    categoria,
-    subcategoria,
-    monto,
-    monto_fmt: formatCOP(monto),
-    metodo_pago: metodo,
-    quien_pago: titular,
-    tarjeta,
-    adelanto_empresas: emp.adelanto,
-    retiro_delca2: emp.retiroDelca2,
+    id: movId,
+    tipo, fecha, categoria, subcategoria, monto, monto_fmt: formatCOP(monto),
+    metodo_pago: metodo, quien_pago: titular, tarjeta,
+    adelanto_empresas: emp.adelanto, retiro_delca2: emp.retiroDelca2,
     mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${formatCOP(monto)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
   };
 }
 
-/** ISO timestamp (helper aislado para poder mockearlo en tests si hiciera falta). */
-function nowISO() {
-  return new Date().toISOString();
-}
-
 /**
- * Escribe en EMPRESAS el adelanto (Jeeves/iWin) o el retiro (Delca2) si aplica.
- * Formato de 13 columnas del monolito. Reutilizado por el alta y por la
- * actualización de una fila a la que se le agrega la cuenta.
+ * Registra en `empresas_mov` el adelanto (iWin) o el retiro (Delca2) si aplica,
+ * y lo espeja en la hoja EMPRESAS (13 columnas). Reutilizado por alta y actualización.
  */
-async function escribirEmpresas(evalMov, { descripcion, titular, monto, fecha, origen }) {
+async function registrarEmpresas(evalMov, { descripcion, titular, monto, fecha, origen, movimiento_id }) {
   const mesNum = mesDeISO(fecha);
   const anio = Number(fecha.slice(0, 4)) || new Date().getFullYear();
   const mesNombre = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][mesNum - 1];
   let adelanto = null;
   let retiroDelca2 = null;
+
   if (evalMov.adelanto_empresas) {
-    await appendRow(config.sheetEmpresas(), [
-      '', 'Superlikers', 'Empresa → Familia', mesNombre, anio,
-      `Adelanto honorarios LADCC · ${descripcion}`, titular,
-      monto, 'COP', monto, 'Pendiente', '', `Registrado vía ${origen} · ${fecha}`,
-    ]);
-    adelanto = { hoja: config.sheetEmpresas(), tipo: 'adelanto', monto };
+    const concepto = `Adelanto honorarios LADCC · ${descripcion}`;
+    await insertEmpresa({ empresa: 'Superlikers', flujo: 'Empresa → Familia', mes: mesNombre, anio,
+      concepto, titular, monto, estado: 'Pendiente', origen, movimiento_id });
+    mirrorEmpresa(['', 'Superlikers', 'Empresa → Familia', mesNombre, anio, concepto, titular,
+      monto, 'COP', monto, 'Pendiente', '', `Registrado vía ${origen} · ${fecha}`]);
+    adelanto = { tipo: 'adelanto', monto };
   }
   if (evalMov.retiro_delca2) {
-    await appendRow(config.sheetEmpresas(), [
-      '', 'Delca2', 'Empresa → Familia', mesNombre, anio,
-      `Retiro/distribución socios Delca2 · ${descripcion}`, titular,
-      monto, 'COP', monto, 'Registrado', '', `Registrado vía ${origen} · ${fecha}`,
-    ]);
-    retiroDelca2 = { hoja: config.sheetEmpresas(), tipo: 'retiro', monto };
+    const concepto = `Retiro/distribución socios Delca2 · ${descripcion}`;
+    await insertEmpresa({ empresa: 'Delca2', flujo: 'Empresa → Familia', mes: mesNombre, anio,
+      concepto, titular, monto, estado: 'Registrado', origen, movimiento_id });
+    mirrorEmpresa(['', 'Delca2', 'Empresa → Familia', mesNombre, anio, concepto, titular,
+      monto, 'COP', monto, 'Registrado', '', `Registrado vía ${origen} · ${fecha}`]);
+    retiroDelca2 = { tipo: 'retiro', monto };
   }
   return { adelanto, retiroDelca2 };
 }
 
 /**
- * Resumen de gastos del Registro Gastos.
+ * Resumen de gastos desde la DB.
  * @param {Object} q
  * @param {string} [q.periodo]    'mes' | 'semana' | 'YYYY-MM' | 'YYYY-MM-DD..YYYY-MM-DD'
- * @param {string} [q.categoria]  filtra por categoría (contains, case-insensitive)
- * @param {string} [q.quien]      filtra por quién pagó
+ * @param {string} [q.categoria]
+ * @param {string} [q.quien]
  * @param {Date}   [q.hoy]        fecha de referencia (inyectable para tests)
  * @returns {Promise<Object>}
  */
@@ -230,40 +222,19 @@ export async function resumen(q = {}) {
   const hoy = q.hoy instanceof Date ? q.hoy : new Date();
   const { desde, hasta, etiqueta } = rangoPeriodo(q.periodo, hoy);
 
-  // Registro Gastos no tiene emoji → values API directa.
-  const rows = await readRange(`${config.sheetGastos()}!A2:J`);
-
-  const catFiltro = (q.categoria || '').toLowerCase().trim();
-  const quienFiltro = (q.quien || '').toLowerCase().trim();
-
-  let total = 0;
-  const porCategoria = {};
-  let n = 0;
-  for (const r of rows) {
-    const fecha = r[0];
-    if (!fecha || fecha < desde || fecha > hasta) continue;
-    const categoria = r[2] || 'Sin categoría';
-    const monto = Number(r[5]) || 0;
-    const quien = (r[7] || '').toLowerCase();
-    if (catFiltro && !categoria.toLowerCase().includes(catFiltro)) continue;
-    if (quienFiltro && !quien.includes(quienFiltro)) continue;
-    total += monto;
-    porCategoria[categoria] = (porCategoria[categoria] || 0) + monto;
-    n++;
-  }
-
-  const desglose = Object.entries(porCategoria)
-    .sort((a, b) => b[1] - a[1])
-    .map(([categoria, monto]) => ({ categoria, monto, monto_fmt: formatCOP(monto) }));
+  const r = await queryResumen({ desde, hasta, categoria: q.categoria, quien: q.quien });
+  const desglose = (r.por_categoria || []).map((x) => ({
+    categoria: x.categoria, monto: Number(x.monto), monto_fmt: formatCOP(Number(x.monto)),
+  }));
 
   return {
     ok: true,
     periodo: etiqueta,
     desde,
     hasta,
-    total,
-    total_fmt: formatCOP(total),
-    movimientos: n,
+    total: Number(r.total) || 0,
+    total_fmt: formatCOP(Number(r.total) || 0),
+    movimientos: Number(r.movimientos) || 0,
     por_categoria: desglose,
   };
 }
@@ -278,11 +249,9 @@ export function rangoPeriodo(periodo, hoy = new Date()) {
   };
   const p = String(periodo || 'mes').toLowerCase().trim();
 
-  // Rango explícito YYYY-MM-DD..YYYY-MM-DD
   const rango = /^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})$/.exec(p);
   if (rango) return { desde: rango[1], hasta: rango[2], etiqueta: `${rango[1]} a ${rango[2]}` };
 
-  // Mes específico YYYY-MM
   const mesEsp = /^(\d{4})-(\d{2})$/.exec(p);
   if (mesEsp) {
     const y = Number(mesEsp[1]);
@@ -300,7 +269,6 @@ export function rangoPeriodo(periodo, hoy = new Date()) {
     return { desde: iso(ini), hasta: iso(hoy), etiqueta: 'semana' };
   }
 
-  // Mes en curso (default)
   const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   return { desde: iso(ini), hasta: iso(hoy), etiqueta: 'mes' };
 }
