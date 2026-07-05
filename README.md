@@ -57,6 +57,7 @@ finanzas_dcdg/
 │   ├── api-registrar-factura.js        # POST /api/registrar-factura
 │   ├── api-resumen.js                  # GET|POST /api/resumen
 │   └── api-clasificar.js               # POST /api/clasificar
+├── AUTOFIX.md                          # Procedimiento del autofix (reportes WhatsApp → fix)
 ├── silvia/finanzas-tools.js            # Tools delgadas para pegar en SilvIA (sl-crm-live)
 ├── scripts/                            # Google Apps Scripts (EmailBot v4, Corregir)
 ├── legacy/DCDG_Captura_v5.html         # Monolito original (referencia de paridad)
@@ -152,3 +153,12 @@ pegan en `buildTools()` de `sl-crm-live`, gateadas por `isFinanceUser`.
 Ver `docs/` para detalle de arquitectura, reglas y cuentas.
 **Para dejar el sistema operativo, sigue [`docs/despliegue.md`](docs/despliegue.md)** —
 enlazar Netlify, crear la cuenta de servicio de Google y configurar SilvIA.
+
+## Autofix (reportes por WhatsApp → arreglo automático)
+
+Luis y Carolina pueden reportarle a SilvIA una falla o mejora del **sistema de
+finanzas** por WhatsApp; SilvIA crea un GitHub Issue aquí (label `dcdg-autofix`) y
+una sesión programada de Claude Code lo arregla siguiendo [`AUTOFIX.md`](AUTOFIX.md)
+(triage → rama → PR → CI → merge/borrador). Al cerrar, se avisa por WhatsApp. El
+procedimiento es **conservador**: nada que toque Sheets, clasificación o el EmailBot
+se auto-mergea sin OK del dueño.
