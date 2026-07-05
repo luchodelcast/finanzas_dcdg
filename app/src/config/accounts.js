@@ -29,7 +29,7 @@ export const CUENTAS = [
   { nombre: 'TC iWin (Superlikers)', banco: 'Jeeves', titular: 'Superlikers', moneda: 'USD', tipo: 'Crédito corporativo', tarjetas: [], cc: 'LADCC' },
   { nombre: 'Nequi Luis', banco: 'Nequi', titular: 'Luis', moneda: 'COP', tipo: 'Nequi-Billetera', tarjetas: [], cc: 'LADCC' },
   { nombre: 'Nequi Carolina', banco: 'Nequi', titular: 'Carolina', moneda: 'COP', tipo: 'Nequi-Billetera', tarjetas: [], cc: 'CMDG' },
-  { nombre: 'Mercury DELCA2', banco: 'Mercury', titular: 'Luis/Carolina', moneda: 'USD', tipo: 'Cuenta USD', tarjetas: [], cc: 'LADCC/CMDG' },
+  { nombre: 'Mercury Delca2 (7730)', banco: 'Mercury', titular: 'Delca2 LLC (Luis/Carolina)', moneda: 'USD', tipo: 'Cuenta USD', tarjetas: ['7730'], cc: 'Delca2', cuenta: '202508119164' },
   { nombre: 'DollarApp', banco: 'DollarApp', titular: 'Luis', moneda: 'USD', tipo: 'Cuenta USD', tarjetas: [], cc: 'LADCC' },
 ];
 
@@ -72,6 +72,7 @@ export const TARJETAS_MAP = {
   '5773': 'Bcol Aho 4549 · Débito 5773 (Luis/DCDG)',
   '4550': 'Bcol Aho 3164 · Débito 4550 (Carolina)',
   '1360': 'Bcol Aho 5688 · Débito 1360 (Ahinoa)',
+  '7730': 'Mercury Delca2 (7730)',
 };
 
 /**
