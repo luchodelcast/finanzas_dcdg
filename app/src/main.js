@@ -365,10 +365,9 @@ async function submit() {
   doSheet();
 }
 
-async function doSheet() {
+async function doSheet(confirmar = false) {
   go('proc');
-  V('proc-msg').textContent = 'Guardando en Sheets…';
-  const cfg = getConfig();
+  V('proc-msg').textContent = 'Guardando…';
   const fecha = V('cf-fecha').value;
   const monto = parseFloat(V('cf-monto').value) || 0;
   const cat = V('cf-cat').value;
@@ -378,61 +377,60 @@ async function doSheet() {
   const metodo = V('cf-mth').value;
   const notas = V('cf-note').value;
   const tarjeta = V('cf-tarjeta').value.trim();
-  const mes = new Date(fecha + 'T12:00:00').getMonth() + 1;
-  const isIwin = curIsIwin || isIwinAccount(metodo);
-
-  // Cols A-J: fecha, mes, cat, sub, desc, monto, metodo, quien, notas, tarjeta
-  const row = [fecha, mes, cat, sub, desc, monto, metodo, quien, notas, tarjeta];
 
   try {
-    await appendValues(cfg.sheetGastos, row, 'A:J');
-    if (isIwin) await doEmpresasSheet(fecha, mes, monto, desc, quien);
+    // El backend clasifica lo que falte, aplica reglas iWin/Delca2, deduplica y
+    // escribe el gasto + el flujo EMPRESAS. Aquí ya mandamos categoría/cuenta.
+    const r = await apiRegistrar({
+      tipo: 'gasto', fecha, monto, categoria: cat, subcategoria: sub,
+      descripcion: desc, quien_pago: quien, metodo_pago: metodo,
+      tarjeta_ultimos4: tarjeta, notas, confirmar,
+    });
 
-    addHistory({ fecha, monto, cat, sub, desc, quien, ts: new Date().toISOString(), iwin: isIwin });
+    // Posible duplicado → preguntar y reintentar forzando si el usuario acepta.
+    if (r && r.registrado === false && r.posible_duplicado) {
+      if (confirm(`${r.mensaje}\n\n(Aceptar = guardar igual · Cancelar = no)`)) {
+        return doSheet(true);
+      }
+      go('conf');
+      return;
+    }
+
+    const empresas = !!(r.retiro_delca2 || r.adelanto_empresas);
+    addHistory({ fecha, monto, cat, sub, desc, quien, ts: new Date().toISOString(), iwin: empresas });
     renderHomeH();
 
     V('ok-amt').textContent = formatCOP(monto);
     V('ok-det').textContent =
-      `${cat} · ${quien} · ${fecha}${isIwin ? ' · 🏢 Préstamo iWin registrado' : ''}`;
+      `${cat} · ${quien} · ${fecha}${r.actualizado ? ' · ✏️ actualizado' : ''}${empresas ? ' · 🏢 EMPRESAS' : ''}`;
     go('ok');
   } catch (e) {
-    if (e.status === 401) {
+    if (e.status === 401 || e.status === 403) {
       const okc = await connect({ forcePrompt: true });
-      if (okc) return doSheet();
+      if (okc) return doSheet(confirmar);
     }
     toast('Error: ' + e.message);
     go('conf');
   }
 }
 
-// ── Escribir préstamo en EMPRESAS (13 columnas) ───────────
-async function doEmpresasSheet(fecha, mes, monto, desc, quien) {
+/** POST a la API de finanzas (mismo origen) con el token de Google. */
+async function apiRegistrar(mov) {
+  const token = await getAccessToken();
   const cfg = getConfig();
-  const sheetName = cfg.sheetEmpresas || 'EMPRESAS';
-  const anio = new Date(fecha + 'T12:00:00').getFullYear();
-  const mesNombre = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][mes - 1];
-  // Columnas A-M: #, Empresa, Dirección, Mes, Año, Concepto, Titular,
-  //               Valor Original, Moneda, Valor COP, Estado, Plazo, Notas
-  const rowE = [
-    '',
-    'Superlikers',
-    'Empresa → Familia',
-    mesNombre,
-    anio,
-    `Adelanto honorarios LADCC · ${desc}`,
-    quien,
-    monto,
-    'COP',
-    monto,
-    'Pendiente',
-    '',
-    `Registrado vía app DCDG · ${fecha}`,
-  ];
-  try {
-    await appendValues(sheetName, rowE, 'A:M');
-  } catch (e) {
-    toast('⚠️ Gasto OK pero error en EMPRESAS: ' + (e.message || ''));
+  const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
+  const res = await fetch(`${base}/api/pwa-registrar`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(mov),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Error ${res.status}`);
+    err.status = res.status;
+    throw err;
   }
+  return data;
 }
 
 // ── Historial ─────────────────────────────────────────────

@@ -14,7 +14,8 @@
  */
 
 import { config } from './env.js';
-import { appendRow, readRange } from './sheets.js';
+import { appendRow, readRange, updateValues } from './sheets.js';
+import { matchDuplicate } from './dedup.js';
 import { clasificar } from './classify.js';
 import { evaluarMovimiento } from '../../../app/src/config/iwin.js';
 import { cuentaPorTarjeta } from '../../../app/src/config/accounts.js';
@@ -94,12 +95,57 @@ export async function registrarMovimiento(mov = {}) {
     return { ok: true, registrado: false, motivo: evalMov.motivo, tipo, monto };
   }
 
-  // 4) Construir y escribir la fila (A-J).
   const fecha = normalizarFecha(mov.fecha);
   const origen = String(mov.origen || 'SilvIA');
+  const titular = String(mov.quien_pago || '').trim() || 'Luis';
+
+  // 4) Deduplicación a nivel del Sheet (fuente-agnóstica): revisa las filas
+  //    recientes por misma fecha + monto + comercio. Protege API, PWA y SilvIA.
+  let dup = null;
+  try {
+    const previas = await readRange(`${config.sheetGastos()}!A2:L`);
+    dup = matchDuplicate(previas, { fecha, monto, descripcion });
+  } catch (_) {
+    /* si falla la lectura, seguimos como alta normal (no bloquear el registro) */
+  }
+
+  if (dup) {
+    // 4a) La fila ya existe pero le faltaba la cuenta y ahora la traemos →
+    //     ACTUALIZAR esa fila en vez de crear otra (evita el duplicado del
+    //     flujo "regístralo… ah, y fue con la tarjeta X").
+    if (!dup.metodoActual && (metodo || tarjeta)) {
+      const g = config.sheetGastos();
+      if (metodo) await updateValues(`${g}!G${dup.rowNumber}`, [[metodo]]);
+      if (tarjeta) await updateValues(`${g}!J${dup.rowNumber}`, [[tarjeta]]);
+      const emp = await escribirEmpresas(evalMov, { descripcion, titular, monto, fecha, origen });
+      return {
+        ok: true, registrado: true, actualizado: true, fila: dup.rowNumber,
+        tipo, fecha, categoria, subcategoria, monto, monto_fmt: formatCOP(monto),
+        metodo_pago: metodo, quien_pago: titular, tarjeta,
+        adelanto_empresas: emp.adelanto, retiro_delca2: emp.retiroDelca2,
+        mensaje: `Actualicé el registro con la cuenta ✅ ${metodo || tarjeta}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
+      };
+    }
+    // 4b) Duplicado genuino (ya tiene la info) → NO escribir; preguntar. Solo se
+    //     registra si el llamador confirma explícitamente (confirmar: true).
+    if (!mov.confirmar) {
+      return {
+        ok: true,
+        registrado: false,
+        posible_duplicado: {
+          fila: dup.rowNumber, fecha, monto, monto_fmt: formatCOP(monto),
+          descripcion, categoria, subcategoria, metodo_actual: dup.metodoActual,
+        },
+        mensaje: `Parece que ya está registrado: ${categoria}${subcategoria ? '/' + subcategoria : ''} ${formatCOP(monto)} "${descripcion}" del ${fecha}. ¿Lo anoto igual?`,
+      };
+    }
+    // confirmar === true → cae al alta normal (registro forzado).
+  }
+
+  // 5) Alta normal. Fila A-L: A-J como siempre, K vacío (cuenta auto-resuelta) y
+  //    L = timestamp de creación (para poder distinguir filas después).
   const notasBase = ETIQUETA_TIPO[tipo].replace('SilvIA', origen);
   const notas = [notasBase, mov.notas].filter(Boolean).join(' — ');
-
   const fila = [
     fecha,                 // A Fecha
     mesDeISO(fecha),       // B Mes
@@ -108,41 +154,15 @@ export async function registrarMovimiento(mov = {}) {
     descripcion,           // E Descripción / Comercio
     monto,                 // F Monto (número)
     metodo,                // G Método de pago
-    String(mov.quien_pago || '').trim(), // H Quién pagó
+    titular,               // H Quién pagó
     notas,                 // I Notas
     tarjeta,               // J Tarjeta (últimos 4)
+    '',                    // K Cuenta auto-resuelta (fórmula en la hoja)
+    nowISO(),              // L Registrado (timestamp UTC)
   ];
   await appendRow(config.sheetGastos(), fila);
 
-  // 5) Flujos Empresa ↔ Familia en EMPRESAS (formato 13 columnas del monolito):
-  //    #, Empresa, Dirección, Mes, Año, Concepto, Titular, Valor Original,
-  //    Moneda, Valor COP, Estado, Plazo, Notas.
-  //    - Jeeves/iWin  → adelanto de honorarios (Superlikers → Familia).
-  //    - Delca2 (7730) → retiro/distribución de socios (Delca2 → Familia).
-  const mesNum = mesDeISO(fecha);
-  const anio = Number(fecha.slice(0, 4)) || new Date().getFullYear();
-  const mesNombre = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][mesNum - 1];
-  const titular = fila[7] || 'Luis';
-
-  let adelanto = null;
-  if (evalMov.adelanto_empresas) {
-    await appendRow(config.sheetEmpresas(), [
-      '', 'Superlikers', 'Empresa → Familia', mesNombre, anio,
-      `Adelanto honorarios LADCC · ${descripcion}`, titular,
-      monto, 'COP', monto, 'Pendiente', '', `Registrado vía ${origen} · ${fecha}`,
-    ]);
-    adelanto = { hoja: config.sheetEmpresas(), tipo: 'adelanto', monto };
-  }
-
-  let retiroDelca2 = null;
-  if (evalMov.retiro_delca2) {
-    await appendRow(config.sheetEmpresas(), [
-      '', 'Delca2', 'Empresa → Familia', mesNombre, anio,
-      `Retiro/distribución socios Delca2 · ${descripcion}`, titular,
-      monto, 'COP', monto, 'Registrado', '', `Registrado vía ${origen} · ${fecha}`,
-    ]);
-    retiroDelca2 = { hoja: config.sheetEmpresas(), tipo: 'retiro', monto };
-  }
+  const emp = await escribirEmpresas(evalMov, { descripcion, titular, monto, fecha, origen });
 
   return {
     ok: true,
@@ -156,10 +176,45 @@ export async function registrarMovimiento(mov = {}) {
     metodo_pago: metodo,
     quien_pago: titular,
     tarjeta,
-    adelanto_empresas: adelanto,
-    retiro_delca2: retiroDelca2,
-    mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${formatCOP(monto)}${metodo ? ', ' + metodo : ''}${retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${adelanto ? ' · adelanto iWin registrado' : ''}.`,
+    adelanto_empresas: emp.adelanto,
+    retiro_delca2: emp.retiroDelca2,
+    mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${formatCOP(monto)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
   };
+}
+
+/** ISO timestamp (helper aislado para poder mockearlo en tests si hiciera falta). */
+function nowISO() {
+  return new Date().toISOString();
+}
+
+/**
+ * Escribe en EMPRESAS el adelanto (Jeeves/iWin) o el retiro (Delca2) si aplica.
+ * Formato de 13 columnas del monolito. Reutilizado por el alta y por la
+ * actualización de una fila a la que se le agrega la cuenta.
+ */
+async function escribirEmpresas(evalMov, { descripcion, titular, monto, fecha, origen }) {
+  const mesNum = mesDeISO(fecha);
+  const anio = Number(fecha.slice(0, 4)) || new Date().getFullYear();
+  const mesNombre = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][mesNum - 1];
+  let adelanto = null;
+  let retiroDelca2 = null;
+  if (evalMov.adelanto_empresas) {
+    await appendRow(config.sheetEmpresas(), [
+      '', 'Superlikers', 'Empresa → Familia', mesNombre, anio,
+      `Adelanto honorarios LADCC · ${descripcion}`, titular,
+      monto, 'COP', monto, 'Pendiente', '', `Registrado vía ${origen} · ${fecha}`,
+    ]);
+    adelanto = { hoja: config.sheetEmpresas(), tipo: 'adelanto', monto };
+  }
+  if (evalMov.retiro_delca2) {
+    await appendRow(config.sheetEmpresas(), [
+      '', 'Delca2', 'Empresa → Familia', mesNombre, anio,
+      `Retiro/distribución socios Delca2 · ${descripcion}`, titular,
+      monto, 'COP', monto, 'Registrado', '', `Registrado vía ${origen} · ${fecha}`,
+    ]);
+    retiroDelca2 = { hoja: config.sheetEmpresas(), tipo: 'retiro', monto };
+  }
+  return { adelanto, retiroDelca2 };
 }
 
 /**
