@@ -26,8 +26,15 @@ test('no marca duplicado si el monto difiere', () => {
   assert.equal(matchDuplicate(rows, { fecha: '2026-07-04', monto: 50000, descripcion: 'BOLD*Restaurante gre' }), null);
 });
 
-test('no marca duplicado si la fecha difiere', () => {
-  assert.equal(matchDuplicate(rows, { fecha: '2026-07-05', monto: 117781, descripcion: 'BOLD*Restaurante gre' }), null);
+test('marca duplicado si la fecha difiere pocos días (re-registro sin fecha del recibo)', () => {
+  // Fila del recibo es 07-04; el re-registro queda con la fecha de hoy (07-06).
+  const d = matchDuplicate(rows, { fecha: '2026-07-06', monto: 117781, descripcion: 'BOLD*Restaurante gre' });
+  assert.ok(d, 'debería atrapar el duplicado dentro de la ventana de ±3 días');
+  assert.equal(d.rowNumber, 3);
+});
+
+test('no marca duplicado si la fecha difiere más que la ventana (±3 días)', () => {
+  assert.equal(matchDuplicate(rows, { fecha: '2026-08-01', monto: 117781, descripcion: 'BOLD*Restaurante gre' }), null);
 });
 
 test('lee el método existente (col G) cuando la fila ya tiene cuenta', () => {
