@@ -58,12 +58,11 @@ function toast(msg, dur = 3000) {
 
 // ── Setup & Settings ──────────────────────────────────────
 function saveSetup() {
-  const ak = V('s-ak').value.trim();
+  const ak = V('s-ak').value.trim(); // opcional: la clasificación ya es server-side
   const gc = V('s-gc').value.trim();
   const si = V('s-si').value.trim();
   const st = V('s-st').value.trim() || 'Registro Gastos';
   const se = V('s-se').value.trim() || 'EMPRESAS';
-  if (!ak) return toast('Ingresa tu Anthropic API Key');
   if (!gc) return toast('Ingresa el Google Client ID');
   if (!si) return toast('Ingresa el ID del Spreadsheet');
   saveConfig({ ak, gc, si, st, se });
@@ -641,7 +640,10 @@ function init() {
   V('s-st').value = cfg.sheetGastos || 'Registro Gastos';
   V('s-se').value = cfg.sheetEmpresas || 'EMPRESAS';
 
-  if (!cfg.anthropicApiKey || !cfg.googleClientId || !cfg.spreadsheetId) {
+  // La PWA viene pre-configurada (Client ID y Spreadsheet por defecto) y ya no
+  // necesita la Anthropic key (la clasificación es server-side). Un dispositivo
+  // nuevo va directo a Home; solo inicia sesión con Google al primer uso.
+  if (!cfg.googleClientId || !cfg.spreadsheetId) {
     go('setup');
   } else {
     go('home');

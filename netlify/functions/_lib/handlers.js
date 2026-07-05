@@ -8,6 +8,9 @@
 import { authorize, parseBody, ok, bad } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import { clasificar } from './classify.js';
+import { verifyFinanceUser } from './google-auth.js';
+import { callAnthropic, extractJson } from './anthropic.js';
+import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
 export function makeRegistrarHandler(tipo) {
@@ -38,6 +41,40 @@ export async function resumenHandler(req) {
   };
   try {
     return ok(await resumen(q));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Handler de clasificación para la PWA (texto o imagen), autenticado con el
+ * login de Google del usuario (no con el token de servicio). Usa la
+ * ANTHROPIC_API_KEY del backend, así el navegador nunca necesita la API key.
+ * Devuelve el shape DCDG completo (fecha, monto, comercio, categoría, …).
+ */
+export async function pwaClasificarHandler(req) {
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try {
+    await verifyFinanceUser(bearer);
+  } catch (e) {
+    return bad(e.message, e.status || 401);
+  }
+  const body = await parseBody(req);
+  try {
+    let content;
+    if (body.imagen) {
+      content = [
+        { type: 'image', source: { type: 'base64', media_type: body.media_type || 'image/jpeg', data: body.imagen } },
+        { type: 'text', text: 'Extrae los datos de esta transacción o recibo.' },
+      ];
+    } else {
+      const texto = String(body.texto || '').trim();
+      if (!texto) return bad('texto o imagen requerido');
+      content = [{ type: 'text', text: `Fecha: ${body.fecha || ''}\nDescripción: ${texto}` }];
+    }
+    const raw = await callAnthropic({ content, system: buildSystemPrompt(), maxTokens: 600 });
+    return ok(extractJson(raw));
   } catch (e) {
     return bad(e.message, 422);
   }
