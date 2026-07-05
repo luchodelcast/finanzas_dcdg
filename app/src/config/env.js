@@ -96,7 +96,9 @@ export function saveConfig(partial) {
  */
 export function validateConfig(cfg = getConfig()) {
   const missing = [];
-  if (!cfg.anthropicApiKey && !cfg.apiBaseUrl) missing.push('anthropicApiKey');
+  // La clasificación ocurre en el backend (autenticada con Google), así que la PWA
+  // ya NO necesita la Anthropic API key. Solo requiere Client ID + Spreadsheet ID,
+  // ambos con default → un dispositivo nuevo queda listo tras iniciar sesión.
   if (!cfg.googleClientId) missing.push('googleClientId');
   if (!cfg.spreadsheetId) missing.push('spreadsheetId');
   return { ok: missing.length === 0, missing };

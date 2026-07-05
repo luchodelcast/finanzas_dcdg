@@ -30,6 +30,11 @@ export const config = {
   saEmail: () => requireEnv('GOOGLE_SA_EMAIL'),
   saPrivateKey: () => normalizeKey(requireEnv('GOOGLE_SA_PRIVATE_KEY')),
 
+  // OAuth de usuario (para autenticar la PWA contra el backend de clasificación).
+  // El Client ID es público (va en el bundle de la PWA); default = el de DCDG.
+  googleClientId: () =>
+    env('GOOGLE_CLIENT_ID', '473061009211-972b11u9s6gpqln7n0e6tdn51vjmnv5p.apps.googleusercontent.com'),
+
   // Integración SilvIA
   apiToken: () => requireEnv('DCDG_API_TOKEN'),
   finanzasUsers: () =>

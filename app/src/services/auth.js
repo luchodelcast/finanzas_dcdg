@@ -10,7 +10,9 @@
 
 import { getConfig } from '../config/env.js';
 
-const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+// openid+email → el backend puede identificar al usuario (clasificación server-side
+// sin exponer la API key). spreadsheets → escribir en el Sheet desde la PWA.
+const SCOPE = 'openid email https://www.googleapis.com/auth/spreadsheets';
 
 let _token = null;
 let _expiresAt = 0;
