@@ -21,6 +21,9 @@
   ],
   "author": "Luis Alberto Del Castillo Cadavid",
   "license": "UNLICENSED",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.0"
+  },
   "devDependencies": {
     "vite": "^5.4.0"
   }
