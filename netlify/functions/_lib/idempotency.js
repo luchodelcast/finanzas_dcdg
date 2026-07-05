@@ -29,3 +29,17 @@ export function deriveIdempotencyKey(mov = {}) {
   const base = `${tipo}|${fecha}|${monto}|${desc}`;
   return createHash('sha256').update(base).digest('hex').slice(0, 40);
 }
+
+/**
+ * Llave de idempotencia de un INGRESO (entidad + fecha + monto + concepto + cédula).
+ * @param {{ entidad_id, fecha, monto, concepto?, cedula?, idempotency_key? }} i
+ * @returns {string}
+ */
+export function deriveIngresoKey(i = {}) {
+  if (i.idempotency_key) return String(i.idempotency_key).slice(0, 80);
+  const fecha = String(i.fecha || '').slice(0, 10);
+  const monto = Math.round(Number(i.monto) || 0);
+  const concepto = normalize(i.concepto).slice(0, 16);
+  const base = `ing|${i.entidad_id}|${fecha}|${monto}|${concepto}|${i.cedula || ''}`;
+  return createHash('sha256').update(base).digest('hex').slice(0, 40);
+}

@@ -7,7 +7,11 @@
 
 import { authorize, parseBody, ok, bad } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
-import { queryMovimientos } from './repo.js';
+import {
+  queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
+  insertIngreso, queryIngresos,
+} from './repo.js';
+import { deriveIngresoKey } from './idempotency.js';
 import { clasificar } from './classify.js';
 import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson } from './anthropic.js';
@@ -153,6 +157,73 @@ export async function pwaMovimientosHandler(req) {
       quien: g('quien'), texto: g('texto'), limit: g('limit'),
     });
     return ok({ ok: true, movimientos: rows, n: rows.length });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+// Cédulas de ingreso (renta personas naturales) para los desplegables del form.
+const CEDULAS = [
+  { value: 'trabajo', label: 'Salario (rentas de trabajo)' },
+  { value: 'honorarios', label: 'Honorarios' },
+  { value: 'no_laboral', label: 'Rentas no laborales (negocio, ventas)' },
+  { value: 'capital', label: 'Rentas de capital (arriendos, rendimientos)' },
+  { value: 'dividendos', label: 'Dividendos' },
+  { value: 'pension', label: 'Pensiones' },
+];
+
+/** Catálogos para el formulario de ingresos (entidades, terceros, cédulas). Auth Google. */
+export async function pwaCatalogosHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try {
+    const [entidades, terceros] = await Promise.all([listEntidades(), listTerceros()]);
+    return ok({ ok: true, entidades, terceros, cedulas: CEDULAS });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/** Registra (POST) o lista (GET) ingresos. Auth Google (equipo financiero). */
+export async function pwaIngresoHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const g = (k) => url.searchParams.get(k);
+    try {
+      const rows = await queryIngresos({ entidad_id: g('entidad_id'), desde: g('desde'), hasta: g('hasta'), limit: g('limit') });
+      return ok({ ok: true, ingresos: rows, n: rows.length });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+
+  const body = await parseBody(req);
+  const entidad_id = Number(body.entidad_id);
+  if (!entidad_id) return bad('entidad requerida');
+  if (!body.cedula) return bad('tipo de ingreso (cédula) requerido');
+  const monto = Number(body.monto);
+  if (!(monto > 0)) return bad('monto inválido');
+  const fecha = String(body.fecha || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+  try {
+    let tercero_id = null;
+    if (body.tercero_nombre) {
+      tercero_id = await findOrCreateTercero({ nombre: body.tercero_nombre, nit: body.tercero_nit, tipo: 'pagador' });
+    }
+    const idempotency_key = deriveIngresoKey({ entidad_id, fecha, monto, concepto: body.concepto, cedula: body.cedula, idempotency_key: body.idempotency_key });
+    const { inserted, row } = await insertIngreso({
+      entidad_id, fecha, cedula: body.cedula, concepto: body.concepto, tercero_id, monto,
+      moneda: body.moneda, retencion_fuente: Number(body.retencion_fuente) || 0,
+      actividad: body.actividad, notas: body.notas, origen: 'App', idempotency_key,
+    });
+    return ok({
+      ok: true, registrado: inserted, ya_existia: !inserted, id: row && row.id,
+      mensaje: inserted ? 'Ingreso registrado ✅' : 'Ese ingreso ya estaba registrado (no se duplicó).',
+    });
   } catch (e) {
     return bad(e.message, 422);
   }

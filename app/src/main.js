@@ -24,6 +24,7 @@ import { procesarRecibo } from './utils/imageProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
 import { loadHistory, addHistory, getHistory, clearHistory } from './services/history.js';
 import { renderDashboard } from './ui/dashboard.js';
+import { renderIngresos } from './ui/ingresos.js';
 
 const V = (id) => document.getElementById(id);
 const today = () => hoyISO();
@@ -49,6 +50,7 @@ function go(s) {
   if (s === 'history') renderH();
   if (s === 'cet') initCET();
   if (s === 'dash') renderDashboard();
+  if (s === 'ingreso') renderIngresos();
 }
 
 function toast(msg, dur = 3000) {
