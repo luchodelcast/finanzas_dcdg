@@ -127,6 +127,77 @@ export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
   return { total: agg[0].total, movimientos: agg[0].n, por_categoria: desglose };
 }
 
+// ---------------------------------------------------------------------------
+// Ingresos / entidades / terceros (Horizonte 1 contable).
+// ---------------------------------------------------------------------------
+
+/** Entidades activas (Luis, Carolina, Ahinoa, sociedades…). */
+export async function listEntidades(sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query('select id, nombre, tipo, pais, moneda from entidades where activo order by tipo, nombre', []);
+}
+
+/** Terceros (pagadores/proveedores) para autocompletar. */
+export async function listTerceros(sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query('select id, nombre, nit from terceros order by nombre limit 500', []);
+}
+
+/** Busca un tercero por nombre (+nit) o lo crea. Devuelve su id (o null). */
+export async function findOrCreateTercero({ nombre, nit, tipo }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const n = String(nombre || '').trim();
+  if (!n) return null;
+  const found = await sql.query(
+    "select id from terceros where lower(nombre) = lower($1) and coalesce(nit,'') = coalesce($2,'') limit 1",
+    [n, nit || null]
+  );
+  if (found.length) return found[0].id;
+  const ins = await sql.query(
+    'insert into terceros (nombre, nit, tipo) values ($1, $2, $3) returning id',
+    [n, nit || null, tipo || null]
+  );
+  return ins[0].id;
+}
+
+/** Inserta un ingreso (idempotente por idempotency_key). */
+export async function insertIngreso(i, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const cols = ['entidad_id', 'fecha', 'cedula', 'concepto', 'tercero_id', 'cuenta_id', 'monto',
+    'moneda', 'retencion_fuente', 'actividad', 'notas', 'origen', 'idempotency_key'];
+  const vals = [i.entidad_id, i.fecha, i.cedula, i.concepto || null, i.tercero_id || null, i.cuenta_id || null,
+    i.monto, i.moneda || 'COP', i.retencion_fuente || 0, i.actividad || null, i.notas || null,
+    i.origen || null, i.idempotency_key];
+  const ph = vals.map((_, x) => `$${x + 1}`).join(', ');
+  const ins = await sql.query(
+    `insert into ingresos (${cols.join(', ')}) values (${ph})
+     on conflict (idempotency_key) do nothing returning *`, vals);
+  if (ins.length) return { inserted: true, row: ins[0] };
+  const prev = await sql.query('select * from ingresos where idempotency_key = $1 limit 1', [i.idempotency_key]);
+  return { inserted: false, row: prev[0] || null };
+}
+
+/** Lista ingresos (con nombre de entidad y tercero). */
+export async function queryIngresos({ entidad_id, desde, hasta, limit = 50 }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (entidad_id) { params.push(entidad_id); cond.push(`i.entidad_id = $${params.length}`); }
+  if (desde) { params.push(desde); cond.push(`i.fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`i.fecha <= $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  params.push(Math.min(Number(limit) || 50, 500));
+  return sql.query(
+    `select i.id, i.fecha, i.cedula, i.concepto, i.monto, i.moneda, i.retencion_fuente,
+            i.actividad, e.nombre as entidad, t.nombre as tercero
+       from ingresos i
+       join entidades e on e.id = i.entidad_id
+       left join terceros t on t.id = i.tercero_id
+       ${where}
+      order by i.fecha desc, i.creado_en desc
+      limit $${params.length}`, params);
+}
+
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

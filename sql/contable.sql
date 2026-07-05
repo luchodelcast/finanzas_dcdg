@@ -119,6 +119,12 @@ insert into entidades (nombre, tipo, pais, moneda, propietario_id)
 select 'Ahinoa', 'negocio', 'CO', 'COP', e.id from entidades e where e.nombre = 'Carolina'
 on conflict (nombre) do nothing;
 
+-- Carolina Díaz Granados SAS: sociedad ya constituida (aún no operada). Se deja
+-- modelada para cuando se decida canalizar Ahinoa por ella.
+insert into entidades (nombre, tipo, pais, moneda, propietario_id)
+select 'Carolina Díaz Granados SAS', 'sociedad', 'CO', 'COP', e.id from entidades e where e.nombre = 'Carolina'
+on conflict (nombre) do nothing;
+
 insert into usuarios (email, nombre, rol, pais) values
   ('luis@iwin.im',       'Luis',                 'owner',            'CO'),
   ('carodz2@gmail.com',  'Carolina',             'owner',            'CO'),
