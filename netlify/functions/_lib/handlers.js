@@ -47,6 +47,27 @@ export async function resumenHandler(req) {
 }
 
 /**
+ * Handler de REGISTRO para la PWA, autenticado con el login de Google (no con el
+ * token de servicio). Pasa por `registrarMovimiento`, así la app comparte el
+ * mismo dedup + timestamp + reglas iWin/Delca2 que la ruta de SilvIA.
+ */
+export async function pwaRegistrarHandler(req) {
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try {
+    await verifyFinanceUser(bearer);
+  } catch (e) {
+    return bad(e.message, e.status || 401);
+  }
+  const body = await parseBody(req);
+  try {
+    return ok(await registrarMovimiento({ ...body, origen: body.origen || 'App' }));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
  * Handler de clasificación para la PWA (texto o imagen), autenticado con el
  * login de Google del usuario (no con el token de servicio). Usa la
  * ANTHROPIC_API_KEY del backend, así el navegador nunca necesita la API key.

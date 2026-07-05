@@ -131,6 +131,19 @@ export async function appendRow(sheetName, rowValues) {
   });
 }
 
+/**
+ * Actualiza celdas de un rango A1 (values.update). Para nombres SIN emoji.
+ * @param {string} rangeA1  p.ej. "Registro Gastos!G12:J12"
+ * @param {Array<Array>} values  filas de valores
+ */
+export async function updateValues(rangeA1, values) {
+  const id = config.spreadsheetId();
+  return authedFetch(
+    `${SHEETS_BASE}/${id}/values/${encodeURIComponent(rangeA1)}?valueInputOption=USER_ENTERED`,
+    { method: 'PUT', body: JSON.stringify({ values }) }
+  );
+}
+
 /** Lee un rango A1 (values API; usar solo con nombres SIN emoji). */
 export async function readRange(rangeA1) {
   const id = config.spreadsheetId();
