@@ -150,3 +150,5 @@ pegan en `buildTools()` de `sl-crm-live`, gateadas por `isFinanceUser`.
   (`netlify/functions/_lib/classify.js`) — no se duplica la clasificación.
 
 Ver `docs/` para detalle de arquitectura, reglas y cuentas.
+**Para dejar el sistema operativo, sigue [`docs/despliegue.md`](docs/despliegue.md)** —
+enlazar Netlify, crear la cuenta de servicio de Google y configurar SilvIA.
