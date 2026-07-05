@@ -42,7 +42,7 @@ export const config = {
   // Integración SilvIA
   apiToken: () => requireEnv('DCDG_API_TOKEN'),
   finanzasUsers: () =>
-    String(env('FINANZAS_USERS', 'luis@iwin.im,carodz2@gmail.com'))
+    String(env('FINANZAS_USERS', 'luis@iwin.im,carodz2@gmail.com,angela@iwin.im,ma.isabel@iwin.im,santiago@iwin.im'))
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),

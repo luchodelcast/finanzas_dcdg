@@ -80,11 +80,15 @@ El sistema lo operará el equipo financiero/contable. Se propone un modelo de
 | Persona | Función | Rol propuesto |
 |---|---|---|
 | Luis / Carolina | Dueños | `owner` — ven todo, aprueban |
-| Angela Guerrero | Líder administrativa y financiera | `admin_financiero` |
-| María Isabel Bolaños | Líder de facturación y tesorería | `tesoreria` |
-| Santiago Rodríguez | Contador — sociedades Colombia | `contador` (CO) |
-| Marco Reina | Contador — sociedades EEUU | `contador` (US) |
-| Juan Barrera | Contador — sociedades México | `contador` (MX) |
+| Angela Guerrero · `angela@iwin.im` | Líder administrativa y financiera | `admin_financiero` — **acceso finanzas familiares** |
+| María Isabel Bolaños · `ma.isabel@iwin.im` | Líder de facturación y tesorería | `tesoreria` — **acceso finanzas familiares** |
+| Santiago Rodríguez · `santiago@iwin.im` | Contador — sociedades Colombia | `contador` (CO) — **acceso finanzas familiares** |
+| Marco Reina | Contador — sociedades EEUU | `contador` (US) — Horizonte 2 |
+| Juan Barrera | Contador — sociedades México | `contador` (MX) — Horizonte 2 |
+
+Acceso concedido a Angela, María Isabel y Santiago para las **finanzas
+familiares** (Horizonte 1). Marco y Juan entran con el Horizonte 2 (sociedades
+US/MX). El acceso se controla con `FINANZAS_USERS` (env) + la tabla `usuarios`.
 
 - **Alcance por entidad:** cada usuario ve las entidades que le corresponden
   (p. ej. finanzas familiares CO para Angela/María Isabel/Santiago; las
@@ -123,6 +127,40 @@ El sistema lo operará el equipo financiero/contable. Se propone un modelo de
 - [ ] Reglas del IBC (§3): costos reales vs presunción.
 - [ ] Catálogo de **tipos de ingreso** (cédulas) que aplican a Luis y Carolina.
 - [ ] Lista de **activos y pasivos** a incluir en el patrimonio.
+
+## 8.b Catálogo de ingresos y casos particulares (insumos jul-2026)
+
+Ingresos de Luis y Carolina y cómo se modelan (`ingresos.cedula`):
+
+| Fuente | Persona | Cédula propuesta | Notas |
+|---|---|---|---|
+| Salario | Luis y Carolina | `trabajo` (laboral) | |
+| Honorarios | Luis y Carolina | `honorarios` | Base típica del IBC de independientes |
+| Transferencias Delca2 | Luis (y/o Carolina) | `dividendos` *(por confirmar)* | Clasificación a confirmar en otra sesión |
+| **Ahinoa** (venta de prendas) | Carolina | `no_laboral` | Negocio informal — ver abajo |
+
+### Caso Ahinoa (negocio informal de Carolina)
+Marca bajo la cual Carolina vende prendas **confeccionadas por tejedoras que
+contrata** o **compradas a proveedores**. Modelado:
+- **Entidad** `Ahinoa` (tipo `negocio`), propiedad de Carolina. Se lleva su
+  **mini P&L**: ingresos por ventas − costos (tejedoras + compra a proveedores)
+  = utilidad, que **es ingreso de Carolina** para renta e IBC.
+- Los **costos** (tejedoras, proveedores) van en `costos_actividad` con
+  `actividad='Ahinoa'` → depuran la base. **Conservar soportes** es clave.
+- Los ingresos entran a **cuentas personales** y, cuando son en efectivo, se
+  **consignan en las cuentas de ahorro de los hijos** (Luis Alberto y Luciano).
+
+> ⚠️ **Banderas fiscales (para el contador):**
+> 1. Aunque el dinero de Ahinoa se reciba/consigne en cuentas de terceros
+>    (incluidos los hijos), **sigue siendo ingreso de Carolina** para renta/IBC.
+> 2. Consignaciones en **cuentas de los hijos** pueden aparecer en la **exógena**
+>    y generar preguntas de la DIAN/UGPP → hay que dejarlas **trazadas** (qué
+>    ingreso de Ahinoa corresponde a cada consignación).
+> 3. Evaluar la conveniencia de **formalizar Ahinoa** (RUT/actividad) — decisión
+>    del contador; el sistema ya lo modela como negocio aparte para cuando llegue.
+
+Las cuentas de los hijos se registran en `cuentas_bancarias` con su titular
+(entidades `menor`), para poder rastrear a dónde llega cada ingreso.
 
 ## 9. Fases y siguiente paso
 
