@@ -124,6 +124,40 @@ export async function movimientosHandler(req) {
   }
 }
 
+/**
+ * Handlers de CONSULTA para la PWA (dashboard), autenticados con el login de
+ * Google del usuario (no con el token de servicio). Leen de la DB.
+ */
+export async function pwaResumenHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const body = req.method === 'POST' ? await parseBody(req) : {};
+  const g = (k) => url.searchParams.get(k) || body[k];
+  try {
+    return ok(await resumen({ periodo: g('periodo'), categoria: g('categoria'), quien: g('quien') }));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+export async function pwaMovimientosHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const body = req.method === 'POST' ? await parseBody(req) : {};
+  const g = (k) => url.searchParams.get(k) || body[k];
+  try {
+    const rows = await queryMovimientos({
+      desde: g('desde'), hasta: g('hasta'), categoria: g('categoria'),
+      quien: g('quien'), texto: g('texto'), limit: g('limit'),
+    });
+    return ok({ ok: true, movimientos: rows, n: rows.length });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
 /** Handler de clasificación (sin escribir en Sheets). */
 export async function clasificarHandler(req) {
   if (req.method !== 'POST') return bad('Método no permitido', 405);
