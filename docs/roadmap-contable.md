@@ -119,6 +119,10 @@ US/MX). El acceso se controla con `FINANZAS_USERS` (env) + la tabla `usuarios`.
 - **Coexistencia con QuickBooks (CO/US/MX):** el sistema propio empieza como
   **capa de consolidación + operación + gerencial por encima** de lo existente;
   se decide **entidad por entidad** si migra o se integra. No un *big bang*.
+- **Conciliación con extractos = fuente de verdad final:** la captura en tiempo
+  real (SilvIA/PWA/EmailBot/portales) es **provisional**; el **extracto bancario**
+  deja todo "en firme" al conciliarse. El esquema ya contempla estados de
+  conciliación. Ver [`docs/conciliacion.md`](conciliacion.md).
 
 ## 8. Preguntas abiertas para el equipo
 
