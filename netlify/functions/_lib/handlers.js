@@ -12,6 +12,7 @@ import {
   insertIngreso, queryIngresos,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
+import { registrarCuenta } from './cuentas.js';
 import { clasificar } from './classify.js';
 import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson } from './anthropic.js';
@@ -31,6 +32,19 @@ export function makeRegistrarHandler(tipo) {
       return bad(e.message, 422);
     }
   };
+}
+
+/** Handler de alta de cuenta/tarjeta en `⚙️ CUENTAS` (token de servicio; SilvIA). */
+export async function registrarCuentaHandler(req) {
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const auth = authorize(req);
+  if (!auth.ok) return auth.response;
+  const body = await parseBody(req);
+  try {
+    return ok(await registrarCuenta(body));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
 }
 
 /** Handler de resumen/consulta. */
