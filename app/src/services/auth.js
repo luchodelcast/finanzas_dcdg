@@ -14,6 +14,12 @@ import { getConfig } from '../config/env.js';
 // sin exponer la API key). spreadsheets → escribir en el Sheet desde la PWA.
 const SCOPE = 'openid email https://www.googleapis.com/auth/spreadsheets';
 
+// Marca en localStorage de que el usuario YA autorizó una vez en este dispositivo.
+// Con eso, en aperturas siguientes pedimos el token en SILENCIO (sin la pantalla
+// de consentimiento), y solo se muestra la primera vez o si se fuerza.
+const GRANTED_KEY = 'dcdg_oauth_granted';
+const yaAutorizo = () => { try { return localStorage.getItem(GRANTED_KEY) === '1'; } catch (_) { return false; } };
+
 let _token = null;
 let _expiresAt = 0;
 let _tokenClient = null;
@@ -59,9 +65,14 @@ export function getAccessToken({ forcePrompt = false } = {}) {
         }
         _token = resp.access_token;
         _expiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000;
+        try { localStorage.setItem(GRANTED_KEY, '1'); } catch (_) { /* noop */ }
         resolve(_token);
       };
-      client.requestAccessToken({ prompt: _token ? '' : 'consent' });
+      // Si ya autorizó antes en este dispositivo, renueva el token en SILENCIO
+      // (prompt vacío = sin popup, mientras la sesión de Google siga activa).
+      // La pantalla de consentimiento solo aparece la primera vez o si se fuerza.
+      const prompt = (forcePrompt || !yaAutorizo()) ? 'consent' : '';
+      client.requestAccessToken({ prompt });
     } catch (e) {
       reject(e);
     }
@@ -79,6 +90,7 @@ export function signOut() {
   }
   _token = null;
   _expiresAt = 0;
+  try { localStorage.removeItem(GRANTED_KEY); } catch (_) { /* noop */ }
 }
 
 /** ¿Hay una sesión activa? */
