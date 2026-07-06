@@ -297,6 +297,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       <div class="act-ico">📋</div>
       <div class="act-txt"><strong>Crear CET</strong><span>Comprobante electrónico de transacción</span></div>
     </button>
+    <button class="act-btn a-txt" data-go="transfer" style="margin-top:10px">
+      <div class="act-ico">🔁</div>
+      <div class="act-txt"><strong>Transferencia entre cuentas</strong><span>Mover dinero entre tus cuentas (COP o USD)</span></div>
+    </button>
   </div>
 
   <div class="card">
@@ -313,6 +317,27 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <div id="dash-seg"></div>
   <div id="dash-body"></div>
   <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── TRANSFERENCIA ── -->
+<div class="scr" id="scr-transfer">
+  <div class="card">
+    <div class="card-ttl">Transferencia entre cuentas</div>
+    <div class="row2">
+      <div class="fld"><label>Fecha</label><input type="date" id="tr-fecha"></div>
+      <div class="fld"><label>Moneda</label><select id="tr-moneda"><option value="COP">COP</option><option value="USD">USD</option></select></div>
+    </div>
+    <div class="fld"><label>Monto</label><input type="number" class="big-amt" id="tr-monto" placeholder="0" inputmode="numeric"></div>
+    <div class="fld"><label>Cuenta origen</label><select id="tr-origen"></select></div>
+    <div class="fld"><label>Cuenta destino</label><select id="tr-destino"></select></div>
+    <div class="fld"><label>Concepto (opcional)</label><input type="text" id="tr-desc" placeholder="Ej: paso de Delca2 a DollarApp"></div>
+    <div class="fld"><label>¿Quién la hizo?</label><select id="tr-who"><option value="Luis">Luis</option><option value="Carolina">Carolina</option></select></div>
+    <div id="tr-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-s" data-go="home" style="flex:.55">✕ Cancelar</button>
+    <button class="btn btn-p" id="btn-save-transfer" data-act="registrarTransfer">✓ Registrar</button>
+  </div>
 </div>
 
 <!-- ── REGISTRAR INGRESO ── -->
@@ -382,9 +407,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       <div class="cfb alta" id="cf-badge">Alta</div>
     </div>
 
-    <div class="fld">
-      <label>Monto (COP)</label>
-      <input type="number" class="big-amt" id="cf-monto" placeholder="0" inputmode="numeric">
+    <div class="row2" style="grid-template-columns:1.6fr 1fr">
+      <div class="fld"><label>Monto</label><input type="number" class="big-amt" id="cf-monto" placeholder="0" inputmode="numeric"></div>
+      <div class="fld"><label>Moneda</label><select id="cf-moneda"><option value="COP">COP</option><option value="USD">USD</option></select></div>
     </div>
     <div class="fld"><label>Fecha</label><input type="date" id="cf-fecha"></div>
 

@@ -33,6 +33,7 @@ const fmtDate = (d) => d.toLocaleDateString('es-CO', { weekday: 'short', day: 'n
 // ── Estado de UI ──────────────────────────────────────────
 let curImg = null; // { base64, mediaType, prev }
 let curIsIwin = false;
+let _accts = []; // cuentas cargadas (para los selects de transferencia)
 
 // ── Navegación ────────────────────────────────────────────
 function go(s) {
@@ -51,6 +52,7 @@ function go(s) {
   if (s === 'cet') initCET();
   if (s === 'dash') renderDashboard();
   if (s === 'ingreso') renderIngresos();
+  if (s === 'transfer') initTransfer();
 }
 
 function toast(msg, dur = 3000) {
@@ -143,6 +145,8 @@ async function cargarCuentas() {
 }
 
 function buildAccountsDropdown(accounts) {
+  _accts = accounts || [];
+  fillTransferAccts();
   const sel = V('cf-mth');
   const currentVal = sel.value;
   sel.innerHTML = '';
@@ -381,12 +385,13 @@ async function doSheet(confirmar = false) {
   const metodo = V('cf-mth').value;
   const notas = V('cf-note').value;
   const tarjeta = V('cf-tarjeta').value.trim();
+  const moneda = V('cf-moneda') ? V('cf-moneda').value : 'COP';
 
   try {
     // El backend clasifica lo que falte, aplica reglas iWin/Delca2, deduplica y
     // escribe el gasto + el flujo EMPRESAS. Aquí ya mandamos categoría/cuenta.
     const r = await apiRegistrar({
-      tipo: 'gasto', fecha, monto, categoria: cat, subcategoria: sub,
+      tipo: 'gasto', fecha, monto, moneda, categoria: cat, subcategoria: sub,
       descripcion: desc, quien_pago: quien, metodo_pago: metodo,
       tarjeta_ultimos4: tarjeta, notas, confirmar,
     });
@@ -583,10 +588,77 @@ async function registrarCET() {
   }
 }
 
+// ── Transferencia entre cuentas ───────────────────────────
+function fillTransferAccts() {
+  const nombres = (_accts && _accts.length ? _accts : CUENTAS_FALLBACK).map((a) => a.name).filter(Boolean);
+  ['tr-origen', 'tr-destino'].forEach((id) => {
+    const sel = V(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '';
+    nombres.forEach((n) => {
+      const o = document.createElement('option');
+      o.value = o.textContent = n;
+      sel.appendChild(o);
+    });
+    if (prev) sel.value = prev;
+  });
+  // Por defecto, destino distinto al origen.
+  if (V('tr-destino') && V('tr-origen') && V('tr-destino').value === V('tr-origen').value && V('tr-destino').options.length > 1) {
+    V('tr-destino').selectedIndex = 1;
+  }
+}
+
+function initTransfer() {
+  fillTransferAccts();
+  V('tr-fecha').value = today();
+  V('tr-msg').textContent = '';
+}
+
+async function registrarTransfer() {
+  if (!isSignedIn()) {
+    const okc = await connect({ forcePrompt: true });
+    if (!okc) return;
+  }
+  const fecha = V('tr-fecha').value || today();
+  const monto = parseFloat(V('tr-monto').value) || 0;
+  const moneda = V('tr-moneda').value;
+  const cOrigen = V('tr-origen').value;
+  const cDestino = V('tr-destino').value;
+  const desc = V('tr-desc').value.trim();
+  const quien = V('tr-who').value;
+  const msg = V('tr-msg');
+  if (!(monto > 0)) { msg.textContent = 'Ingresa un monto válido.'; msg.style.color = 'var(--red)'; return; }
+  if (!cOrigen || !cDestino || cOrigen === cDestino) {
+    msg.textContent = 'Elige cuentas de origen y destino distintas.'; msg.style.color = 'var(--red)'; return;
+  }
+  go('proc');
+  V('proc-msg').textContent = 'Registrando transferencia…';
+  try {
+    await apiRegistrar({
+      tipo: 'transferencia', fecha, monto, moneda,
+      cuenta_origen: cOrigen, cuenta_destino: cDestino, descripcion: desc, quien_pago: quien,
+    });
+    const fmt = moneda === 'USD' ? 'USD ' + monto.toLocaleString('en-US') : formatCOP(monto);
+    addHistory({ fecha, monto, cat: 'Transferencia', sub: '', desc: desc || `${cOrigen} → ${cDestino}`, quien, ts: new Date().toISOString() });
+    renderHomeH();
+    V('ok-amt').textContent = fmt;
+    V('ok-det').textContent = `Transferencia · ${cOrigen} → ${cDestino}`;
+    go('ok');
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) {
+      const okc = await connect({ forcePrompt: true });
+      if (okc) return registrarTransfer();
+    }
+    msg.textContent = 'Error: ' + e.message; msg.style.color = 'var(--red)';
+    go('transfer');
+  }
+}
+
 // ── Cableado de eventos (delegación) ──────────────────────
 const ACTIONS = {
   saveSetup, saveCfg, resetAll, signOut, doText, submit,
-  abrirMailCET, registrarCET, clearHist,
+  abrirMailCET, registrarCET, clearHist, registrarTransfer,
   trigCam: () => V('cam-in').click(),
   trigGal: () => V('gal-in').click(),
 };

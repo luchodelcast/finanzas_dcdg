@@ -35,13 +35,19 @@ import {
   formatCOP,
 } from '../../../app/src/utils/formatters.js';
 
-const TIPOS = new Set(['gasto', 'pago', 'factura']);
+const TIPOS = new Set(['gasto', 'pago', 'factura', 'transferencia']);
 
 const ETIQUETA_TIPO = {
   gasto: '🤖 SilvIA · gasto',
   pago: '🤖 SilvIA · pago',
   factura: '🤖 SilvIA · factura',
+  transferencia: '🔁 transferencia',
 };
+
+/** Formatea un monto según la moneda (COP con separador local; USD con prefijo). */
+function fmtMonto(monto, moneda) {
+  return moneda === 'USD' ? 'USD ' + Number(monto || 0).toLocaleString('en-US') : formatCOP(monto);
+}
 
 /**
  * Registra un movimiento financiero en la DB (y lo espeja en el Sheet).
@@ -51,11 +57,19 @@ const ETIQUETA_TIPO = {
 export async function registrarMovimiento(mov = {}) {
   const tipo = String(mov.tipo || 'gasto').toLowerCase();
   if (!TIPOS.has(tipo)) {
-    throw new Error(`tipo inválido: "${mov.tipo}". Usa gasto | pago | factura.`);
+    throw new Error(`tipo inválido: "${mov.tipo}". Usa gasto | pago | factura | transferencia.`);
   }
 
   const monto = parseMonto(mov.monto);
   if (monto == null || monto <= 0) throw new Error('monto inválido o ausente');
+  const moneda = String(mov.moneda || 'COP').toUpperCase() === 'USD' ? 'USD' : 'COP';
+
+  // Una TRANSFERENCIA entre cuentas propias NO es un gasto: no se clasifica, no
+  // aplica reglas iWin/Delca2 y NO cuenta en los totales de gasto. Se maneja aparte.
+  if (tipo === 'transferencia') {
+    return registrarTransferencia({ ...mov, monto, moneda });
+  }
+
   const descripcion = String(mov.descripcion || '').trim();
   if (!descripcion) throw new Error('descripcion requerida');
 
@@ -144,7 +158,7 @@ export async function registrarMovimiento(mov = {}) {
   const notas = [notasBase, mov.notas].filter(Boolean).join(' — ');
 
   const { inserted, row } = await insertMovimiento({
-    fecha, tipo, categoria, subcategoria, descripcion, monto,
+    fecha, tipo, categoria, subcategoria, descripcion, monto, moneda,
     metodo_pago: metodo, quien_pago: titular, tarjeta, notas, origen,
     idempotency_key: idempotencyKey,
   });
@@ -153,8 +167,8 @@ export async function registrarMovimiento(mov = {}) {
   if (!inserted) {
     return {
       ok: true, registrado: false, ya_existia: true, id: row && row.id,
-      tipo, fecha, monto, monto_fmt: formatCOP(monto),
-      mensaje: `Ya estaba anotado ✅ ${formatCOP(monto)} "${descripcion}" (${fecha}). No lo dupliqué.`,
+      tipo, fecha, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
+      mensaje: `Ya estaba anotado ✅ ${fmtMonto(monto, moneda)} "${descripcion}" (${fecha}). No lo dupliqué.`,
     };
   }
 
@@ -172,10 +186,63 @@ export async function registrarMovimiento(mov = {}) {
     ok: true,
     registrado: true,
     id: movId,
-    tipo, fecha, categoria, subcategoria, monto, monto_fmt: formatCOP(monto),
+    tipo, fecha, categoria, subcategoria, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
     metodo_pago: metodo, quien_pago: titular, tarjeta,
     adelanto_empresas: emp.adelanto, retiro_delca2: emp.retiroDelca2,
-    mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${formatCOP(monto)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
+    mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${fmtMonto(monto, moneda)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
+  };
+}
+
+/**
+ * Registra una TRANSFERENCIA entre cuentas propias. No es un gasto: no se
+ * clasifica, no corre reglas iWin/Delca2, NO se espeja al Sheet de gastos y NO
+ * cuenta en los totales de gasto (el resumen la excluye). Guarda cuenta origen,
+ * cuenta destino, moneda e idempotencia.
+ */
+async function registrarTransferencia(mov) {
+  const monto = mov.monto;
+  const moneda = mov.moneda === 'USD' ? 'USD' : 'COP';
+  const fecha = normalizarFecha(mov.fecha);
+  const origen = String(mov.origen || 'App');
+  const titular = String(mov.quien_pago || '').trim() || 'Luis';
+  const cuentaOrigen = String(mov.cuenta_origen || mov.metodo_pago || '').trim();
+  const cuentaDestino = String(mov.cuenta_destino || '').trim();
+  if (!cuentaOrigen || !cuentaDestino) {
+    throw new Error('la transferencia requiere cuenta de origen y de destino');
+  }
+  const descripcion = String(mov.descripcion || '').trim()
+    || `Transferencia ${cuentaOrigen} → ${cuentaDestino}`;
+
+  let idempotencyKey = deriveIdempotencyKey({
+    tipo: 'transferencia', fecha, monto, descripcion,
+    idempotency_key: mov.idempotency_key, source_msg_id: mov.source_msg_id,
+  });
+  if (mov.confirmar && !mov.idempotency_key && !mov.source_msg_id) {
+    idempotencyKey += ':forced:' + Date.now();
+  }
+
+  const notas = ['🔁 Transferencia', mov.notas].filter(Boolean).join(' — ');
+  const { inserted, row } = await insertMovimiento({
+    fecha, tipo: 'transferencia', categoria: 'Transferencia', subcategoria: '',
+    descripcion, monto, moneda, metodo_pago: cuentaOrigen, quien_pago: titular,
+    tarjeta: '', cuenta_destino: cuentaDestino, notas, origen,
+    idempotency_key: idempotencyKey,
+  });
+
+  if (!inserted) {
+    return {
+      ok: true, registrado: false, ya_existia: true, id: row && row.id, tipo: 'transferencia',
+      fecha, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
+      mensaje: `Esa transferencia ya estaba registrada (no la dupliqué).`,
+    };
+  }
+  await logEvento('alta', origen, { id: row.id, tipo: 'transferencia', monto, moneda });
+
+  return {
+    ok: true, registrado: true, id: row.id, tipo: 'transferencia',
+    fecha, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
+    cuenta_origen: cuentaOrigen, cuenta_destino: cuentaDestino, quien_pago: titular,
+    mensaje: `Transferencia registrada ✅ ${fmtMonto(monto, moneda)} · ${cuentaOrigen} → ${cuentaDestino}.`,
   };
 }
 
