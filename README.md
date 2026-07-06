@@ -58,6 +58,7 @@ finanzas_dcdg/
 │   ├── api-resumen.js                  # GET|POST /api/resumen
 │   └── api-clasificar.js               # POST /api/clasificar
 ├── AUTOFIX.md                          # Procedimiento del autofix (reportes WhatsApp → fix)
+├── AUTOBUILD.md                        # Procedimiento del autobuild (issues → funcionalidad nueva)
 ├── silvia/finanzas-tools.js            # Tools delgadas para pegar en SilvIA (sl-crm-live)
 ├── scripts/                            # Google Apps Scripts (EmailBot v4, Corregir)
 ├── legacy/DCDG_Captura_v5.html         # Monolito original (referencia de paridad)
@@ -162,3 +163,13 @@ una sesión programada de Claude Code lo arregla siguiendo [`AUTOFIX.md`](AUTOFI
 (triage → rama → PR → CI → merge/borrador). Al cerrar, se avisa por WhatsApp. El
 procedimiento es **conservador**: nada que toque Sheets, clasificación o el EmailBot
 se auto-mergea sin OK del dueño.
+
+## Autobuild (issues → funcionalidad nueva)
+
+Luis puede abrir directamente un GitHub Issue aquí (label `autobuild`) describiendo
+una mejora o funcionalidad nueva que quiere; una sesión programada de Claude Code
+la construye siguiendo [`AUTOBUILD.md`](AUTOBUILD.md) (triage → rama → PR → CI →
+merge/borrador). Si el pedido es grande o ambiguo, el agente abre primero una
+**propuesta** (issue con label `propuesta`) y espera aprobación antes de construir.
+Mismo criterio conservador que autofix: nada que toque Sheets, clasificación,
+EmailBot o esquema se auto-mergea sin OK del dueño.
