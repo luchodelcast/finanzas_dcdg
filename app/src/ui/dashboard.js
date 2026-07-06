@@ -21,8 +21,7 @@ const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /** Devuelve { param, desde, hasta, label } para el periodo seleccionado. */
-function periodRange(key) {
-  const hoy = new Date();
+export function periodRange(key, hoy = new Date()) {
   if (key === 'mespasado') {
     const ini = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
     const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
@@ -37,6 +36,32 @@ function periodRange(key) {
   return { desde: iso(ini), hasta: iso(hoy), label: 'Este mes' };
 }
 
+/** Devuelve el rango equivalente del periodo INMEDIATAMENTE ANTERIOR al seleccionado. */
+export function periodRangeAnterior(key, hoy = new Date()) {
+  if (key === 'mespasado') {
+    const ini = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+    const fin = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 0);
+    return { desde: iso(ini), hasta: iso(fin), label: 'Hace 2 meses' };
+  }
+  if (key === 'anio') {
+    const ini = new Date(hoy.getFullYear() - 1, 0, 1);
+    const fin = new Date(hoy.getFullYear() - 1, hoy.getMonth(), hoy.getDate());
+    return { desde: iso(ini), hasta: iso(fin), label: String(hoy.getFullYear() - 1) };
+  }
+  // mes en curso → el mes calendario anterior completo
+  const ini = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+  return { desde: iso(ini), hasta: iso(fin), label: 'Mes anterior' };
+}
+
+/** % de variación de `actual` vs `anterior` (null si no hay base de comparación). */
+export function variacionPct(actual, anterior) {
+  const a = Number(actual) || 0;
+  const b = Number(anterior) || 0;
+  if (!b) return null;
+  return ((a - b) / Math.abs(b)) * 100;
+}
+
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
@@ -47,15 +72,28 @@ function segHTML() {
     `<button class="seg-btn${k === _periodo ? ' on' : ''}" data-per="${k}">${l}</button>`).join('')}</div>`;
 }
 
-function barsHTML(porCategoria) {
+/** HTML del indicador de variación (▲/▼ + %). `compact` omite el sufijo "vs. …". */
+function variacionHTML(actual, anterior, { compact = false, sufijo = '' } = {}) {
+  const pct = variacionPct(actual, anterior);
+  if (pct == null) return '';
+  const bajo = pct <= 0;
+  const cls = bajo ? 'var-down' : 'var-up';
+  const arrow = bajo ? '▼' : '▲';
+  const texto = `${arrow} ${Math.abs(pct).toFixed(compact ? 0 : 1)}%${sufijo}`;
+  return `<span class="${compact ? 'bar-var' : 'dash-var'} ${cls}">${texto}</span>`;
+}
+
+function barsHTML(porCategoria, porCategoriaAnterior) {
   if (!porCategoria || !porCategoria.length) return '<div class="empty">Sin gastos en este periodo</div>';
   const max = Math.max(...porCategoria.map((c) => Number(c.monto) || 0)) || 1;
+  const prevMap = new Map((porCategoriaAnterior || []).map((c) => [c.categoria, Number(c.monto) || 0]));
   return porCategoria.map((c, i) => {
     const monto = Number(c.monto) || 0;
     const pct = Math.max(2, Math.round((monto / max) * 100));
     const color = PALETTE[i % PALETTE.length];
+    const varHtml = prevMap.has(c.categoria) ? variacionHTML(monto, prevMap.get(c.categoria), { compact: true }) : '';
     return `<div class="bar-row">
-      <div class="bar-head"><span class="bar-cat">${esc(c.categoria)}</span><span class="bar-amt">${esc(c.monto_fmt || formatCOP(monto))}</span></div>
+      <div class="bar-head"><span class="bar-cat">${esc(c.categoria)}</span><span class="bar-amt">${esc(c.monto_fmt || formatCOP(monto))} ${varHtml}</span></div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
@@ -79,22 +117,27 @@ function skeleton() {
 async function load() {
   skeleton();
   const { desde, hasta, label } = periodRange(_periodo);
+  const anterior = periodRangeAnterior(_periodo);
   const periodo = `${desde}..${hasta}`;
+  const periodoAnterior = `${anterior.desde}..${anterior.hasta}`;
   try {
-    const [res, movsRes] = await Promise.all([
+    const [res, movsRes, resAnterior] = await Promise.all([
       getResumen({ periodo }),
       getMovimientos({ desde, hasta, limit: 20 }),
+      getResumen({ periodo: periodoAnterior }),
     ]);
     const total = Number(res.total) || 0;
+    const totalAnterior = Number(resAnterior.total) || 0;
+    const varTotal = variacionHTML(total, totalAnterior, { sufijo: ` vs. ${esc(anterior.label)}` });
     V('dash-body').innerHTML = `
       <div class="card dash-total-card">
         <div class="dash-total-lbl">${esc(label)}</div>
         <div class="dash-total">${esc(res.total_fmt || formatCOP(total))}</div>
-        <div class="dash-total-sub">${res.movimientos || 0} movimiento${res.movimientos === 1 ? '' : 's'}</div>
+        <div class="dash-total-sub">${res.movimientos || 0} movimiento${res.movimientos === 1 ? '' : 's'}${varTotal ? ` · ${varTotal}` : ''}</div>
       </div>
       <div class="card">
         <div class="card-ttl">Por categoría</div>
-        ${barsHTML(res.por_categoria)}
+        ${barsHTML(res.por_categoria, resAnterior.por_categoria)}
       </div>
       <div class="card">
         <div class="card-ttl">Movimientos del periodo</div>
