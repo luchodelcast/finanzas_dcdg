@@ -9,6 +9,8 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-06
+- Dashboard: comparativo del periodo vs. el anterior (variación % del total y
+  por categoría, "Este mes"/"Mes pasado"/"Año"). 🤖 PR #29. ✅
 - **Autobuild activado** 🤖 — construcción autónoma de funcionalidades 24/7 desde
   la cola de issues `autobuild`, con auto-merge bajo CI verde y avisos por
   WhatsApp/email/este CHANGELOG. (Sistema base.) ✅
