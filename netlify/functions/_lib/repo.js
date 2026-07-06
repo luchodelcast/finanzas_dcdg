@@ -19,10 +19,10 @@ import { normalize } from '../../../app/src/config/rules.js';
  */
 export async function insertMovimiento(m, sqlArg) {
   const sql = sqlArg || await getSql();
-  const cols = ['fecha', 'tipo', 'categoria', 'subcategoria', 'descripcion', 'monto',
-    'metodo_pago', 'quien_pago', 'tarjeta', 'notas', 'origen', 'idempotency_key'];
-  const vals = [m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto,
-    m.metodo_pago, m.quien_pago, m.tarjeta, m.notas, m.origen, m.idempotency_key];
+  const cols = ['fecha', 'tipo', 'categoria', 'subcategoria', 'descripcion', 'monto', 'moneda',
+    'metodo_pago', 'quien_pago', 'tarjeta', 'cuenta_destino', 'notas', 'origen', 'idempotency_key'];
+  const vals = [m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto, m.moneda || 'COP',
+    m.metodo_pago, m.quien_pago, m.tarjeta, m.cuenta_destino || null, m.notas, m.origen, m.idempotency_key];
   const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
   const ins = await sql.query(
     `insert into movimientos (${cols.join(', ')}) values (${ph})
@@ -111,7 +111,9 @@ export async function logEvento(tipo, origen, payload, sqlArg) {
 export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
   const sql = sqlArg || await getSql();
   const params = [desde, hasta];
-  let filtro = 'fecha >= $1 and fecha <= $2';
+  // Excluye transferencias (no son gasto) y limita el total a COP (no se mezclan
+  // monedas). Los movimientos en USD se ven en la lista, no en el total de gasto.
+  let filtro = "fecha >= $1 and fecha <= $2 and coalesce(tipo,'gasto') <> 'transferencia' and coalesce(moneda,'COP') = 'COP'";
   if (categoria) { params.push(`%${categoria.toLowerCase()}%`); filtro += ` and lower(categoria) like $${params.length}`; }
   if (quien) { params.push(`%${quien.toLowerCase()}%`); filtro += ` and lower(coalesce(quien_pago,'')) like $${params.length}`; }
   const agg = await sql.query(
@@ -211,8 +213,8 @@ export async function queryMovimientos({ desde, hasta, categoria, quien, texto, 
   const where = cond.length ? `where ${cond.join(' and ')}` : '';
   params.push(Math.min(Number(limit) || 50, 500));
   const rows = await sql.query(
-    `select id, fecha, tipo, categoria, subcategoria, descripcion, monto,
-            metodo_pago, quien_pago, tarjeta, notas, origen, creado_en
+    `select id, fecha, tipo, categoria, subcategoria, descripcion, monto, moneda,
+            metodo_pago, quien_pago, tarjeta, cuenta_destino, notas, origen, creado_en
        from movimientos ${where}
       order by fecha desc, creado_en desc
       limit $${params.length}`,

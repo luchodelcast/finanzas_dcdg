@@ -18,13 +18,15 @@ function fakeDb() {
     const t = text.replace(/\s+/g, ' ').trim();
 
     if (t.startsWith('insert into movimientos')) {
-      const key = params[11];
+      // cols: fecha,tipo,categoria,subcategoria,descripcion,monto,moneda,
+      //       metodo_pago,quien_pago,tarjeta,cuenta_destino,notas,origen,idempotency_key
+      const key = params[13];
       if (movimientos.some((m) => m.idempotency_key === key)) return []; // ON CONFLICT DO NOTHING
       const row = {
         id: ++seq, fecha: params[0], tipo: params[1], categoria: params[2],
-        subcategoria: params[3], descripcion: params[4], monto: params[5],
-        metodo_pago: params[6], quien_pago: params[7], tarjeta: params[8],
-        notas: params[9], origen: params[10], idempotency_key: key,
+        subcategoria: params[3], descripcion: params[4], monto: params[5], moneda: params[6],
+        metodo_pago: params[7], quien_pago: params[8], tarjeta: params[9],
+        cuenta_destino: params[10], notas: params[11], origen: params[12], idempotency_key: key,
         creado_en: '2026-07-05T12:00:00Z', actualizado_en: null,
       };
       movimientos.push(row);
@@ -113,5 +115,42 @@ test('idempotencia: reintento exacto NO duplica (misma llave)', async () => {
   assert.equal(r3.ya_existia, true, 'la misma source_msg_id no debe duplicar');
   assert.equal(r3.registrado, false);
 
+  setSqlForTests(null);
+});
+
+test('transferencia USD entre cuentas: se registra como tipo transferencia, no como gasto', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+
+  const r = await registrarMovimiento({
+    tipo: 'transferencia', monto: 4000, moneda: 'USD',
+    cuenta_origen: 'Mercury Delca2 (7730)', cuenta_destino: 'DollarApp',
+    fecha: '2026-07-06', quien_pago: 'Luis',
+  });
+  assert.equal(r.registrado, true);
+  assert.equal(r.tipo, 'transferencia');
+  assert.equal(r.moneda, 'USD');
+  assert.equal(r.cuenta_origen, 'Mercury Delca2 (7730)');
+  assert.equal(r.cuenta_destino, 'DollarApp');
+  assert.match(r.mensaje, /USD 4,000/);
+
+  const fila = db._movimientos[0];
+  assert.equal(fila.tipo, 'transferencia');
+  assert.equal(fila.categoria, 'Transferencia'); // no se clasifica como gasto
+  assert.equal(fila.moneda, 'USD');
+  assert.equal(fila.cuenta_destino, 'DollarApp');
+  // No se registró ningún movimiento en EMPRESAS (no corre reglas iWin/Delca2).
+  assert.equal(db._empresas.length, 0);
+
+  setSqlForTests(null);
+});
+
+test('transferencia requiere cuenta de origen y destino', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+  await assert.rejects(
+    () => registrarMovimiento({ tipo: 'transferencia', monto: 100, cuenta_origen: 'Nequi Luis', fecha: '2026-07-06' }),
+    /origen y de destino/,
+  );
   setSqlForTests(null);
 });
