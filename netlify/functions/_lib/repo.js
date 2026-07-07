@@ -126,7 +126,14 @@ export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
       group by 1 order by 2 desc`,
     params
   );
-  return { total: agg[0].total, movimientos: agg[0].n, por_categoria: desglose };
+  const porDescripcion = await sql.query(
+    `select descripcion, sum(monto)::float8 as monto
+       from movimientos where ${filtro}
+      group by 1 order by 2 desc
+      limit 5`,
+    params
+  );
+  return { total: agg[0].total, movimientos: agg[0].n, por_categoria: desglose, por_descripcion: porDescripcion };
 }
 
 // ---------------------------------------------------------------------------

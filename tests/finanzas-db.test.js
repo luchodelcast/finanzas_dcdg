@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setSqlForTests } from '../netlify/functions/_lib/db.js';
-import { registrarMovimiento } from '../netlify/functions/_lib/finanzas.js';
+import { registrarMovimiento, resumen } from '../netlify/functions/_lib/finanzas.js';
 
 // ---------------------------------------------------------------------------
 // Fake mínimo de Postgres: implementa `sql.query(text, params)` para las pocas
@@ -152,5 +152,56 @@ test('transferencia requiere cuenta de origen y destino', async () => {
     () => registrarMovimiento({ tipo: 'transferencia', monto: 100, cuenta_origen: 'Nequi Luis', fecha: '2026-07-06' }),
     /origen y de destino/,
   );
+  setSqlForTests(null);
+});
+
+// ---------------------------------------------------------------------------
+// Fake de `movimientos` para las consultas de resumen() / queryResumen().
+// ---------------------------------------------------------------------------
+function fakeResumenDb(rows) {
+  async function query(text) {
+    const t = text.replace(/\s+/g, ' ').trim();
+    if (t.startsWith('select coalesce(sum(monto)')) {
+      const total = rows.reduce((s, r) => s + r.monto, 0);
+      return [{ total, n: rows.length }];
+    }
+    if (t.startsWith("select coalesce(categoria,'Sin categoría')")) {
+      const porCat = {};
+      for (const r of rows) porCat[r.categoria] = (porCat[r.categoria] || 0) + r.monto;
+      return Object.entries(porCat)
+        .sort((a, b) => b[1] - a[1])
+        .map(([categoria, monto]) => ({ categoria, monto }));
+    }
+    if (t.startsWith('select descripcion, sum(monto)')) {
+      const porDesc = {};
+      for (const r of rows) porDesc[r.descripcion] = (porDesc[r.descripcion] || 0) + r.monto;
+      return Object.entries(porDesc)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([descripcion, monto]) => ({ descripcion, monto }));
+    }
+    return [];
+  }
+  return { query };
+}
+
+test('resumen: top_comercios agrupa por descripción, ordena y limita a 5', async () => {
+  const rows = [
+    { categoria: 'Alimentación', descripcion: 'Éxito', monto: 45000 },
+    { categoria: 'Alimentación', descripcion: 'Éxito', monto: 30000 },
+    { categoria: 'Ocio', descripcion: 'Cucinare', monto: 85000 },
+    { categoria: 'Transporte', descripcion: 'Uber', monto: 18500 },
+    { categoria: 'Salud', descripcion: 'Farmatodo', monto: 12000 },
+    { categoria: 'Hogar', descripcion: 'Homecenter', monto: 9000 },
+    { categoria: 'Otros', descripcion: 'Varios', monto: 5000 },
+  ];
+  setSqlForTests(fakeResumenDb(rows));
+
+  const r = await resumen({ periodo: '2026-07-01..2026-07-31', hoy: new Date(2026, 6, 15) });
+  assert.equal(r.top_comercios.length, 5);
+  assert.deepEqual(r.top_comercios.map((c) => c.descripcion), ['Cucinare', 'Éxito', 'Uber', 'Farmatodo', 'Homecenter']);
+  assert.equal(r.top_comercios[1].monto, 75000);
+  assert.equal(r.top_comercios[1].monto_fmt, '$75.000');
+
   setSqlForTests(null);
 });
