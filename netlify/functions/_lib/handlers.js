@@ -20,6 +20,7 @@ import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
+import { parseExtractoPdfText } from './extracto-pdf.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
@@ -293,12 +294,23 @@ export async function pwaExtractoHandler(req) {
   const body = await parseBody(req);
   const cuenta = String(body.cuenta || '').trim();
   if (!cuenta) return bad('cuenta requerida');
-  const csvText = String(body.csv || '');
-  if (!csvText.trim()) return bad('archivo CSV vacío o faltante');
 
-  const { lineas, errores } = parseCsvExtracto(csvText);
+  // Dos fuentes: CSV (texto crudo) o el TEXTO ya extraído de un PDF en el
+  // navegador (la contraseña del PDF nunca llega acá). El texto de PDF lo
+  // estructura Claude; el CSV, el parser puro.
+  const textoPdf = String(body.texto || '');
+  const csvText = String(body.csv || '');
+  const esPdf = textoPdf.trim().length > 0;
+  if (!esPdf && !csvText.trim()) return bad('archivo (CSV o texto de PDF) vacío o faltante');
+
+  let lineas; let errores;
+  try {
+    ({ lineas, errores } = esPdf ? await parseExtractoPdfText(textoPdf) : parseCsvExtracto(csvText));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
   if (!lineas.length) {
-    return bad(`No se encontraron líneas válidas en el CSV.${errores[0] ? ' ' + errores[0] : ''}`, 422);
+    return bad(`No se encontraron transacciones válidas en el ${esPdf ? 'PDF' : 'CSV'}.${errores[0] ? ' ' + errores[0] : ''}`, 422);
   }
 
   try {
@@ -306,14 +318,14 @@ export async function pwaExtractoHandler(req) {
       cuenta,
       periodo: body.periodo, fecha_desde: body.fecha_desde, fecha_hasta: body.fecha_hasta,
       saldo_inicial: body.saldo_inicial, saldo_final: body.saldo_final, moneda: body.moneda,
-      fuente: 'csv',
+      fuente: esPdf ? 'pdf' : 'csv',
     });
     await insertExtractoLineas(extracto.id, lineas);
     const nErr = errores.length;
     return ok({
       ok: true, extracto_id: extracto.id, lineas: lineas.length, errores,
       mensaje: `Extracto cargado ✅ ${lineas.length} línea${lineas.length === 1 ? '' : 's'}`
-        + (nErr ? ` (${nErr} fila${nErr === 1 ? '' : 's'} con error, omitida${nErr === 1 ? '' : 's'}).` : '.'),
+        + (nErr ? ` (${nErr} con aviso).` : '.'),
     });
   } catch (e) {
     return bad(e.message, 422);
