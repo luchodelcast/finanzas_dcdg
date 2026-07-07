@@ -9,7 +9,7 @@ import { authorize, parseBody, ok, bad } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
-  insertIngreso, queryIngresos,
+  insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
@@ -195,6 +195,20 @@ export async function pwaCatalogosHandler(req) {
   try {
     const [entidades, terceros] = await Promise.all([listEntidades(), listTerceros()]);
     return ok({ ok: true, entidades, terceros, cedulas: CEDULAS });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/** Plan de cuentas (PUC) para consulta. Auth Google (equipo financiero, lectura). */
+export async function pwaPlanCuentasHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const clase = url.searchParams.get('clase');
+  try {
+    const cuentas = await listPlanCuentas({ clase });
+    return ok({ ok: true, cuentas, n: cuentas.length });
   } catch (e) {
     return bad(e.message, 422);
   }
