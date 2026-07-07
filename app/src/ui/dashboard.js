@@ -99,6 +99,14 @@ function barsHTML(porCategoria, porCategoriaAnterior) {
   }).join('');
 }
 
+function comerciosHTML(top) {
+  if (!top || !top.length) return '<div class="empty">Sin datos en este periodo</div>';
+  return top.map((c) => `<div class="h-item">
+      <div><div class="h-name">${esc(c.descripcion)}</div></div>
+      <div><div class="h-amt">${esc(c.monto_fmt || formatCOP(Number(c.monto) || 0))}</div></div>
+    </div>`).join('');
+}
+
 function movsHTML(movs) {
   if (!movs || !movs.length) return '<div class="empty">Sin movimientos en este periodo</div>';
   return movs.map((m) => {
@@ -138,6 +146,10 @@ async function load() {
       <div class="card">
         <div class="card-ttl">Por categoría</div>
         ${barsHTML(res.por_categoria, resAnterior.por_categoria)}
+      </div>
+      <div class="card">
+        <div class="card-ttl">En qué más se fue la plata</div>
+        ${comerciosHTML(res.top_comercios)}
       </div>
       <div class="card">
         <div class="card-ttl">Movimientos del periodo</div>

@@ -293,6 +293,9 @@ export async function resumen(q = {}) {
   const desglose = (r.por_categoria || []).map((x) => ({
     categoria: x.categoria, monto: Number(x.monto), monto_fmt: formatCOP(Number(x.monto)),
   }));
+  const topComercios = (r.por_descripcion || []).map((x) => ({
+    descripcion: x.descripcion, monto: Number(x.monto), monto_fmt: formatCOP(Number(x.monto)),
+  }));
 
   return {
     ok: true,
@@ -303,6 +306,7 @@ export async function resumen(q = {}) {
     total_fmt: formatCOP(Number(r.total) || 0),
     movimientos: Number(r.movimientos) || 0,
     por_categoria: desglose,
+    top_comercios: topComercios,
   };
 }
 
