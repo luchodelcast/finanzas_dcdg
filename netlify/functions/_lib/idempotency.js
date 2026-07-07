@@ -43,3 +43,26 @@ export function deriveIngresoKey(i = {}) {
   const base = `ing|${i.entidad_id}|${fecha}|${monto}|${concepto}|${i.cedula || ''}`;
   return createHash('sha256').update(base).digest('hex').slice(0, 40);
 }
+
+/**
+ * Llave de idempotencia de un ASIENTO (libro diario). Un `movimiento_id`/
+ * `ingreso_id` de origen (T4, contabilización automática) es la señal más
+ * fuerte: un mismo movimiento nunca genera dos asientos. Sin eso (asiento
+ * manual), se deriva de fecha + descripción + entidad + líneas.
+ * @param {{ fecha, descripcion, entidad_id?, origen?, lineas?, idempotency_key?,
+ *           movimiento_id?, ingreso_id? }} a
+ * @returns {string}
+ */
+export function deriveAsientoKey(a = {}) {
+  if (a.idempotency_key) return String(a.idempotency_key).slice(0, 80);
+  if (a.movimiento_id) return 'asi:mov:' + String(a.movimiento_id).slice(0, 70);
+  if (a.ingreso_id) return 'asi:ing:' + String(a.ingreso_id).slice(0, 70);
+
+  const fecha = String(a.fecha || '').slice(0, 10);
+  const desc = normalize(a.descripcion).slice(0, 16);
+  const lineasBase = (a.lineas || [])
+    .map((l) => `${l.cuenta}:${Math.round(Number(l.debito) || 0)}:${Math.round(Number(l.credito) || 0)}`)
+    .join(',');
+  const base = `asi|${a.entidad_id || ''}|${fecha}|${desc}|${a.origen || 'manual'}|${lineasBase}`;
+  return createHash('sha256').update(base).digest('hex').slice(0, 40);
+}

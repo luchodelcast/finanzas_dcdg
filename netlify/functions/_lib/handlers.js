@@ -11,14 +11,17 @@ import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
   insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
+  queryAsientos, queryAsientoLineas,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
+import { crearAsiento } from './asientos.js';
 import { registrarCuenta } from './cuentas.js';
 import { clasificar } from './classify.js';
 import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
+import { config } from './env.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
 export function makeRegistrarHandler(tipo) {
@@ -311,6 +314,50 @@ export async function pwaExtractoHandler(req) {
       ok: true, extracto_id: extracto.id, lineas: lineas.length, errores,
       mensaje: `Extracto cargado ✅ ${lineas.length} línea${lineas.length === 1 ? '' : 's'}`
         + (nErr ? ` (${nErr} fila${nErr === 1 ? '' : 's'} con error, omitida${nErr === 1 ? '' : 's'}).` : '.'),
+    });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Crea (POST) o lista (GET) asientos del libro diario. Auth Google. La
+ * creación manual queda restringida a los dueños (`FINANZAS_OWNERS`, Luis/
+ * Carolina) hasta que exista un sistema de roles (T8) — el resto del equipo
+ * financiero solo puede consultar. `crearAsiento` valida Σdébito = Σcrédito.
+ */
+export async function pwaAsientoHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let email;
+  try { ({ email } = await verifyFinanceUser(bearer)); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const asiento_id = Number(url.searchParams.get('asiento_id')) || null;
+    try {
+      if (asiento_id) {
+        const lineas = await queryAsientoLineas(asiento_id);
+        return ok({ ok: true, lineas, n: lineas.length });
+      }
+      const g = (k) => url.searchParams.get(k);
+      const asientos = await queryAsientos({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id'), limit: g('limit') });
+      return ok({ ok: true, asientos, n: asientos.length });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!config.finanzasOwners().includes(email)) {
+    return bad('Solo el dueño (Luis/Carolina) puede registrar asientos manuales', 403);
+  }
+
+  const body = await parseBody(req);
+  try {
+    const { inserted, asiento, lineas } = await crearAsiento(body);
+    return ok({
+      ok: true, registrado: inserted, ya_existia: !inserted,
+      asiento_id: asiento.id, lineas: lineas.length,
+      mensaje: inserted ? 'Asiento registrado ✅' : 'Ese asiento ya estaba registrado (no se duplicó).',
     });
   } catch (e) {
     return bad(e.message, 422);

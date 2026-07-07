@@ -164,6 +164,84 @@ export async function getPlanCuenta(codigo, sqlArg) {
 }
 
 // ---------------------------------------------------------------------------
+// Libro diario (asientos de partida doble) — T2 del sprint contable.
+// ---------------------------------------------------------------------------
+
+/** Inserta la cabecera de un asiento. Idempotente por idempotency_key. */
+export async function insertAsiento(a, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const cols = ['fecha', 'descripcion', 'entidad_id', 'origen', 'estado', 'estado_conciliacion', 'idempotency_key'];
+  const vals = [a.fecha, a.descripcion, a.entidad_id || null, a.origen || 'manual',
+    a.estado || 'contabilizado', a.estado_conciliacion || 'provisional', a.idempotency_key];
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const ins = await sql.query(
+    `insert into asientos (${cols.join(', ')}) values (${ph})
+     on conflict (idempotency_key) do nothing
+     returning *`,
+    vals
+  );
+  if (ins.length) return { inserted: true, row: ins[0] };
+  const prev = await sql.query('select * from asientos where idempotency_key = $1 limit 1', [a.idempotency_key]);
+  return { inserted: false, row: prev[0] || null };
+}
+
+/** Inserta las líneas de un asiento ya creado (una sola sentencia multi-fila). */
+export async function insertAsientoLineas(asiento_id, lineas, sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!lineas || !lineas.length) return [];
+  const cols = ['asiento_id', 'cuenta', 'debito', 'credito', 'tercero_id', 'movimiento_id', 'ingreso_id'];
+  const vals = [];
+  const groups = lineas.map((l, i) => {
+    const base = i * cols.length;
+    vals.push(asiento_id, l.cuenta, l.debito || 0, l.credito || 0,
+      l.tercero_id || null, l.movimiento_id || null, l.ingreso_id || null);
+    return `(${cols.map((_, j) => `$${base + j + 1}`).join(', ')})`;
+  });
+  return sql.query(
+    `insert into asiento_lineas (${cols.join(', ')}) values ${groups.join(', ')} returning *`, vals
+  );
+}
+
+/** Busca un asiento (con sus líneas) por su llave de idempotencia. */
+export async function getAsientoByKey(idempotency_key, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from asientos where idempotency_key = $1 limit 1', [idempotency_key]);
+  return rows[0] || null;
+}
+
+/** Lista asientos (cabecera) en un rango/entidad — libro diario. */
+export async function queryAsientos({ desde, hasta, entidad_id, limit = 100 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (desde) { params.push(desde); cond.push(`fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`fecha <= $${params.length}`); }
+  if (entidad_id) { params.push(entidad_id); cond.push(`entidad_id = $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  params.push(Math.min(Number(limit) || 100, 500));
+  return sql.query(
+    `select id, fecha, descripcion, entidad_id, origen, estado, estado_conciliacion, creado_en
+       from asientos ${where}
+      order by fecha desc, id desc
+      limit $${params.length}`,
+    params
+  );
+}
+
+/** Líneas de un asiento (para el detalle del libro diario). */
+export async function queryAsientoLineas(asiento_id, sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!asiento_id) return [];
+  return sql.query(
+    `select id, cuenta, debito, credito, tercero_id, movimiento_id, ingreso_id
+       from asiento_lineas
+      where asiento_id = $1
+      order by id`,
+    [asiento_id]
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
 

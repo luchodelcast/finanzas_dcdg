@@ -46,6 +46,13 @@ export const config = {
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),
+  // Dueños (Luis/Carolina): únicos con permiso de escritura sobre asientos
+  // manuales del libro diario, hasta que exista un sistema de roles (T8).
+  finanzasOwners: () =>
+    String(env('FINANZAS_OWNERS', 'luis@iwin.im,carodz2@gmail.com'))
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
 };
 
 /** Normaliza la clave privada PEM (Netlify suele escapar los saltos de línea). */
