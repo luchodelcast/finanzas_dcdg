@@ -176,6 +176,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       <div class="conn-dot" id="conn-dot"></div>
       <span id="conn-lbl" style="color:#fff">Sin conectar</span>
     </div>
+    <button class="ico-btn" data-go="dashboard" title="Dashboard">📊</button>
     <button class="ico-btn" data-go="settings" title="Configuración">⚙</button>
   </div>
 </div>
@@ -393,6 +394,25 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       <button class="sec-link" style="color:var(--red)" data-act="clearHist">Limpiar</button>
     </div>
     <div id="hist-list"><div class="empty">Sin registros aún</div></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div class="scr" id="scr-dashboard">
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl" style="margin:0">En qué más se fue la plata</div>
+    </div>
+    <div class="fld">
+      <label>Periodo</label>
+      <select id="dash-periodo">
+        <option value="mes">Mes actual</option>
+        <option value="mes-anterior">Mes anterior</option>
+        <option value="3-meses">Últimos 3 meses</option>
+      </select>
+    </div>
+    <div id="dash-top"><div class="empty">Cargando…</div></div>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>

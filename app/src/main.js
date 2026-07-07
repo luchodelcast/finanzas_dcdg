@@ -17,12 +17,14 @@ import {
 import { analizarTexto, analizarImagen } from './services/claude.js';
 import {
   appendValues,
+  readRange,
   loadCuentas as fetchCuentas,
 } from './services/sheets.js';
 import { getAccessToken, signOut as authSignOut, isSignedIn } from './services/auth.js';
 import { procesarRecibo } from './utils/imageProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
 import { loadHistory, addHistory, getHistory, clearHistory } from './services/history.js';
+import { rangoDashboard, topComercios } from './utils/dashboard.js';
 
 const V = (id) => document.getElementById(id);
 const today = () => hoyISO();
@@ -47,6 +49,7 @@ function go(s) {
   }
   if (s === 'history') renderH();
   if (s === 'cet') initCET();
+  if (s === 'dashboard') loadDashboard();
 }
 
 function toast(msg, dur = 3000) {
@@ -466,6 +469,37 @@ function clearHist() {
   }
 }
 
+// ── Dashboard ─────────────────────────────────────────────
+function topComercioItemHTML(item) {
+  return `<div class="h-item">
+    <div><div class="h-name">${item.descripcion}</div></div>
+    <div><div class="h-amt">${formatCOP(item.monto)}</div></div>
+  </div>`;
+}
+
+async function loadDashboard() {
+  const c = V('dash-top');
+  c.innerHTML = '<div class="empty">Cargando…</div>';
+  if (!isSignedIn()) {
+    const okc = await connect({ forcePrompt: true });
+    if (!okc) {
+      c.innerHTML = '<div class="empty">Conéctate con Google para ver el dashboard</div>';
+      return;
+    }
+  }
+  const cfg = getConfig();
+  const { desde, hasta } = rangoDashboard(V('dash-periodo').value);
+  try {
+    const rows = await readRange(`'${cfg.sheetGastos}'!A2:J`);
+    const top = topComercios(rows, { desde, hasta });
+    c.innerHTML = top.length
+      ? top.map(topComercioItemHTML).join('')
+      : '<div class="empty">Sin registros en este periodo</div>';
+  } catch (e) {
+    c.innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
 // ── CET ───────────────────────────────────────────────────
 function fillCetCuentaSelect(sel) {
   sel.innerHTML = '';
@@ -621,6 +655,8 @@ function wireEvents() {
       if (el) el.addEventListener('change', actualizarCET);
     });
   V('cet-tipo-dest').addEventListener('change', onCetTipoDest);
+
+  V('dash-periodo').addEventListener('change', loadDashboard);
 }
 
 // ── Init ──────────────────────────────────────────────────
