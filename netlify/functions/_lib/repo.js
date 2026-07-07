@@ -137,6 +137,33 @@ export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan de cuentas (PUC simplificado) — base de la partida doble.
+// ---------------------------------------------------------------------------
+
+/** Lista el plan de cuentas activo (opcionalmente filtra por clase 1–6). */
+export async function listPlanCuentas({ clase } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  let filtro = 'activo';
+  if (clase != null && clase !== '') { params.push(Number(clase)); filtro += ` and clase = $${params.length}`; }
+  return sql.query(
+    `select codigo, nombre, clase, naturaleza, cuenta_padre
+       from plan_cuentas where ${filtro} order by codigo`,
+    params
+  );
+}
+
+/** Devuelve una cuenta del PUC por su código (o null). */
+export async function getPlanCuenta(codigo, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    'select codigo, nombre, clase, naturaleza, cuenta_padre from plan_cuentas where codigo = $1 limit 1',
+    [String(codigo || '')]
+  );
+  return rows[0] || null;
+}
+
+// ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
 

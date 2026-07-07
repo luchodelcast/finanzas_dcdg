@@ -9,6 +9,12 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-07
+- Soporte de comprobantes en PDF en la PWA ("Elegir de galería"), solo 1 página
+  por ahora: se manda como bloque `document` nativo de Anthropic reusando el
+  mismo flujo de clasificación que las fotos; si el PDF trae más páginas o pesa
+  de más, se avisa en vez de fallar en silencio. Límite exacto de tamaño y
+  soporte multi-página quedan como decisiones abiertas; el lado SilvIA/WhatsApp
+  queda fuera (otro repo). 🤖 PR #54. 🔎 (en revisión — toca clasificación)
 - Cargador de extractos bancarios en CSV (botón 🧾): sube fecha/descripción/
   monto de una cuenta y un periodo y los deja guardados en `extracto_lineas`
   (`sin_conciliar`) — primer paso de la conciliación (docs/conciliacion.md);

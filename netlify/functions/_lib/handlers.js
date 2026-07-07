@@ -9,14 +9,14 @@ import { authorize, parseBody, ok, bad } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
-  insertIngreso, queryIngresos,
+  insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
 import { clasificar } from './classify.js';
 import { verifyFinanceUser } from './google-auth.js';
-import { callAnthropic, extractJson } from './anthropic.js';
+import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
 import { reporteAportes } from './aportes.js';
@@ -90,10 +90,15 @@ export async function pwaRegistrarHandler(req) {
 }
 
 /**
- * Handler de clasificación para la PWA (texto o imagen), autenticado con el
- * login de Google del usuario (no con el token de servicio). Usa la
+ * Handler de clasificación para la PWA (texto, imagen o PDF), autenticado con
+ * el login de Google del usuario (no con el token de servicio). Usa la
  * ANTHROPIC_API_KEY del backend, así el navegador nunca necesita la API key.
  * Devuelve el shape DCDG completo (fecha, monto, comercio, categoría, …).
+ *
+ * El campo `imagen` es genérico (base64 de una foto o de un PDF); `media_type`
+ * decide el bloque que se arma para Claude (`image` o `document` nativo de
+ * PDF — ver `buildReceiptContent` en `_lib/anthropic.js`). Solo PWA; el lado
+ * SilvIA/WhatsApp vive en otro repo y no se toca acá (issue #35).
  */
 export async function pwaClasificarHandler(req) {
   if (req.method !== 'POST') return bad('Método no permitido', 405);
@@ -107,10 +112,7 @@ export async function pwaClasificarHandler(req) {
   try {
     let content;
     if (body.imagen) {
-      content = [
-        { type: 'image', source: { type: 'base64', media_type: body.media_type || 'image/jpeg', data: body.imagen } },
-        { type: 'text', text: 'Extrae los datos de esta transacción o recibo.' },
-      ];
+      content = buildReceiptContent({ base64: body.imagen, mediaType: body.media_type });
     } else {
       const texto = String(body.texto || '').trim();
       if (!texto) return bad('texto o imagen requerido');
@@ -196,6 +198,20 @@ export async function pwaCatalogosHandler(req) {
   try {
     const [entidades, terceros] = await Promise.all([listEntidades(), listTerceros()]);
     return ok({ ok: true, entidades, terceros, cedulas: CEDULAS });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/** Plan de cuentas (PUC) para consulta. Auth Google (equipo financiero, lectura). */
+export async function pwaPlanCuentasHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const clase = url.searchParams.get('clase');
+  try {
+    const cuentas = await listPlanCuentas({ clase });
+    return ok({ ok: true, cuentas, n: cuentas.length });
   } catch (e) {
     return bad(e.message, 422);
   }

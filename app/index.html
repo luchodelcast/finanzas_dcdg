@@ -118,6 +118,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
 .iwin-notice{background:var(--purple-l);border:1.5px solid #AFA9EC;border-radius:10px;padding:11px 13px;font-size:13px;color:#3C3489;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
 .iwin-notice b{font-weight:700;display:block;margin-bottom:2px}
 
+/* PDF NOTICE */
+.pdf-notice{background:var(--gray);border-radius:10px;padding:11px 13px;font-size:13px;display:flex;align-items:center;gap:9px;margin-bottom:12px}
+
 /* IMG PREVIEW */
 .img-prev{width:100%;max-height:180px;object-fit:contain;border-radius:var(--r-s);background:var(--gray)}
 
@@ -288,9 +291,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <input type="file" id="cam-in" accept="image/*" capture="environment" style="display:none">
     <button class="act-btn a-cam" data-act="trigGal" style="margin-top:10px">
       <div class="act-ico">🖼️</div>
-      <div class="act-txt"><strong>Elegir de galería</strong><span>Apple Wallet, screenshots, fotos guardadas</span></div>
+      <div class="act-txt"><strong>Elegir de galería</strong><span>Apple Wallet, screenshots, fotos guardadas, PDF de comprobante</span></div>
     </button>
-    <input type="file" id="gal-in" accept="image/*" style="display:none">
+    <input type="file" id="gal-in" accept="image/*,application/pdf" style="display:none">
     <button class="act-btn a-txt" data-go="text" style="margin-top:10px">
       <div class="act-ico">✏️</div>
       <div class="act-txt"><strong>Entrada manual</strong><span>Describe el gasto con texto</span></div>
@@ -429,6 +432,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
 <!-- ── CONFIRM ── -->
 <div class="scr" id="scr-conf">
   <div id="img-wrap" style="display:none"><img id="img-prev" class="img-prev" alt="Recibo"></div>
+  <div id="pdf-wrap" style="display:none" class="pdf-notice">
+    <span style="font-size:20px">📄</span><span>Comprobante en PDF adjunto</span>
+  </div>
 
   <div id="tw-wrap" style="display:none" class="tw">
     <div class="tw-icon">⚠️</div>
