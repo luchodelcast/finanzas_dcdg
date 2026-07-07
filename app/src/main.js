@@ -25,6 +25,7 @@ import { formatCOP, hoyISO } from './utils/formatters.js';
 import { loadHistory, addHistory, getHistory, clearHistory } from './services/history.js';
 import { renderDashboard } from './ui/dashboard.js';
 import { renderIngresos } from './ui/ingresos.js';
+import { renderExtractos } from './ui/extractos.js';
 
 const V = (id) => document.getElementById(id);
 const today = () => hoyISO();
@@ -53,6 +54,7 @@ function go(s) {
   if (s === 'dash') renderDashboard();
   if (s === 'ingreso') renderIngresos();
   if (s === 'transfer') initTransfer();
+  if (s === 'extractos') renderExtractos();
 }
 
 function toast(msg, dur = 3000) {

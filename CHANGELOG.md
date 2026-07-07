@@ -8,6 +8,12 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-07
+- Cargador de extractos bancarios en CSV (botón 🧾): sube fecha/descripción/
+  monto de una cuenta y un periodo y los deja guardados en `extracto_lineas`
+  (`sin_conciliar`) — primer paso de la conciliación (docs/conciliacion.md);
+  aún sin el motor de cruce automático. 🤖 PR #38. ✅
+
 ## 2026-07-06
 - Dashboard: comparativo del periodo vs. el anterior (variación % del total y
   por categoría, "Este mes"/"Mes pasado"/"Año"). 🤖 PR #29. ✅
