@@ -59,9 +59,13 @@ export async function analizarTexto(texto, fecha) {
 }
 
 /**
- * Clasifica un gasto a partir de una IMAGEN de recibo (visión).
- * @param {string} base64  imagen base64 (sin prefijo data:)
- * @param {string} mediaType  p.ej. 'image/jpeg'
+ * Clasifica un gasto a partir de un comprobante adjunto: IMAGEN (visión) o PDF
+ * (bloque `document` nativo de Anthropic — solo 1 página, ver
+ * `utils/pdfProcessor.js`). El nombre del campo se mantiene genérico (`imagen`)
+ * por compatibilidad; `mediaType` es lo que decide cómo se arma el bloque en
+ * el backend (`buildReceiptContent` en `_lib/anthropic.js`).
+ * @param {string} base64  datos en base64 (sin prefijo data:)
+ * @param {string} mediaType  p.ej. 'image/jpeg' o 'application/pdf'
  * @returns {Promise<Object>}
  */
 export async function analizarImagen(base64, mediaType = 'image/jpeg') {

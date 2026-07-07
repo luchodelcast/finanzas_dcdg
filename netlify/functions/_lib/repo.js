@@ -137,6 +137,33 @@ export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan de cuentas (PUC simplificado) — base de la partida doble.
+// ---------------------------------------------------------------------------
+
+/** Lista el plan de cuentas activo (opcionalmente filtra por clase 1–6). */
+export async function listPlanCuentas({ clase } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  let filtro = 'activo';
+  if (clase != null && clase !== '') { params.push(Number(clase)); filtro += ` and clase = $${params.length}`; }
+  return sql.query(
+    `select codigo, nombre, clase, naturaleza, cuenta_padre
+       from plan_cuentas where ${filtro} order by codigo`,
+    params
+  );
+}
+
+/** Devuelve una cuenta del PUC por su código (o null). */
+export async function getPlanCuenta(codigo, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    'select codigo, nombre, clase, naturaleza, cuenta_padre from plan_cuentas where codigo = $1 limit 1',
+    [String(codigo || '')]
+  );
+  return rows[0] || null;
+}
+
+// ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
 
@@ -184,6 +211,31 @@ export async function insertIngreso(i, sqlArg) {
   if (ins.length) return { inserted: true, row: ins[0] };
   const prev = await sql.query('select * from ingresos where idempotency_key = $1 limit 1', [i.idempotency_key]);
   return { inserted: false, row: prev[0] || null };
+}
+
+/**
+ * Totales de ingresos y costos deducibles por entidad, agrupados en un rango
+ * de fechas — base del reporte de aportes IBC (Fase 3.2, solo lectura).
+ * Devuelve dos listas `{entidad_id, total}` (una por tabla); el llamador las
+ * combina con `listEntidades()`.
+ */
+export async function queryAportesBase({ desde, hasta }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const ingresos = await sql.query(
+    `select entidad_id, coalesce(sum(monto),0)::float8 as total
+       from ingresos
+      where fecha >= $1 and fecha <= $2
+      group by entidad_id`,
+    [desde, hasta]
+  );
+  const costos = await sql.query(
+    `select entidad_id, coalesce(sum(monto),0)::float8 as total
+       from costos_actividad
+      where deducible = true and fecha >= $1 and fecha <= $2
+      group by entidad_id`,
+    [desde, hasta]
+  );
+  return { ingresos, costos };
 }
 
 /** Lista ingresos (con nombre de entidad y tercero). */
