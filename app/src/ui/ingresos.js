@@ -8,6 +8,7 @@
 
 import { getCatalogos, getIngresos, registrarIngreso } from '../services/finanzas.js';
 import { formatCOP, hoyISO } from '../utils/formatters.js';
+import { periodRange } from './dashboard.js';
 
 const V = (id) => document.getElementById(id);
 
@@ -41,6 +42,11 @@ function formHTML(cat) {
     <div class="fld"><label>Notas (opcional)</label><input type="text" id="in-notas" placeholder="Ej: consignado en ahorros Luciano"></div>`;
 }
 
+function filtroEntidadOptionsHTML(cat) {
+  const ents = (cat.entidades || []).map((e) => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('');
+  return `<option value="">Todos</option>${ents}`;
+}
+
 function itemHTML(i) {
   const fecha = String(i.fecha || '').slice(0, 10);
   const reten = Number(i.retencion_fuente) || 0;
@@ -52,12 +58,19 @@ function itemHTML(i) {
 }
 
 async function refreshList() {
+  const entidad_id = V('ingreso-filtro-entidad').value || undefined;
+  const periodo = V('ingreso-filtro-periodo').value;
+  const { desde, hasta } = periodRange(periodo);
   try {
-    const r = await getIngresos({ limit: 20 });
-    V('ingreso-list').innerHTML = (r.ingresos && r.ingresos.length)
-      ? r.ingresos.map(itemHTML).join('')
+    const r = await getIngresos({ entidad_id, desde, hasta, limit: 100 });
+    const ingresos = r.ingresos || [];
+    const total = ingresos.reduce((s, i) => s + (Number(i.monto) || 0), 0);
+    V('ingreso-total').textContent = `Total del periodo: ${formatCOP(total)}`;
+    V('ingreso-list').innerHTML = ingresos.length
+      ? ingresos.map(itemHTML).join('')
       : '<div class="empty">Aún no hay ingresos registrados</div>';
   } catch (e) {
+    V('ingreso-total').textContent = '';
     V('ingreso-list').innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message)}</div>`;
   }
 }
@@ -120,6 +133,7 @@ export async function renderIngresos() {
     });
     V('scr-ingreso').addEventListener('change', (e) => {
       if (e.target.id === 'in-entidad') onEntidadChange();
+      if (e.target.id === 'ingreso-filtro-entidad' || e.target.id === 'ingreso-filtro-periodo') refreshList();
     });
   }
   if (!_cat) {
@@ -127,6 +141,7 @@ export async function renderIngresos() {
       _cat = await getCatalogos();
       V('ingreso-form').innerHTML = formHTML(_cat);
       V('in-fecha').value = hoyISO();
+      V('ingreso-filtro-entidad').innerHTML = filtroEntidadOptionsHTML(_cat);
     } catch (e) {
       V('ingreso-form').innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message)}</div>`;
       return;
