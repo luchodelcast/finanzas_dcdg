@@ -8,36 +8,63 @@
  * NIT en Bancolombia) NUNCA llega al servidor. Acá solo llega el texto legible.
  */
 import { parseMonto, normalizarFecha } from '../../../app/src/utils/formatters.js';
-import { callAnthropic, extractJson } from './anthropic.js';
+import { callAnthropic } from './anthropic.js';
 
-const SYSTEM = `Eres un extractor de transacciones de extractos bancarios colombianos (p. ej. Bancolombia). Recibes el TEXTO plano de un extracto y devuelves EXCLUSIVAMENTE un objeto JSON, sin explicaciones ni texto fuera del JSON, con esta forma:
-{"transacciones":[{"fecha":"YYYY-MM-DD","descripcion":"texto","monto":-12345.67}]}
+// El modelo devuelve UNA LÍNEA POR TRANSACCIÓN (no JSON): la mitad de tokens de
+// salida que un JSON, y si la respuesta se corta solo se pierde la última línea
+// (no se rompe todo el parseo). Clave para caber en el límite de ~10 s de las
+// funciones síncronas de Netlify (el cuello de botella es el TIEMPO de
+// generación, no solo el modelo). Formato exacto: FECHA|DESCRIPCION|MONTO
+const SYSTEM = `Eres un extractor de transacciones de extractos bancarios colombianos (p. ej. Bancolombia). Recibes el TEXTO plano de un extracto y devuelves UNA LÍNEA POR TRANSACCIÓN con este formato EXACTO separado por barras verticales:
+FECHA|DESCRIPCION|MONTO
 Reglas:
-- Una entrada por movimiento/transacción del extracto.
-- "monto" es un número: NEGATIVO para débitos/retiros/cargos/pagos; POSITIVO para créditos/consignaciones/abonos/depósitos.
-- "fecha" en formato YYYY-MM-DD. Si a una fila le falta el año, dedúcelo del periodo del extracto.
-- Ignora encabezados, saldos, totales, cuotas de manejo informativas y publicidad: SOLO transacciones reales.
-- Si no identificas transacciones, devuelve {"transacciones":[]}.`;
+- FECHA en formato YYYY-MM-DD (si a una fila le falta el año, dedúcelo del periodo del extracto).
+- MONTO: número entero en pesos con signo, SIN separador de miles ni símbolo. NEGATIVO para débitos/retiros/cargos/pagos; POSITIVO para créditos/consignaciones/abonos/depósitos.
+- DESCRIPCION en una sola línea, sin barras verticales.
+- Una transacción por línea. NADA más: sin encabezados, sin saldos/totales, sin JSON, sin viñetas, sin explicaciones.
+- Si no hay transacciones, no devuelvas nada.`;
 
 const MAX_TEXT = 60000;
 
-/** Mapea las filas devueltas por el modelo al shape de líneas del extracto (puro). */
-export function mapClaudeLineas(rows) {
+// Modelo RÁPIDO (Haiku) + salida acotada, para no pasar el timeout de Netlify.
+// Configurable con EXTRACTO_MODEL.
+const FAST_MODEL = process.env.EXTRACTO_MODEL || 'claude-haiku-4-5-20251001';
+const MAX_OUT_TOKENS = 4096;
+
+/** Parsea un monto con signo tolerando separadores de miles (el signo aparte). */
+function parseMontoSigno(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  const neg = /^-/.test(s) || /^\(.*\)$/.test(s); // "-45000" o "(45000)"
+  const abs = s.replace(/^[+-]/, '').replace(/^\((.*)\)$/, '$1');
+  const n = parseMonto(abs);
+  if (n == null) return null;
+  return neg ? -Math.abs(n) : n;
+}
+
+/**
+ * Parsea la salida delimitada del modelo (una línea `FECHA|DESC|MONTO` por
+ * transacción) al shape de líneas del extracto. Puro y testeable.
+ * @returns {{lineas: Array, errores: string[]}}
+ */
+export function parseDelimLineas(text) {
   const lineas = [];
   const errores = [];
-  const arr = Array.isArray(rows) ? rows : [];
-  arr.forEach((r, i) => {
-    const fechaRaw = String((r && (r.fecha ?? r.date)) || '').trim();
-    const montoVal = r && (r.monto ?? r.valor ?? r.amount);
-    const monto = typeof montoVal === 'number' ? montoVal : parseMonto(String(montoVal ?? ''));
-    if (!fechaRaw || monto == null) { errores.push(`Transacción ${i + 1}: falta fecha o monto`); return; }
-    const descripcion = String((r.descripcion ?? r.concepto ?? r.detalle) || '').trim() || null;
+  const rows = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  rows.forEach((row, i) => {
+    if (!row.includes('|')) return; // ignora líneas que no son transacciones
+    const parts = row.split('|');
+    const fechaRaw = (parts[0] || '').trim();
+    const montoRaw = (parts[parts.length - 1] || '').trim();
+    const descripcion = parts.length >= 3 ? (parts.slice(1, -1).join(' ').trim() || null) : null;
+    const monto = parseMontoSigno(montoRaw);
+    if (!fechaRaw || monto == null) { errores.push(`Línea ${i + 1}: falta fecha o monto ("${row.slice(0, 48)}")`); return; }
     lineas.push({
       fecha: normalizarFecha(fechaRaw),
       descripcion,
       monto,
       tipo: monto < 0 ? 'debito' : 'credito',
-      referencia: (r.referencia && String(r.referencia).trim()) || null,
+      referencia: null,
     });
   });
   return { lineas, errores };
@@ -45,22 +72,18 @@ export function mapClaudeLineas(rows) {
 
 /**
  * Estructura el texto de un extracto en líneas usando Claude.
- * `deps` permite inyectar callAnthropic/extractJson en tests (sin red).
+ * `deps` permite inyectar callAnthropic en tests (sin red).
  * @returns {Promise<{lineas: Array, errores: string[]}>}
  */
 export async function parseExtractoPdfText(texto, deps = {}) {
   const _call = deps.callAnthropic || callAnthropic;
-  const _extract = deps.extractJson || extractJson;
   const clean = String(texto || '').trim();
   if (!clean) return { lineas: [], errores: ['Texto del extracto vacío'] };
   const raw = await _call({
     content: [{ type: 'text', text: `Texto del extracto bancario:\n\n${clean.slice(0, MAX_TEXT)}` }],
     system: SYSTEM,
-    maxTokens: 8000,
+    model: FAST_MODEL,
+    maxTokens: MAX_OUT_TOKENS,
   });
-  let data;
-  try { data = _extract(raw); } catch (e) {
-    return { lineas: [], errores: [`El modelo no devolvió JSON válido: ${e.message}`] };
-  }
-  return mapClaudeLineas(data && data.transacciones);
+  return parseDelimLineas(raw);
 }
