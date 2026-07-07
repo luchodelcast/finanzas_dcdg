@@ -350,6 +350,17 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   </div>
   <div class="card">
     <div class="card-ttl">Últimos ingresos</div>
+    <div class="row2">
+      <div class="fld"><label>Entidad</label><select id="ingreso-filtro-entidad"><option value="">Todos</option></select></div>
+      <div class="fld"><label>Periodo</label>
+        <select id="ingreso-filtro-periodo">
+          <option value="mes">Este mes</option>
+          <option value="mespasado">Mes pasado</option>
+          <option value="anio">Año</option>
+        </select>
+      </div>
+    </div>
+    <div id="ingreso-total" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px"></div>
     <div id="ingreso-list"><div class="empty">—</div></div>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
