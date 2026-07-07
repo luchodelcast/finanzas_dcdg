@@ -63,3 +63,12 @@ export const confirmarCruce = (body) => request('/api/pwa-conciliacion', { metho
 
 /** Reporte mensual de aportes IBC por persona (Fase 3.2, solo lectura). */
 export const getAportes = (params = {}) => request('/api/pwa-aportes', { params });
+
+/** Plan de cuentas (PUC). Opcional ?clase=1..6. */
+export const getPlanCuentas = (params = {}) => request('/api/pwa-plan-cuentas', { params });
+
+/** Apertura existente de una entidad (o null). */
+export const getApertura = (params = {}) => request('/api/pwa-apertura', { params });
+
+/** Guarda el asiento de apertura (saldos iniciales). */
+export const guardarApertura = (body) => request('/api/pwa-apertura', { method: 'POST', body });
