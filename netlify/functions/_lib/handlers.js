@@ -10,6 +10,7 @@ import { registrarMovimiento, resumen } from './finanzas.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
   insertIngreso, queryIngresos,
+  insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
@@ -17,6 +18,7 @@ import { clasificar } from './classify.js';
 import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
+import { parseCsvExtracto } from './extractos.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
 export function makeRegistrarHandler(tipo) {
@@ -237,6 +239,62 @@ export async function pwaIngresoHandler(req) {
     return ok({
       ok: true, registrado: inserted, ya_existia: !inserted, id: row && row.id,
       mensaje: inserted ? 'Ingreso registrado ✅' : 'Ese ingreso ya estaba registrado (no se duplicó).',
+    });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Carga (POST) o lista (GET) extractos bancarios en CSV. Auth Google (equipo
+ * financiero). Primer paso de la conciliación (docs/conciliacion.md): solo
+ * normaliza y guarda las líneas (`extracto_lineas`, sin_conciliar); el cruce
+ * automático contra lo capturado es una fase futura.
+ */
+export async function pwaExtractoHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const extracto_id = Number(url.searchParams.get('extracto_id')) || null;
+    try {
+      if (extracto_id) {
+        const lineas = await queryExtractoLineas({ extracto_id });
+        return ok({ ok: true, lineas, n: lineas.length });
+      }
+      const extractos = await queryExtractos({ cuenta: url.searchParams.get('cuenta') || undefined });
+      return ok({ ok: true, extractos, n: extractos.length });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+
+  const body = await parseBody(req);
+  const cuenta = String(body.cuenta || '').trim();
+  if (!cuenta) return bad('cuenta requerida');
+  const csvText = String(body.csv || '');
+  if (!csvText.trim()) return bad('archivo CSV vacío o faltante');
+
+  const { lineas, errores } = parseCsvExtracto(csvText);
+  if (!lineas.length) {
+    return bad(`No se encontraron líneas válidas en el CSV.${errores[0] ? ' ' + errores[0] : ''}`, 422);
+  }
+
+  try {
+    const extracto = await insertExtracto({
+      cuenta,
+      periodo: body.periodo, fecha_desde: body.fecha_desde, fecha_hasta: body.fecha_hasta,
+      saldo_inicial: body.saldo_inicial, saldo_final: body.saldo_final, moneda: body.moneda,
+      fuente: 'csv',
+    });
+    await insertExtractoLineas(extracto.id, lineas);
+    const nErr = errores.length;
+    return ok({
+      ok: true, extracto_id: extracto.id, lineas: lineas.length, errores,
+      mensaje: `Extracto cargado ✅ ${lineas.length} línea${lineas.length === 1 ? '' : 's'}`
+        + (nErr ? ` (${nErr} fila${nErr === 1 ? '' : 's'} con error, omitida${nErr === 1 ? '' : 's'}).` : '.'),
     });
   } catch (e) {
     return bad(e.message, 422);

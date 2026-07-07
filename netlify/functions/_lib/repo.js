@@ -207,6 +207,74 @@ export async function queryIngresos({ entidad_id, desde, hasta, limit = 50 }, sq
       limit $${params.length}`, params);
 }
 
+// ---------------------------------------------------------------------------
+// Extractos bancarios (cargador CSV — fase 1 de conciliación, docs/conciliacion.md).
+// ---------------------------------------------------------------------------
+
+/** Inserta un extracto cargado (cabecera). */
+export async function insertExtracto(e, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const cols = ['cuenta', 'entidad_id', 'periodo', 'fecha_desde', 'fecha_hasta',
+    'saldo_inicial', 'saldo_final', 'moneda', 'fuente', 'estado'];
+  const vals = [e.cuenta, e.entidad_id || null, e.periodo || null, e.fecha_desde || null, e.fecha_hasta || null,
+    e.saldo_inicial ?? null, e.saldo_final ?? null, e.moneda || 'COP', e.fuente || 'csv', e.estado || 'cargado'];
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const rows = await sql.query(
+    `insert into extractos (${cols.join(', ')}) values (${ph}) returning *`, vals
+  );
+  return rows[0];
+}
+
+/** Inserta las líneas de un extracto ya cargado (una sola sentencia multi-fila). */
+export async function insertExtractoLineas(extracto_id, lineas, sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!lineas || !lineas.length) return [];
+  const cols = ['extracto_id', 'fecha', 'descripcion', 'monto', 'tipo', 'referencia'];
+  const vals = [];
+  const groups = lineas.map((l, i) => {
+    const base = i * cols.length;
+    vals.push(extracto_id, l.fecha, l.descripcion || null, l.monto, l.tipo || null, l.referencia || null);
+    return `(${cols.map((_, j) => `$${base + j + 1}`).join(', ')})`;
+  });
+  return sql.query(
+    `insert into extracto_lineas (${cols.join(', ')}) values ${groups.join(', ')} returning *`, vals
+  );
+}
+
+/** Lista extractos cargados (con conteo de líneas). */
+export async function queryExtractos({ cuenta, limit = 50 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (cuenta) { params.push(cuenta); cond.push(`e.cuenta = $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  params.push(Math.min(Number(limit) || 50, 200));
+  return sql.query(
+    `select e.id, e.cuenta, e.periodo, e.fecha_desde, e.fecha_hasta, e.saldo_inicial, e.saldo_final,
+            e.moneda, e.fuente, e.estado, e.creado_en,
+            (select count(*) from extracto_lineas l where l.extracto_id = e.id)::int as n_lineas
+       from extractos e
+       ${where}
+      order by e.creado_en desc
+      limit $${params.length}`,
+    params
+  );
+}
+
+/** Lista las líneas de un extracto. */
+export async function queryExtractoLineas({ extracto_id, limit = 500 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!extracto_id) return [];
+  return sql.query(
+    `select id, fecha, descripcion, monto, tipo, referencia, estado
+       from extracto_lineas
+      where extracto_id = $1
+      order by fecha, id
+      limit $2`,
+    [extracto_id, Math.min(Number(limit) || 500, 2000)]
+  );
+}
+
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

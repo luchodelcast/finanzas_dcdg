@@ -47,3 +47,9 @@ export const getIngresos = (params = {}) => request('/api/pwa-ingreso', { params
 
 /** Registra un ingreso. */
 export const registrarIngreso = (body) => request('/api/pwa-ingreso', { method: 'POST', body });
+
+/** Lista de extractos bancarios cargados (o las líneas de uno, con extracto_id). */
+export const getExtractos = (params = {}) => request('/api/pwa-extracto', { params });
+
+/** Carga un extracto bancario en CSV. */
+export const subirExtracto = (body) => request('/api/pwa-extracto', { method: 'POST', body });

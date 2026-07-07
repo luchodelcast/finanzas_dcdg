@@ -85,8 +85,12 @@ DDL en [`sql/conciliacion.sql`](../sql/conciliacion.sql) (idempotente).
 
 ## Fases
 
-- **Ahora:** dejar el esquema listo (`extractos`, `extracto_lineas`,
-  `estado_conciliacion`) para no re-arquitecturar después. *(Este PR.)*
-- **Siguiente:** cargador de extractos (CSV/PDF) + motor de cruce + reporte de
-  discrepancias.
+- **Listo:** esquema (`extractos`, `extracto_lineas`, `estado_conciliacion`).
+- **Listo:** cargador de extractos en CSV (botón 🧾 de la PWA · endpoint
+  `/api/pwa-extracto`) — sube fecha/descripción/monto de una cuenta y un
+  periodo, y los guarda en `extracto_lineas` con `estado='sin_conciliar'`.
+  Sin PDF aún y **sin el motor de cruce automático** (siguiente fase): solo
+  deja los datos cargados y visibles.
+- **Siguiente:** motor de cruce (paso 2 de "El proceso de conciliación" arriba)
+  + reporte de discrepancias + soporte de PDF.
 - **Futuro:** ingesta directa desde los portales de los bancos.
