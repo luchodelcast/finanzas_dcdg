@@ -1,40 +1,42 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mapClaudeLineas, parseExtractoPdfText } from '../netlify/functions/_lib/extracto-pdf.js';
+import { parseDelimLineas, parseExtractoPdfText } from '../netlify/functions/_lib/extracto-pdf.js';
 
-test('mapClaudeLineas: signo → tipo, y arma el shape de líneas', () => {
-  const { lineas, errores } = mapClaudeLineas([
-    { fecha: '2026-07-03', descripcion: 'PAGO NEQUI', monto: -50000 },
-    { fecha: '2026-07-04', descripcion: 'CONSIGNACION', monto: 120000 },
-  ]);
+test('parseDelimLineas: signo → tipo, y arma el shape de líneas', () => {
+  const { lineas, errores } = parseDelimLineas(
+    '2026-07-03|PAGO NEQUI|-50000\n2026-07-04|CONSIGNACION|120000',
+  );
   assert.equal(errores.length, 0);
   assert.equal(lineas.length, 2);
   assert.equal(lineas[0].tipo, 'debito');
   assert.equal(lineas[0].monto, -50000);
   assert.equal(lineas[0].descripcion, 'PAGO NEQUI');
   assert.equal(lineas[1].tipo, 'credito');
+  assert.equal(lineas[1].monto, 120000);
 });
 
-test('mapClaudeLineas: monto como string ("1.234,56") también se parsea', () => {
-  const { lineas } = mapClaudeLineas([{ fecha: '2026-07-05', descripcion: 'X', monto: '-1.234,56' }]);
+test('parseDelimLineas: tolera separador de miles con signo ("-1.234.567")', () => {
+  const { lineas } = parseDelimLineas('2026-07-05|RETIRO|-1.234.567');
   assert.equal(lineas.length, 1);
-  assert.equal(lineas[0].tipo, 'debito');
-  assert.ok(lineas[0].monto < 0);
+  assert.equal(lineas[0].monto, -1234567);
 });
 
-test('mapClaudeLineas: filas sin fecha o sin monto se omiten con aviso', () => {
-  const { lineas, errores } = mapClaudeLineas([
-    { descripcion: 'sin fecha', monto: -10 },
-    { fecha: '2026-07-05', descripcion: 'sin monto' },
-    { fecha: '2026-07-05', descripcion: 'ok', monto: -10 },
-  ]);
-  assert.equal(lineas.length, 1);
-  assert.equal(errores.length, 2);
+test('parseDelimLineas: descripción con espacios internos se conserva', () => {
+  const { lineas } = parseDelimLineas('2026-07-05|COMPRA EXITO CALLE 80|-45000');
+  assert.equal(lineas[0].descripcion, 'COMPRA EXITO CALLE 80');
 });
 
-test('mapClaudeLineas: entrada no-array → vacío sin lanzar', () => {
-  assert.deepEqual(mapClaudeLineas(null), { lineas: [], errores: [] });
-  assert.deepEqual(mapClaudeLineas(undefined), { lineas: [], errores: [] });
+test('parseDelimLineas: ignora líneas de ruido (sin barra) y avisa las inválidas', () => {
+  const { lineas, errores } = parseDelimLineas(
+    'SALDO ANTERIOR 100000\n2026-07-05|OK|-10\n2026-07-06|SIN MONTO|abc',
+  );
+  assert.equal(lineas.length, 1);          // solo la válida
+  assert.equal(errores.length, 1);         // la de monto inválido
+});
+
+test('parseDelimLineas: entrada vacía → sin líneas, sin lanzar', () => {
+  assert.deepEqual(parseDelimLineas(''), { lineas: [], errores: [] });
+  assert.deepEqual(parseDelimLineas(null), { lineas: [], errores: [] });
 });
 
 test('parseExtractoPdfText: texto vacío → error, sin llamar al modelo', async () => {
@@ -45,20 +47,15 @@ test('parseExtractoPdfText: texto vacío → error, sin llamar al modelo', async
   assert.match(r.errores[0], /vac/i);
 });
 
-test('parseExtractoPdfText: estructura el texto vía el modelo (inyectado)', async () => {
-  const fakeCall = async ({ content, system }) => {
+test('parseExtractoPdfText: usa modelo rápido y estructura la salida (inyectado)', async () => {
+  const fakeCall = async ({ content, system, model }) => {
     assert.ok(system.includes('extractos bancarios'));
     assert.ok(content[0].text.includes('MOVIMIENTO'));
-    return '```json\n{"transacciones":[{"fecha":"2026-07-06","descripcion":"COMPRA","monto":-9900}]}\n```';
+    assert.ok(model, 'debe pasar un modelo (rápido)');
+    return '2026-07-06|COMPRA|-9900\n2026-07-07|ABONO|15000';
   };
   const r = await parseExtractoPdfText('... MOVIMIENTO 06/07 COMPRA -9.900 ...', { callAnthropic: fakeCall });
-  assert.equal(r.lineas.length, 1);
+  assert.equal(r.lineas.length, 2);
   assert.equal(r.lineas[0].tipo, 'debito');
-  assert.equal(r.lineas[0].descripcion, 'COMPRA');
-});
-
-test('parseExtractoPdfText: respuesta no-JSON del modelo → error controlado', async () => {
-  const r = await parseExtractoPdfText('algo', { callAnthropic: async () => 'lo siento, no puedo' });
-  assert.equal(r.lineas.length, 0);
-  assert.match(r.errores[0], /JSON/);
+  assert.equal(r.lineas[1].tipo, 'credito');
 });
