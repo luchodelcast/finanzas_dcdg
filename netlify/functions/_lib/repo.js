@@ -275,6 +275,82 @@ export async function queryExtractoLineas({ extracto_id, limit = 500 } = {}, sql
   );
 }
 
+// ---------------------------------------------------------------------------
+// Motor de cruce de conciliación (fase 2, docs/conciliacion.md, issue #39).
+// Solo lectura salvo `confirmarConciliacion` (la única escritura: siempre a
+// pedido explícito del usuario, tras revisar la propuesta).
+// ---------------------------------------------------------------------------
+
+/** Un extracto por id (el motor de cruce necesita su rango de fechas). */
+export async function getExtracto(id, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from extractos where id = $1', [id]);
+  return rows[0] || null;
+}
+
+/** Movimientos `provisional` dentro de una ventana de fechas (candidatos a conciliar). */
+export async function queryMovimientosProvisionales({ desde, hasta }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select id, fecha, descripcion, monto
+       from movimientos
+      where coalesce(estado_conciliacion, 'provisional') = 'provisional'
+        and fecha between $1 and $2
+      order by fecha`,
+    [desde, hasta]
+  );
+}
+
+/** Ingresos `provisional` dentro de una ventana de fechas (candidatos a conciliar). */
+export async function queryIngresosProvisionales({ desde, hasta }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select id, fecha, concepto as descripcion, monto
+       from ingresos
+      where coalesce(estado_conciliacion, 'provisional') = 'provisional'
+        and fecha between $1 and $2
+      order by fecha`,
+    [desde, hasta]
+  );
+}
+
+/**
+ * Confirma un cruce propuesto (o elegido manualmente ante ambigüedad): marca
+ * `conciliado` en la línea del extracto Y en el movimiento/ingreso elegido.
+ * Única escritura del motor de conciliación — nunca se llama sola, siempre
+ * tras revisión del usuario en la pantalla de conciliación.
+ * Guarda-raíles: la línea debe seguir `sin_conciliar` y el capturado debe
+ * seguir `provisional` (evita re-conciliar o pisar un cruce ya confirmado).
+ */
+export async function confirmarConciliacion({ linea_id, tipo, id }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const esIngreso = tipo === 'ingreso';
+
+  const lineaRows = await sql.query('select * from extracto_lineas where id = $1', [linea_id]);
+  const linea = lineaRows[0];
+  if (!linea) throw new Error('Línea de extracto no encontrada');
+  if (linea.estado !== 'sin_conciliar') throw new Error('Esa línea ya fue conciliada (o marcada) previamente');
+
+  const capturadoRows = esIngreso
+    ? await sql.query('select * from ingresos where id = $1', [id])
+    : await sql.query('select * from movimientos where id = $1', [id]);
+  const capturado = capturadoRows[0];
+  if (!capturado) throw new Error(`${esIngreso ? 'Ingreso' : 'Movimiento'} no encontrado`);
+  if ((capturado.estado_conciliacion || 'provisional') !== 'provisional') {
+    throw new Error('Ese registro ya no está provisional (¿ya se concilió con otra línea?)');
+  }
+
+  if (esIngreso) {
+    await sql.query("update extracto_lineas set estado = 'conciliado', ingreso_id = $2 where id = $1", [linea_id, id]);
+    await sql.query("update ingresos set estado_conciliacion = 'conciliado', extracto_linea_id = $2 where id = $1", [id, linea_id]);
+  } else {
+    await sql.query("update extracto_lineas set estado = 'conciliado', movimiento_id = $2 where id = $1", [linea_id, id]);
+    await sql.query("update movimientos set estado_conciliacion = 'conciliado', extracto_linea_id = $2 where id = $1", [id, linea_id]);
+  }
+
+  return { linea_id, tipo: esIngreso ? 'ingreso' : 'movimiento', id };
+}
+
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

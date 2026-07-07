@@ -204,6 +204,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     </div>
     <button class="ico-btn" data-go="ingreso" title="Registrar ingreso">💵</button>
     <button class="ico-btn" data-go="extractos" title="Cargar extracto bancario">🧾</button>
+    <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
     <button class="ico-btn" data-go="dash" title="Dashboard">📊</button>
     <button class="ico-btn" data-go="settings" title="Configuración">⚙</button>
   </div>
@@ -382,6 +383,21 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <div class="card">
     <div class="card-ttl">Extractos cargados</div>
     <div id="extracto-list"><div class="empty">—</div></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── CONCILIACIÓN (motor de cruce, fase 2) ── -->
+<div class="scr" id="scr-conciliacion">
+  <div class="card">
+    <div class="card-ttl">Conciliar extracto</div>
+    <div class="fld"><label>Extracto</label><select id="conc-extracto"></select></div>
+    <div id="conc-resumen" style="font-size:12px;color:var(--gray-d);margin-top:4px"></div>
+    <div id="conc-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Cruces propuestos</div>
+    <div id="conc-list"><div class="empty">—</div></div>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>

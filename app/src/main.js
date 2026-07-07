@@ -26,6 +26,7 @@ import { loadHistory, addHistory, getHistory, clearHistory } from './services/hi
 import { renderDashboard } from './ui/dashboard.js';
 import { renderIngresos } from './ui/ingresos.js';
 import { renderExtractos } from './ui/extractos.js';
+import { renderConciliacion } from './ui/conciliacion.js';
 
 const V = (id) => document.getElementById(id);
 const today = () => hoyISO();
@@ -55,6 +56,7 @@ function go(s) {
   if (s === 'ingreso') renderIngresos();
   if (s === 'transfer') initTransfer();
   if (s === 'extractos') renderExtractos();
+  if (s === 'conciliacion') renderConciliacion();
 }
 
 function toast(msg, dur = 3000) {
