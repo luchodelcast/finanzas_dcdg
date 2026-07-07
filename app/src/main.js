@@ -27,6 +27,7 @@ import { loadHistory, addHistory, getHistory, clearHistory } from './services/hi
 import { renderDashboard } from './ui/dashboard.js';
 import { renderIngresos } from './ui/ingresos.js';
 import { renderExtractos } from './ui/extractos.js';
+import { renderConciliacion } from './ui/conciliacion.js';
 import { renderAportes } from './ui/aportes.js';
 
 const V = (id) => document.getElementById(id);
@@ -57,6 +58,7 @@ function go(s) {
   if (s === 'ingreso') renderIngresos();
   if (s === 'transfer') initTransfer();
   if (s === 'extractos') renderExtractos();
+  if (s === 'conciliacion') renderConciliacion();
   if (s === 'aportes') renderAportes();
 }
 

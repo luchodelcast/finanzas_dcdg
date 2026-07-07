@@ -11,6 +11,7 @@ import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
   insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
+  getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
@@ -19,6 +20,7 @@ import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
+import { proponerCruces, VENTANA_DIAS_DEFAULT } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
@@ -313,6 +315,84 @@ export async function pwaExtractoHandler(req) {
       mensaje: `Extracto cargado ✅ ${lineas.length} línea${lineas.length === 1 ? '' : 's'}`
         + (nErr ? ` (${nErr} fila${nErr === 1 ? '' : 's'} con error, omitida${nErr === 1 ? '' : 's'}).` : '.'),
     });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/** Suma/resta días a una fecha YYYY-MM-DD (para la ventana del motor de cruce). */
+function addDias(fechaISO, dias) {
+  const d = new Date(`${fechaISO}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * GET|POST /api/pwa-conciliacion — motor de cruce automático de conciliación
+ * (fase 2 de docs/conciliacion.md, issue #39). Auth Google (equipo financiero).
+ *
+ * GET  ?extracto_id=NN → PROPONE cruces entre las líneas `sin_conciliar` de
+ * ese extracto y los movimientos/ingresos `provisional` de la misma ventana
+ * de fechas. Solo lectura: no escribe nada.
+ *
+ * POST { linea_id, tipo: 'movimiento'|'ingreso', id } → única escritura del
+ * motor: el usuario confirma el cruce propuesto (o, ante ambigüedad, el que
+ * eligió manualmente entre los candidatos) y se marca `conciliado` en
+ * `extracto_lineas` + `movimientos`/`ingresos`.
+ */
+export async function conciliacionHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const extracto_id = Number(url.searchParams.get('extracto_id')) || null;
+    if (!extracto_id) return bad('extracto_id requerido');
+    try {
+      const extracto = await getExtracto(extracto_id);
+      if (!extracto) return bad('Extracto no encontrado', 404);
+      const todasLineas = await queryExtractoLineas({ extracto_id });
+      const lineas = todasLineas.filter((l) => l.estado === 'sin_conciliar');
+      if (!lineas.length) {
+        return ok({
+          ok: true, extracto_id, propuestas: [],
+          resumen: { n_lineas: todasLineas.length, n_sin_conciliar: 0, n_match: 0, n_ambiguo: 0, n_solo_extracto: 0 },
+        });
+      }
+      const fechasLineas = lineas.map((l) => String(l.fecha).slice(0, 10)).sort();
+      const fechaDesde = extracto.fecha_desde ? String(extracto.fecha_desde).slice(0, 10) : fechasLineas[0];
+      const fechaHasta = extracto.fecha_hasta ? String(extracto.fecha_hasta).slice(0, 10) : fechasLineas[fechasLineas.length - 1];
+      const desde = addDias(fechaDesde, -VENTANA_DIAS_DEFAULT);
+      const hasta = addDias(fechaHasta, VENTANA_DIAS_DEFAULT);
+
+      const [movimientos, ingresos] = await Promise.all([
+        queryMovimientosProvisionales({ desde, hasta }),
+        queryIngresosProvisionales({ desde, hasta }),
+      ]);
+      const propuestas = proponerCruces(lineas, movimientos, ingresos, VENTANA_DIAS_DEFAULT);
+      const resumen = {
+        n_lineas: todasLineas.length,
+        n_sin_conciliar: lineas.length,
+        n_match: propuestas.filter((p) => p.caso === 'match').length,
+        n_ambiguo: propuestas.filter((p) => p.caso === 'ambiguo').length,
+        n_solo_extracto: propuestas.filter((p) => p.caso === 'solo_extracto').length,
+      };
+      return ok({ ok: true, extracto_id, propuestas, resumen });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const body = await parseBody(req);
+  const linea_id = Number(body.linea_id);
+  const id = Number(body.id);
+  const tipo = body.tipo === 'ingreso' ? 'ingreso' : 'movimiento';
+  if (!linea_id) return bad('linea_id requerido');
+  if (!id) return bad('id (del movimiento/ingreso elegido) requerido');
+  try {
+    const r = await confirmarConciliacion({ linea_id, tipo, id });
+    return ok({ ok: true, ...r, mensaje: 'Cruce confirmado ✅ (conciliado)' });
   } catch (e) {
     return bad(e.message, 422);
   }

@@ -89,8 +89,21 @@ DDL en [`sql/conciliacion.sql`](../sql/conciliacion.sql) (idempotente).
 - **Listo:** cargador de extractos en CSV (botón 🧾 de la PWA · endpoint
   `/api/pwa-extracto`) — sube fecha/descripción/monto de una cuenta y un
   periodo, y los guarda en `extracto_lineas` con `estado='sin_conciliar'`.
-  Sin PDF aún y **sin el motor de cruce automático** (siguiente fase): solo
-  deja los datos cargados y visibles.
-- **Siguiente:** motor de cruce (paso 2 de "El proceso de conciliación" arriba)
-  + reporte de discrepancias + soporte de PDF.
+  Sin PDF aún.
+- **Listo (primera versión, issue #39):** motor de cruce automático — botón 🔗
+  de la PWA · endpoint `/api/pwa-conciliacion`. Para **un extracto a la vez**,
+  PROPONE cruces (monto ±1, fecha ±4 días, descripción como desempate,
+  reusando el criterio de `repo.findPosibleDuplicado`) entre sus líneas
+  `sin_conciliar` y los `movimientos`/`ingresos` `provisional`. Nunca escribe
+  solo: el usuario revisa y confirma cada cruce (`POST` explícito) antes de
+  marcar `conciliado`. Si una línea matchea con más de un capturado
+  (ambigüedad), no se auto-resuelve ni se descarta — se muestran todos los
+  candidatos para que el usuario elija manualmente cuál es el correcto.
+  `solo_extracto` (línea sin nada capturado que coincida) es solo informativo
+  en esta versión: el motor no crea el movimiento/ingreso faltante por sí
+  solo, el usuario lo registra por las pantallas normales.
+  Sin PDF, sin soporte multi-extracto simultáneo y **sin el cuadre de saldos**
+  (paso 4 de "El proceso de conciliación" arriba) todavía.
+- **Siguiente:** cuadre de saldos + creación guiada del movimiento faltante
+  para `solo_extracto` + reporte de discrepancias + soporte de PDF.
 - **Futuro:** ingesta directa desde los portales de los bancos.

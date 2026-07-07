@@ -54,5 +54,12 @@ export const getExtractos = (params = {}) => request('/api/pwa-extracto', { para
 /** Carga un extracto bancario en CSV. */
 export const subirExtracto = (body) => request('/api/pwa-extracto', { method: 'POST', body });
 
+/** Propone cruces de conciliación para un extracto (solo lectura). */
+export const getPropuestasConciliacion = (extracto_id) =>
+  request('/api/pwa-conciliacion', { params: { extracto_id } });
+
+/** Confirma un cruce (o el elegido manualmente ante ambigüedad) → marca conciliado. */
+export const confirmarCruce = (body) => request('/api/pwa-conciliacion', { method: 'POST', body });
+
 /** Reporte mensual de aportes IBC por persona (Fase 3.2, solo lectura). */
 export const getAportes = (params = {}) => request('/api/pwa-aportes', { params });
