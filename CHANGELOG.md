@@ -18,7 +18,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   (`POST /api/pwa-recontabilizar`, solo owners) para contabilizar lo ya
   capturado desde el 1-jul. Alcance acotado a propósito: **solo movimientos en
   COP** — el PUC simplificado de T1 no tiene subcuenta por moneda, así que los
-  USD se omiten (quedan sin asiento) hasta que se diseñe eso. 🤖 PR #PENDIENTE.
+  USD se omiten (quedan sin asiento) hasta que se diseñe eso. 🤖 PR #67.
   🔎 en revisión — requiere correr `sql/reglas-contables.sql` en Neon y que
   confirmes si la cédula "capital" (arriendos + rendimientos financieros) se
   separa en dos cuentas o se queda unificada en 4210.
