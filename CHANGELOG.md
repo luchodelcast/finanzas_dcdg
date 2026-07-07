@@ -13,7 +13,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   docs/conciliacion.md: para un extracto a la vez, propone cruces entre sus
   líneas y lo capturado (`movimientos`/`ingresos` `provisional`); el usuario
   revisa y confirma antes de marcar `conciliado` (ante ambigüedad, elige
-  manualmente entre los candidatos — nunca se auto-resuelve). 🤖 PR #55. 🔎
+  manualmente entre los candidatos — nunca se auto-resuelve). 🤖 PR #57. 🔎
 - Cargador de extractos bancarios en CSV (botón 🧾): sube fecha/descripción/
   monto de una cuenta y un periodo y los deja guardados en `extracto_lineas`
   (`sin_conciliar`) — primer paso de la conciliación (docs/conciliacion.md);
