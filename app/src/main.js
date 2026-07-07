@@ -21,6 +21,7 @@ import {
 } from './services/sheets.js';
 import { getAccessToken, signOut as authSignOut, isSignedIn } from './services/auth.js';
 import { procesarRecibo } from './utils/imageProcessor.js';
+import { procesarReciboPDF } from './utils/pdfProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
 import { loadHistory, addHistory, getHistory, clearHistory } from './services/history.js';
 import { renderDashboard } from './ui/dashboard.js';
@@ -171,12 +172,26 @@ function buildAccountsDropdown(accounts) {
   }
 }
 
-// ── Cámara / imagen ───────────────────────────────────────
+// ── Cámara / imagen / PDF ─────────────────────────────────
+const esPDF = (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+
 async function onImg(inp) {
   const f = inp.files[0];
   if (!f) return;
   inp.value = '';
   go('proc');
+  if (esPDF(f)) {
+    V('proc-msg').textContent = 'Cargando PDF…';
+    try {
+      const { base64, mediaType } = await procesarReciboPDF(f);
+      curImg = { base64, mediaType, prev: null };
+      await doImg();
+    } catch (e) {
+      go('home');
+      toast(e.message || 'No se pudo leer el PDF.');
+    }
+    return;
+  }
   V('proc-msg').textContent = 'Cargando imagen…';
   try {
     const { base64, mediaType, dataUrl } = await procesarRecibo(f);
@@ -219,11 +234,17 @@ async function doText() {
 // ── Pantalla de confirmación ──────────────────────────────
 function showConf(d) {
   const iw = V('img-wrap');
-  if (curImg) {
+  const pw = V('pdf-wrap');
+  if (curImg && curImg.mediaType === 'application/pdf') {
+    iw.style.display = 'none';
+    pw.style.display = 'flex';
+  } else if (curImg) {
     V('img-prev').src = curImg.prev;
     iw.style.display = 'block';
+    pw.style.display = 'none';
   } else {
     iw.style.display = 'none';
+    pw.style.display = 'none';
   }
 
   // Aviso de umbral (< $10.000)
