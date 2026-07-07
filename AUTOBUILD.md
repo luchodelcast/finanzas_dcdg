@@ -20,8 +20,21 @@ prompt: "operar con loops en vez de prompts".
 1. **Sincroniza `main`** (`git fetch && checkout main && pull`). Instala deps si
    hace falta (`npm ci`).
 2. **Lee el backlog:** issues abiertos con label **`autobuild`**, ordenados por
-   prioridad (label `prioridad-alta` > reacciones 👍 > antigüedad). **Ignora** los
-   que ya tengan un PR abierto o el label `autobuild-wip` (otra corrida los tomó).
+   prioridad (label `prioridad-alta` > reacciones 👍 > antigüedad).
+   **NO TOMES** (déjalos intactos — sin construir, sin abrir PR y **sin cambiarles
+   ni una etiqueta**):
+   - **`propuesta`** — es la **compuerta de aprobación de Luis**. Un issue con
+     `propuesta` NO está aprobado: espera a que **Luis** le quite esa etiqueta.
+     Construir uno con `propuesta` (o quitársela tú para construirlo) es una
+     **violación del proceso** — nunca lo hagas, por más listo que esté el pedido.
+   - **`autobuild-espera`** / **`needs-review`** o con un **PR abierto** — ya hay
+     trabajo esperando revisión; no lo rehagas.
+   - **`autobuild-wip`** — otra corrida ya lo tomó.
+   - Marcados **🔒 BLOQUEADA / "depende de #N"** cuya dependencia **no esté
+     fusionada** en `main` todavía. Verifícalo antes de empezar.
+
+   Solo es elegible un issue `autobuild` **sin** ninguna de esas etiquetas y con
+   sus dependencias ya fusionadas.
 3. **Si el backlog está vacío:** **propón UNA** funcionalidad nueva creando un
    issue `autobuild` + `propuesta` (con contexto y valor), **avísale a Luis del
    pendiente** (ver "Notificación" — una propuesta sin avisar es invisible) y
@@ -54,6 +67,9 @@ prompt: "operar con loops en vez de prompts".
 ## Barandas (lo que lo hace seguro)
 
 - **Todo por PR + CI.** Nada se fusiona sin `npm test` + `npm run build` en verde.
+- **Compuerta de aprobación (`propuesta`):** solo **Luis** aprueba una propuesta
+  (quitándole la etiqueta). Autobuild **nunca** construye un issue con `propuesta`
+  ni le cambia la etiqueta por su cuenta. Aprobar es decisión del dueño, no del agente.
 - **Alcance de una feature** por corrida. Cambios pequeños y reversibles.
 - **Candado de irreversibles/seguridad** (paso 7) incluso bajo máxima autonomía.
 - **Convive con Autofix:** los **bugs tienen prioridad**. Si hay issues de autofix
