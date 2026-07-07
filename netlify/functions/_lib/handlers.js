@@ -21,7 +21,7 @@ import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js'
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
 import { parseExtractoPdfText } from './extracto-pdf.js';
-import { proponerCruces, VENTANA_DIAS_DEFAULT } from './conciliacion.js';
+import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
@@ -335,6 +335,7 @@ export async function pwaExtractoHandler(req) {
 /** Suma/resta días a una fecha YYYY-MM-DD (para la ventana del motor de cruce). */
 function addDias(fechaISO, dias) {
   const d = new Date(`${fechaISO}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return fechaISO; // fecha inválida: no desplazamos
   d.setUTCDate(d.getUTCDate() + dias);
   return d.toISOString().slice(0, 10);
 }
@@ -364,16 +365,20 @@ export async function conciliacionHandler(req) {
       const extracto = await getExtracto(extracto_id);
       if (!extracto) return bad('Extracto no encontrado', 404);
       const todasLineas = await queryExtractoLineas({ extracto_id });
-      const lineas = todasLineas.filter((l) => l.estado === 'sin_conciliar');
+      // Normaliza `fecha` (Date → 'YYYY-MM-DD') para todo el motor de cruce.
+      const lineas = todasLineas
+        .filter((l) => l.estado === 'sin_conciliar')
+        .map((l) => ({ ...l, fecha: toISODate(l.fecha) }));
+      const resumenVacio = { n_lineas: todasLineas.length, n_sin_conciliar: lineas.length, n_match: 0, n_ambiguo: 0, n_solo_extracto: 0 };
       if (!lineas.length) {
-        return ok({
-          ok: true, extracto_id, propuestas: [],
-          resumen: { n_lineas: todasLineas.length, n_sin_conciliar: 0, n_match: 0, n_ambiguo: 0, n_solo_extracto: 0 },
-        });
+        return ok({ ok: true, extracto_id, propuestas: [], resumen: { ...resumenVacio, n_sin_conciliar: 0 } });
       }
-      const fechasLineas = lineas.map((l) => String(l.fecha).slice(0, 10)).sort();
-      const fechaDesde = extracto.fecha_desde ? String(extracto.fecha_desde).slice(0, 10) : fechasLineas[0];
-      const fechaHasta = extracto.fecha_hasta ? String(extracto.fecha_hasta).slice(0, 10) : fechasLineas[fechasLineas.length - 1];
+      const fechasLineas = lineas.map((l) => l.fecha).filter(Boolean).sort();
+      const fechaDesde = toISODate(extracto.fecha_desde) || fechasLineas[0];
+      const fechaHasta = toISODate(extracto.fecha_hasta) || fechasLineas[fechasLineas.length - 1];
+      if (!fechaDesde || !fechaHasta) {
+        return ok({ ok: true, extracto_id, propuestas: [], resumen: resumenVacio });
+      }
       const desde = addDias(fechaDesde, -VENTANA_DIAS_DEFAULT);
       const hasta = addDias(fechaHasta, VENTANA_DIAS_DEFAULT);
 
@@ -381,7 +386,8 @@ export async function conciliacionHandler(req) {
         queryMovimientosProvisionales({ desde, hasta }),
         queryIngresosProvisionales({ desde, hasta }),
       ]);
-      const propuestas = proponerCruces(lineas, movimientos, ingresos, VENTANA_DIAS_DEFAULT);
+      const norm = (arr) => arr.map((m) => ({ ...m, fecha: toISODate(m.fecha) }));
+      const propuestas = proponerCruces(lineas, norm(movimientos), norm(ingresos), VENTANA_DIAS_DEFAULT);
       const resumen = {
         n_lineas: todasLineas.length,
         n_sin_conciliar: lineas.length,
