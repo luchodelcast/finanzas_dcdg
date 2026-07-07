@@ -164,6 +164,63 @@ export async function getPlanCuenta(codigo, sqlArg) {
 }
 
 // ---------------------------------------------------------------------------
+// Libro diario de partida doble (asientos) — T2.
+// ---------------------------------------------------------------------------
+
+/** Inserta la cabecera de un asiento. Idempotente por idempotency_key. */
+export async function insertAsiento(a, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const cols = ['fecha', 'descripcion', 'entidad_id', 'origen', 'estado', 'estado_conciliacion', 'idempotency_key'];
+  const vals = [a.fecha, a.descripcion || null, a.entidad_id || null, a.origen || 'manual',
+    a.estado || 'contabilizado', a.estado_conciliacion || 'provisional', a.idempotency_key];
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const ins = await sql.query(
+    `insert into asientos (${cols.join(', ')}) values (${ph})
+     on conflict (idempotency_key) do nothing returning *`, vals);
+  if (ins.length) return { inserted: true, row: ins[0] };
+  const prev = await sql.query('select * from asientos where idempotency_key = $1 limit 1', [a.idempotency_key]);
+  return { inserted: false, row: prev[0] || null };
+}
+
+/** Inserta los renglones de un asiento (una sola sentencia multi-fila). */
+export async function insertAsientoLineas(asiento_id, lineas, sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!lineas || !lineas.length) return [];
+  const cols = ['asiento_id', 'cuenta', 'debito', 'credito', 'tercero_id', 'movimiento_id', 'ingreso_id'];
+  const vals = [];
+  const groups = lineas.map((l, i) => {
+    const base = i * cols.length;
+    vals.push(asiento_id, l.cuenta, Number(l.debito) || 0, Number(l.credito) || 0,
+      l.tercero_id || null, l.movimiento_id || null, l.ingreso_id || null);
+    return `(${cols.map((_, j) => `$${base + j + 1}`).join(', ')})`;
+  });
+  return sql.query(
+    `insert into asiento_lineas (${cols.join(', ')}) values ${groups.join(', ')} returning *`, vals);
+}
+
+/** Libro diario: asientos en un rango, cada uno con sus renglones. */
+export async function queryAsientos({ desde, hasta, entidad_id, limit = 100 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (desde) { params.push(desde); cond.push(`a.fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`a.fecha <= $${params.length}`); }
+  if (entidad_id) { params.push(entidad_id); cond.push(`a.entidad_id = $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  params.push(Math.min(Number(limit) || 100, 500));
+  return sql.query(
+    `select a.id, a.fecha, a.descripcion, a.entidad_id, a.origen, a.estado, a.estado_conciliacion,
+            coalesce(json_agg(json_build_object('cuenta', l.cuenta, 'debito', l.debito, 'credito', l.credito)
+                     order by l.id) filter (where l.id is not null), '[]') as lineas
+       from asientos a
+       left join asiento_lineas l on l.asiento_id = a.id
+       ${where}
+      group by a.id
+      order by a.fecha desc, a.id desc
+      limit $${params.length}`, params);
+}
+
+// ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
 

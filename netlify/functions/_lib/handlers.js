@@ -12,6 +12,7 @@ import {
   insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
+  queryAsientos,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
@@ -21,6 +22,7 @@ import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js'
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
 import { parseExtractoPdfText } from './extracto-pdf.js';
+import { crearAsiento } from './asientos.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
@@ -215,6 +217,48 @@ export async function pwaPlanCuentasHandler(req) {
   try {
     const cuentas = await listPlanCuentas({ clase });
     return ok({ ok: true, cuentas, n: cuentas.length });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/** ¿El email es de un dueño (Luis/Carolina)? Solo ellos escriben (decisión: equipo = lectura). */
+function esOwner(email) {
+  const owners = String(process.env.FINANZAS_OWNERS || 'luis@iwin.im,carodz2@gmail.com')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return owners.includes(String(email || '').toLowerCase());
+}
+
+/**
+ * Libro diario de partida doble (T2). Auth Google (equipo financiero).
+ *   GET  /api/pwa-asiento?desde=&hasta=&entidad_id= → lista asientos (lectura, todo el equipo).
+ *   POST /api/pwa-asiento { fecha, descripcion?, entidad_id?, origen?, lineas:[{cuenta,debito,credito,...}] }
+ *        → crea un asiento manual cuadrado. SOLO owners (Luis/Carolina).
+ */
+export async function pwaAsientoHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const g = (k) => url.searchParams.get(k);
+    try {
+      const asientos = await queryAsientos({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id'), limit: g('limit') });
+      return ok({ ok: true, asientos, n: asientos.length });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden crear asientos manuales.', 403);
+
+  const body = await parseBody(req);
+  try {
+    return ok(await crearAsiento({
+      fecha: body.fecha, descripcion: body.descripcion, entidad_id: body.entidad_id,
+      origen: body.origen || 'manual', lineas: body.lineas, idempotency_key: body.idempotency_key,
+    }));
   } catch (e) {
     return bad(e.message, 422);
   }
