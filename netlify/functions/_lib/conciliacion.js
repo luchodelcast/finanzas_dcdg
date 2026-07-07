@@ -21,6 +21,18 @@ import { normalize } from '../../../app/src/config/rules.js';
 
 export const VENTANA_DIAS_DEFAULT = 4; // dentro del rango 3–5 días que pide el issue
 
+/**
+ * Normaliza una fecha a 'YYYY-MM-DD' (o null). Postgres devuelve las columnas
+ * `date` como objetos Date; sin esto, `String(date).slice(0,10)` da basura
+ * ("Thu Mar 05") y revienta al construir una Date con "Invalid time value".
+ */
+export function toISODate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10);
+  const m = String(v).match(/\d{4}-\d{2}-\d{2}/);
+  return m ? m[0] : null;
+}
+
 /** Diferencia en días entre dos fechas YYYY-MM-DD. Infinity si alguna es inválida. */
 function difDias(a, b) {
   const ma = Date.parse(a);

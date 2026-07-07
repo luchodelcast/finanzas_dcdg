@@ -1,8 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { proponerCruces, VENTANA_DIAS_DEFAULT } from '../netlify/functions/_lib/conciliacion.js';
+import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from '../netlify/functions/_lib/conciliacion.js';
 import { setSqlForTests } from '../netlify/functions/_lib/db.js';
 import { confirmarConciliacion } from '../netlify/functions/_lib/repo.js';
+
+// Regresión del bug "Invalid time value": Postgres devuelve `date` como objetos
+// Date; hay que normalizarlos a 'YYYY-MM-DD' antes de la ventana de fechas.
+test('toISODate: Date, ISO string, YYYY-MM-DD y nulos', () => {
+  assert.equal(toISODate(new Date('2026-03-05T00:00:00Z')), '2026-03-05');
+  assert.equal(toISODate('2026-03-05T12:34:56.000Z'), '2026-03-05');
+  assert.equal(toISODate('2026-03-05'), '2026-03-05');
+  assert.equal(toISODate(null), null);
+  assert.equal(toISODate(''), null);
+  assert.equal(toISODate(new Date('nope')), null);
+});
 
 // ---------------------------------------------------------------------------
 // proponerCruces — motor puro (issue #39): match / solo_extracto / ambiguo.
