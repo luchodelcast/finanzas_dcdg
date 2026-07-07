@@ -375,12 +375,19 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
 <!-- ── CARGAR EXTRACTO (conciliación) ── -->
 <div class="scr" id="scr-extractos">
   <div class="card">
-    <div class="card-ttl">Cargar extracto bancario (CSV)</div>
+    <div class="card-ttl">Cargar extracto bancario (CSV o PDF)</div>
     <div class="fld"><label>Cuenta</label><select id="ex-cuenta"></select></div>
     <div class="fld"><label>Periodo (opcional)</label><input type="text" id="ex-periodo" placeholder="Ej: 2026-07"></div>
-    <button class="btn btn-s" data-act="trigExtractoFile" style="margin-top:4px">📄 Elegir archivo CSV</button>
-    <input type="file" id="ex-file-in" accept=".csv,text/csv" style="display:none">
+    <button class="btn btn-s" data-act="trigExtractoFile" style="margin-top:4px">📄 Elegir archivo (CSV o PDF)</button>
+    <input type="file" id="ex-file-in" accept=".csv,text/csv,.pdf,application/pdf" style="display:none">
     <div id="extracto-file-name" style="font-size:12px;color:var(--gray-d);margin-top:6px"></div>
+    <div class="fld" id="ex-pass-wrap" style="display:none;margin-top:8px">
+      <label>Contraseña del PDF</label>
+      <input type="password" id="ex-pass" placeholder="Cédula del titular / NIT" autocomplete="off" inputmode="numeric">
+      <label style="font-weight:400;font-size:11px;color:var(--gray-d);margin-top:4px;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="ex-pass-remember" style="width:auto"> Recordar en este equipo (no se envía a ningún servidor)
+      </label>
+    </div>
     <div id="extracto-msg" style="font-size:12px;margin-top:10px;font-weight:600"></div>
     <button class="btn btn-p" id="btn-save-extracto" data-act="subirExtracto" style="margin-top:14px">✓ Cargar extracto</button>
   </div>
