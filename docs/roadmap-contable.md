@@ -171,7 +171,14 @@ Las cuentas de los hijos se registran en `cuentas_bancarias` con su titular
 - **Fase 3.0 (este documento):** diseño para revisión del equipo.
 - **Fase 3.1:** esquema `entidades` + `terceros` + `ingresos` + roles;
   captura de ingresos.
-- **Fase 3.2:** cálculo y **reporte IBC mensual** por persona.
+- **Fase 3.2 (implementada, solo lectura — pendiente validación del contador):**
+  cálculo y **reporte IBC mensual** por persona (`/api/pwa-aportes` + tarjeta
+  🧮 en la PWA). Usa costos reales (no presunción DIAN), SMMLV/tarifas como
+  config versionada en `app/src/config/aportes.js`, y asume que Luis y
+  Carolina cotizan por separado. Las entidades tipo `negocio` (p.ej. Ahinoa)
+  aún no se consolidan automáticamente en su dueño — ver §3 y §8.b. Ninguna de
+  estas decisiones metodológicas está confirmada por Santiago todavía; no usar
+  los números para trámites reales sin su validación.
 - **Fase 3.3:** `patrimonio` + hoja de trabajo de renta por cédulas.
 - **Fase 4 (Horizonte 2):** partida doble, estados financieros, multi-entidad
   del grupo.
