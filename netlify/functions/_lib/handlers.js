@@ -19,6 +19,7 @@ import { verifyFinanceUser } from './google-auth.js';
 import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
+import { reporteAportes } from './aportes.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
 export function makeRegistrarHandler(tipo) {
@@ -312,6 +313,24 @@ export async function pwaExtractoHandler(req) {
       mensaje: `Extracto cargado ✅ ${lineas.length} línea${lineas.length === 1 ? '' : 's'}`
         + (nErr ? ` (${nErr} fila${nErr === 1 ? '' : 's'} con error, omitida${nErr === 1 ? '' : 's'}).` : '.'),
     });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Reporte mensual de aportes IBC por persona (Fase 3.2, solo lectura). Auth
+ * Google (equipo financiero). Query/body: { periodo? } — mismo formato que
+ * `pwaResumenHandler` ('mes' | 'YYYY-MM' | rango 'YYYY-MM-DD..YYYY-MM-DD').
+ */
+export async function pwaAportesHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const body = req.method === 'POST' ? await parseBody(req) : {};
+  const g = (k) => url.searchParams.get(k) || body[k];
+  try {
+    return ok(await reporteAportes({ periodo: g('periodo') }));
   } catch (e) {
     return bad(e.message, 422);
   }

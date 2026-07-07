@@ -213,6 +213,31 @@ export async function insertIngreso(i, sqlArg) {
   return { inserted: false, row: prev[0] || null };
 }
 
+/**
+ * Totales de ingresos y costos deducibles por entidad, agrupados en un rango
+ * de fechas — base del reporte de aportes IBC (Fase 3.2, solo lectura).
+ * Devuelve dos listas `{entidad_id, total}` (una por tabla); el llamador las
+ * combina con `listEntidades()`.
+ */
+export async function queryAportesBase({ desde, hasta }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const ingresos = await sql.query(
+    `select entidad_id, coalesce(sum(monto),0)::float8 as total
+       from ingresos
+      where fecha >= $1 and fecha <= $2
+      group by entidad_id`,
+    [desde, hasta]
+  );
+  const costos = await sql.query(
+    `select entidad_id, coalesce(sum(monto),0)::float8 as total
+       from costos_actividad
+      where deducible = true and fecha >= $1 and fecha <= $2
+      group by entidad_id`,
+    [desde, hasta]
+  );
+  return { ingresos, costos };
+}
+
 /** Lista ingresos (con nombre de entidad y tercero). */
 export async function queryIngresos({ entidad_id, desde, hasta, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();
