@@ -12,7 +12,7 @@ import {
   insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
-  queryAsientos,
+  queryAsientos, listMovimientosSinAsiento, listIngresosSinAsiento, logEvento,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
@@ -26,6 +26,7 @@ import { crearAsiento } from './asientos.js';
 import { construirApertura } from './apertura.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
+import { contabilizarMovimiento, contabilizarIngreso } from './contabilizar.js';
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
 export function makeRegistrarHandler(tipo) {
@@ -343,9 +344,57 @@ export async function pwaIngresoHandler(req) {
       moneda: body.moneda, retencion_fuente: Number(body.retencion_fuente) || 0,
       actividad: body.actividad, notas: body.notas, origen: 'App', idempotency_key,
     });
+    if (inserted) {
+      try { await contabilizarIngreso(row); } catch (e) {
+        await logEvento('contabilizacion_fallida', 'App', { ingreso_id: row.id, error: e.message });
+      }
+    }
     return ok({
       ok: true, registrado: inserted, ya_existia: !inserted, id: row && row.id,
       mensaje: inserted ? 'Ingreso registrado ✅' : 'Ese ingreso ya estaba registrado (no se duplicó).',
+    });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * POST /api/pwa-recontabilizar — backfill de contabilización (T4). Recorre los
+ * movimientos e ingresos desde `desde` (default 2026-07-01, el punto cero de
+ * la apertura) que todavía no tienen un asiento ligado y los contabiliza.
+ * Solo owners: escribe asientos (aunque sea reprocesando datos ya capturados).
+ */
+export async function pwaRecontabilizarHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden recontabilizar.', 403);
+
+  const body = await parseBody(req).catch(() => ({}));
+  const desde = String(body.desde || '2026-07-01').slice(0, 10);
+
+  try {
+    const [movimientos, ingresos] = await Promise.all([
+      listMovimientosSinAsiento({ desde }),
+      listIngresosSinAsiento({ desde }),
+    ]);
+    let contabilizados = 0; let omitidos = 0; let fallidos = 0;
+    for (const m of movimientos) {
+      try {
+        const r = await contabilizarMovimiento(m);
+        if (r.omitido) omitidos++; else contabilizados++;
+      } catch (e) { fallidos++; await logEvento('contabilizacion_fallida', 'backfill', { movimiento_id: m.id, error: e.message }); }
+    }
+    for (const i of ingresos) {
+      try {
+        const r = await contabilizarIngreso(i);
+        if (r.omitido) omitidos++; else contabilizados++;
+      } catch (e) { fallidos++; await logEvento('contabilizacion_fallida', 'backfill', { ingreso_id: i.id, error: e.message }); }
+    }
+    return ok({
+      ok: true, desde, revisados: movimientos.length + ingresos.length, contabilizados, omitidos, fallidos,
+      mensaje: `Recontabilización desde ${desde}: ${contabilizados} asientos nuevos, ${omitidos} omitidos (sin regla/moneda), ${fallidos} fallidos.`,
     });
   } catch (e) {
     return bad(e.message, 422);

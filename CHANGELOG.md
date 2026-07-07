@@ -9,6 +9,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-07
+- [T4] Contabilización automática: cada gasto/pago/factura/transferencia
+  registrado (PWA/SilvIA) e ingreso registrado (PWA) genera su asiento de
+  partida doble solo (tabla `reglas_contables`: categoría → cuenta de gasto,
+  cédula → cuenta de ingreso; el medio de pago resuelve la cuenta de liquidez
+  con una heurística pura). Best-effort: si falla, la captura NO se ve
+  afectada, solo queda logueado. Incluye backfill
+  (`POST /api/pwa-recontabilizar`, solo owners) para contabilizar lo ya
+  capturado desde el 1-jul. Alcance acotado a propósito: **solo movimientos en
+  COP** — el PUC simplificado de T1 no tiene subcuenta por moneda, así que los
+  USD se omiten (quedan sin asiento) hasta que se diseñe eso. 🤖 PR #PENDIENTE.
+  🔎 en revisión — requiere correr `sql/reglas-contables.sql` en Neon y que
+  confirmes si la cédula "capital" (arriendos + rendimientos financieros) se
+  separa en dos cuentas o se queda unificada en 4210.
 - Motor de cruce automático de conciliación (botón 🔗), fase 2 de
   docs/conciliacion.md: para un extracto a la vez, propone cruces entre sus
   líneas y lo capturado (`movimientos`/`ingresos` `provisional`); el usuario

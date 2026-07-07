@@ -118,6 +118,20 @@ test('idempotencia: reintento exacto NO duplica (misma llave)', async () => {
   setSqlForTests(null);
 });
 
+test('T4: si la contabilización automática falla (sin reglas/plan de cuentas), la captura del gasto igual queda registrada', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+
+  // Este fakeDb no implementa "reglas_contables" ni "plan_cuentas" (devuelve []
+  // por defecto), así que contabilizarMovimiento() truena adentro — el punto es
+  // que registrarMovimiento() debe seguir devolviendo el alta ok de todas formas.
+  const r = await registrarMovimiento({ ...base, metodo_pago: 'Bcol 0965', tarjeta_ultimos4: '2331' });
+  assert.equal(r.registrado, true);
+  assert.equal(db._movimientos.length, 1);
+
+  setSqlForTests(null);
+});
+
 test('transferencia USD entre cuentas: se registra como tipo transferencia, no como gasto', async () => {
   const db = fakeDb();
   setSqlForTests(db);

@@ -25,6 +25,7 @@ import {
 import { mirrorMovimiento, mirrorEmpresa } from './sheet-mirror.js';
 import { deriveIdempotencyKey } from './idempotency.js';
 import { clasificar } from './classify.js';
+import { contabilizarMovimiento } from './contabilizar.js';
 import { evaluarMovimiento } from '../../../app/src/config/iwin.js';
 import { cuentaPorTarjeta } from '../../../app/src/config/accounts.js';
 import {
@@ -47,6 +48,19 @@ const ETIQUETA_TIPO = {
 /** Formatea un monto según la moneda (COP con separador local; USD con prefijo). */
 function fmtMonto(monto, moneda) {
   return moneda === 'USD' ? 'USD ' + Number(monto || 0).toLocaleString('en-US') : formatCOP(monto);
+}
+
+/**
+ * Genera el asiento contable de un movimiento ya guardado (T4). Best-effort a
+ * propósito: si falla (regla faltante, DB caída), NUNCA debe tumbar la
+ * captura — solo queda logueado para revisar/recontabilizar después.
+ */
+async function contabilizarBestEffort(row) {
+  try {
+    await contabilizarMovimiento(row);
+  } catch (e) {
+    await logEvento('contabilizacion_fallida', row.origen || 'App', { movimiento_id: row.id, error: e.message });
+  }
 }
 
 /**
@@ -175,6 +189,7 @@ export async function registrarMovimiento(mov = {}) {
   const movId = row.id;
   const emp = await registrarEmpresas(evalMov, { descripcion, titular, monto, fecha, origen, movimiento_id: movId });
   await logEvento('alta', origen, { id: movId, tipo, monto, categoria });
+  await contabilizarBestEffort(row);
 
   // Espejo al Sheet (best-effort). Fila A-L como el layout histórico.
   mirrorMovimiento([
@@ -237,6 +252,7 @@ async function registrarTransferencia(mov) {
     };
   }
   await logEvento('alta', origen, { id: row.id, tipo: 'transferencia', monto, moneda });
+  await contabilizarBestEffort(row);
 
   return {
     ok: true, registrado: true, id: row.id, tipo: 'transferencia',

@@ -221,6 +221,43 @@ export async function queryAsientos({ desde, hasta, entidad_id, limit = 100 } = 
 }
 
 // ---------------------------------------------------------------------------
+// Reglas de contabilización automática (T4) — categoría/cédula → cuenta PUC.
+// ---------------------------------------------------------------------------
+
+/** Reglas activas (categoría→cuenta de gasto, cédula→cuenta de ingreso). */
+export async function listReglasContables(sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query('select tipo, criterio, cuenta from reglas_contables', []);
+}
+
+/** Movimientos desde `desde` sin asiento contable ligado aún (para el backfill). */
+export async function listMovimientosSinAsiento({ desde }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select m.id, m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto,
+            m.moneda, m.metodo_pago, m.cuenta_destino
+       from movimientos m
+      where m.fecha >= $1
+        and not exists (select 1 from asiento_lineas al where al.movimiento_id = m.id)
+      order by m.fecha, m.id`,
+    [desde]
+  );
+}
+
+/** Ingresos desde `desde` sin asiento contable ligado aún (para el backfill). */
+export async function listIngresosSinAsiento({ desde }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select i.id, i.fecha, i.cedula, i.concepto, i.entidad_id, i.monto, i.moneda
+       from ingresos i
+      where i.fecha >= $1
+        and not exists (select 1 from asiento_lineas al where al.ingreso_id = i.id)
+      order by i.fecha, i.id`,
+    [desde]
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
 
