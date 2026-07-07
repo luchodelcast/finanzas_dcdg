@@ -23,9 +23,10 @@ prompt: "operar con loops en vez de prompts".
    prioridad (label `prioridad-alta` > reacciones 👍 > antigüedad). **Ignora** los
    que ya tengan un PR abierto o el label `autobuild-wip` (otra corrida los tomó).
 3. **Si el backlog está vacío:** **propón UNA** funcionalidad nueva creando un
-   issue `autobuild` + `propuesta` (con contexto y valor), y **termina sin
-   construir**. Luis la aprueba (le quita `propuesta`) para que una corrida futura
-   la tome. Nunca construyas algo que no esté en la cola.
+   issue `autobuild` + `propuesta` (con contexto y valor), **avísale a Luis del
+   pendiente** (ver "Notificación" — una propuesta sin avisar es invisible) y
+   **termina sin construir**. Luis la aprueba (le quita `propuesta`) para que una
+   corrida futura la tome. Nunca construyas algo que no esté en la cola.
 4. **Toma el item más prioritario** que quepa en UNA corrida (alcance acotado; si
    es grande, divídelo en sub-issues y toma el primero). Márcalo con
    `autobuild-wip` para que otra corrida no colisione.
@@ -62,26 +63,50 @@ prompt: "operar con loops en vez de prompts".
 - **Producción:** cada merge a `main` despliega a Netlify. Por eso el CI es el
   guardián y el CHANGELOG es la ruta de reversa (revert del PR) si algo sale mal.
 
-## Notificación (WhatsApp + email + CHANGELOG)
+## Notificación (WhatsApp + CHANGELOG)
 
-Al terminar cada corrida (y en el digest diario), informa a Luis de forma breve y
-humana ("qué hay de nuevo"):
+**Avisa SIEMPRE en estos tres momentos** (una propuesta o un merge sin avisar es
+invisible para Luis — fue justo lo que falló al principio):
 
-- **CHANGELOG.md** — siempre (queda versionado; es el canal garantizado).
-- **WhatsApp (SilvIA) + email** — vía el endpoint de notificación configurado
-  (`AUTOBUILD_NOTIFY_URL`, reusando el canal de SilvIA). Si no está configurado,
-  el CHANGELOG y el digest quedan igual.
+1. **Al crear una propuesta** (paso 3) — para que Luis sepa que hay algo que
+   aprobar. Sin esto, las propuestas se acumulan calladas.
+2. **Al fusionar una funcionalidad** (paso 9).
+3. **Al dejar algo en revisión** bajo el candado (paso 7).
 
-Formato sugerido del aviso:
-`✅ Nuevo: <título> (PR #<n>). <una frase de qué hace y cómo usarlo>.`
-Y para lo que quedó en revisión:
-`🔎 Te espera para aprobar: <título> (PR borrador #<n>) — <por qué>.`
+Canales:
+
+- **WhatsApp (SilvIA)** — vía el endpoint `AUTOBUILD_NOTIFY_URL` (lo sirve
+  `sl-crm-live`: `/api/silvia-autobuild-notify`). Con `curl` (la corrida tiene
+  Bash):
+
+  ```sh
+  curl -s -X POST "$AUTOBUILD_NOTIFY_URL" \
+    -H "x-autobuild-secret: $AUTOBUILD_NOTIFY_SECRET" \
+    -H 'content-type: application/json' \
+    -d "{\"message\": \"🔎 Nueva propuesta #41: backup de la DB al Sheet. Dime 'aprueba la 41' o revísala en https://github.com/luchodelcast/finanzas_dcdg/issues/41\"}"
+  ```
+
+  Si `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` no están en el entorno, no
+  falles la corrida: deja el aviso en el CHANGELOG y sigue.
+- **CHANGELOG.md** — siempre (queda versionado; es el canal garantizado y la
+  red de seguridad si el WhatsApp no sale).
+
+Formato sugerido del mensaje:
+- Nuevo: `✅ Nuevo: <título> (PR #<n>). <una frase de qué hace y cómo usarlo>.`
+- Por aprobar (propuesta): `🔎 Propuesta #<n> por aprobar: <título> — <valor en una frase>. Dime "aprueba la <n>" o revísala en <link>.`
+- En revisión (candado): `🔒 Te espera para aprobar: <título> (PR borrador #<n>) — <por qué>.`
 
 ## Digest diario
 
-Una corrida especial (1×/día) recorre las entradas del CHANGELOG de las últimas
-24 h y manda a Luis un resumen consolidado por WhatsApp + email:
-`☀️ Buenos días. Anoche/hoy: <lista de lo fusionado>. Pendiente de tu visto bueno: <lista de borradores>.`
+Una corrida especial (1×/día) manda a Luis un resumen consolidado por WhatsApp
+(vía `AUTOBUILD_NOTIFY_URL`). Debe incluir **dos bloques**:
+
+- **Lo fusionado**: entradas del CHANGELOG de las últimas 24 h.
+- **Pendiente de tu visto bueno**: TODOS los issues abiertos con label
+  `propuesta` (no solo los de las últimas 24 h — mientras sigan sin aprobar,
+  se repiten cada día para que no se pierdan) + los PR borrador `needs-review`.
+
+`☀️ Buenos días. Anoche/hoy: <lista de lo fusionado>. Tienes <N> propuestas esperando tu OK: #<n> <título>, … — dime "aprueba la <n>" o revísalas en https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta`
 
 ## Cómo alimentar el backlog
 
