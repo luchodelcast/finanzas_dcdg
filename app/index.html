@@ -209,6 +209,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <button class="ico-btn" data-go="extractos" title="Cargar extracto bancario">🧾</button>
     <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
     <button class="ico-btn" data-go="aportes" title="Aportes IBC por persona">🧮</button>
+    <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
     <button class="ico-btn" data-go="dash" title="Dashboard">📊</button>
     <button class="ico-btn" data-go="settings" title="Configuración">⚙</button>
   </div>
@@ -417,6 +418,23 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
 <div class="scr" id="scr-aportes">
   <div id="aportes-seg"></div>
   <div id="aportes-body"></div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── SALDOS INICIALES / APERTURA (T3, partida doble) ── -->
+<div class="scr" id="scr-apertura">
+  <div class="card">
+    <div class="card-ttl">Saldos iniciales al 1-jul-2026</div>
+    <div class="fld"><label>Entidad</label><select id="ap-entidad"></select></div>
+    <div style="font-size:12px;color:var(--gray-d);margin:6px 0">Escribe el saldo de cada cuenta a esa fecha. El patrimonio (capital) se calcula solo.</div>
+    <div class="card-sub" style="font-weight:600;margin-top:8px">Activos (bancos, efectivo)</div>
+    <div id="ap-activos"></div>
+    <div class="card-sub" style="font-weight:600;margin-top:10px">Pasivos (tarjetas de crédito, deudas)</div>
+    <div id="ap-pasivos"></div>
+    <div id="ap-capital" style="font-size:12px;color:var(--gray-d);margin-top:12px;font-weight:600"></div>
+    <div id="ap-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+    <button class="btn btn-p" id="btn-save-apertura" data-act="saveApertura" style="margin-top:12px">✓ Guardar apertura</button>
+  </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 

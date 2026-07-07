@@ -23,6 +23,7 @@ import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
 import { parseExtractoPdfText } from './extracto-pdf.js';
 import { crearAsiento } from './asientos.js';
+import { construirApertura } from './apertura.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
@@ -259,6 +260,48 @@ export async function pwaAsientoHandler(req) {
       fecha: body.fecha, descripcion: body.descripcion, entidad_id: body.entidad_id,
       origen: body.origen || 'manual', lineas: body.lineas, idempotency_key: body.idempotency_key,
     }));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Asiento de apertura / saldos iniciales (T3). Auth Google.
+ *   GET  /api/pwa-apertura?entidad_id= → devuelve la apertura existente (o null).
+ *   POST /api/pwa-apertura { entidad_id?, fecha?, saldos:[{cuenta, monto}] }
+ *        → arma y guarda el asiento de apertura cuadrado. SOLO owners.
+ */
+export async function pwaAperturaHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const entidad_id = url.searchParams.get('entidad_id') || null;
+    try {
+      const asientos = await queryAsientos({ limit: 500 });
+      const apertura = asientos.find((a) => a.origen === 'apertura' && String(a.entidad_id || '') === String(entidad_id || '')) || null;
+      return ok({ ok: true, apertura });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden montar la apertura.', 403);
+
+  const body = await parseBody(req);
+  const entidad_id = body.entidad_id || null;
+  const fecha = String(body.fecha || '').slice(0, 10) || '2026-07-01';
+  try {
+    const cuentas = await listPlanCuentas({});
+    const plan = new Map(cuentas.map((c) => [c.codigo, c]));
+    const lineas = construirApertura(body.saldos, plan);
+    const r = await crearAsiento({
+      fecha, descripcion: 'Saldos iniciales (apertura)', entidad_id, origen: 'apertura',
+      lineas, idempotency_key: `apertura:${entidad_id || 'todas'}:${fecha}`,
+    });
+    return ok(r);
   } catch (e) {
     return bad(e.message, 422);
   }
