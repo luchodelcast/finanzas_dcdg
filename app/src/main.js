@@ -25,6 +25,7 @@ import { procesarReciboPDF } from './utils/pdfProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
 import { loadHistory, addHistory, getHistory, clearHistory } from './services/history.js';
 import { renderDashboard } from './ui/dashboard.js';
+import { renderHome } from './ui/home.js';
 import { renderIngresos } from './ui/ingresos.js';
 import { renderExtractos } from './ui/extractos.js';
 import { renderConciliacion } from './ui/conciliacion.js';
@@ -56,6 +57,7 @@ function go(s) {
     V('cfg-st').value = cfg.sheetGastos || 'Registro Gastos';
     V('cfg-se').value = cfg.sheetEmpresas || 'EMPRESAS';
   }
+  if (s === 'home') renderHome();
   if (s === 'history') renderH();
   if (s === 'cet') initCET();
   if (s === 'dash') renderDashboard();
@@ -199,7 +201,7 @@ async function onImg(inp) {
       curImg = { base64, mediaType, prev: null };
       await doImg();
     } catch (e) {
-      go('home');
+      go('registrar');
       toast(e.message || 'No se pudo leer el PDF.');
     }
     return;
@@ -210,7 +212,7 @@ async function onImg(inp) {
     curImg = { base64, mediaType, prev: dataUrl };
     await doImg();
   } catch (e) {
-    go('home');
+    go('registrar');
     toast(e.message || 'No se pudo leer la imagen.');
   }
 }
@@ -224,7 +226,7 @@ async function doImg() {
     showConf(await analizarImagen(curImg.base64, curImg.mediaType));
   } catch (e) {
     toast('Error: ' + e.message);
-    go('home');
+    go('registrar');
   }
 }
 
