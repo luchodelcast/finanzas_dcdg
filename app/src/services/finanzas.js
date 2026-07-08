@@ -98,6 +98,34 @@ export const getBalanceGeneral = (params = {}) => request('/api/pwa-balance-gene
 /** Pagos del mes (issue #73): catálogo + estado de un (anio, mes), y pendientes del mes anterior. */
 export const getPagosDelMes = (params = {}) => request('/api/pwa-pagos', { params });
 
+/**
+ * Descarga un export contable en CSV (T12a, issue #91): `tipo` es
+ * diario|mayor|comprobacion|estado-resultados|balance-general, más los
+ * filtros que aplique cada uno (desde/hasta/cuenta/fecha/entidad_id).
+ * A diferencia de `request()`, no espera JSON: devuelve el blob + el nombre
+ * de archivo sugerido por el servidor, para que la UI dispare la descarga.
+ */
+export async function descargarExportCSV(params = {}) {
+  const token = await getAccessToken();
+  const cfg = getConfig();
+  const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v != null && v !== '')
+  ).toString();
+  const res = await fetch(`${base}/api/pwa-exportar${qs ? '?' + qs : ''}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const err = new Error(data.error || `Error ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  const blob = await res.blob();
+  const match = (res.headers.get('content-disposition') || '').match(/filename="([^"]+)"/);
+  return { blob, filename: match ? match[1] : `${params.tipo || 'export'}.csv` };
+}
+
 /** Marca un pago fijo como pagado en su mes (solo owners). */
 export const marcarPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'marcar', ...body } });
 

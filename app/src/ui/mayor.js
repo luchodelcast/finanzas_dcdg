@@ -5,8 +5,9 @@
  * Semana 1 del motor contable — base de los estados financieros (T6/T7).
  */
 
-import { getPlanCuentas, getMayor, getComprobacion } from '../services/finanzas.js';
+import { getPlanCuentas, getMayor, getComprobacion, descargarExportCSV } from '../services/finanzas.js';
 import { formatCOP } from '../utils/formatters.js';
+import { descargarBlob } from '../utils/download.js';
 
 const V = (id) => document.getElementById(id);
 
@@ -80,6 +81,33 @@ async function consultarComprobacion() {
   }
 }
 
+async function descargar(tipo, params, msgId) {
+  const msg = V(msgId);
+  try {
+    const { blob, filename } = await descargarExportCSV({ tipo, ...params });
+    descargarBlob(blob, filename);
+  } catch (e) {
+    msg.textContent = (e.status === 401 || e.status === 403)
+      ? 'Inicia sesión con Google (equipo financiero) para descargar el export.'
+      : 'Error: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+function descargarDiario() {
+  return descargar('diario', { desde: V('may-desde').value || undefined, hasta: V('may-hasta').value || undefined }, 'may-msg');
+}
+
+function descargarMayor() {
+  const cuenta = V('may-cuenta').value;
+  if (!cuenta) { V('may-msg').textContent = 'Elige una cuenta.'; V('may-msg').style.color = 'var(--red)'; return; }
+  return descargar('mayor', { cuenta, desde: V('may-desde').value || undefined, hasta: V('may-hasta').value || undefined }, 'may-msg');
+}
+
+function descargarComprobacion() {
+  return descargar('comprobacion', { desde: V('may-desde').value || undefined, hasta: V('may-hasta').value || undefined }, 'comp-msg');
+}
+
 /** Llamado por main.js al navegar a la pantalla de Mayor/Comprobación. */
 export async function renderMayor() {
   try {
@@ -93,6 +121,9 @@ export async function renderMayor() {
     V('scr-mayor').addEventListener('click', (e) => {
       if (e.target.closest('[data-act="verMayor"]')) consultarMayor();
       if (e.target.closest('[data-act="verComprobacion"]')) consultarComprobacion();
+      if (e.target.closest('[data-act="descargarDiario"]')) descargarDiario();
+      if (e.target.closest('[data-act="descargarMayor"]')) descargarMayor();
+      if (e.target.closest('[data-act="descargarComprobacion"]')) descargarComprobacion();
     });
   }
 }

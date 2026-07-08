@@ -5,8 +5,9 @@
  * de estados financieros del motor contable.
  */
 
-import { getEstadoResultados, getBalanceGeneral } from '../services/finanzas.js';
+import { getEstadoResultados, getBalanceGeneral, descargarExportCSV } from '../services/finanzas.js';
 import { formatCOP, hoyISO } from '../utils/formatters.js';
+import { descargarBlob } from '../utils/download.js';
 
 const V = (id) => document.getElementById(id);
 
@@ -76,6 +77,27 @@ async function consultarBalanceGeneral() {
   }
 }
 
+async function descargar(tipo, params, msgId) {
+  const msg = V(msgId);
+  try {
+    const { blob, filename } = await descargarExportCSV({ tipo, ...params });
+    descargarBlob(blob, filename);
+  } catch (e) {
+    msg.textContent = (e.status === 401 || e.status === 403)
+      ? 'Inicia sesión con Google (equipo financiero) para descargar el export.'
+      : 'Error: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+function descargarEstadoResultados() {
+  return descargar('estado-resultados', { desde: V('er-desde').value || undefined, hasta: V('er-hasta').value || undefined }, 'er-msg');
+}
+
+function descargarBalanceGeneral() {
+  return descargar('balance-general', { fecha: V('bg-fecha').value || hoyISO() }, 'bg-msg');
+}
+
 /** Llamado por main.js al navegar a la pantalla de Estados financieros. */
 export async function renderEstados() {
   if (!V('bg-fecha').value) V('bg-fecha').value = hoyISO();
@@ -84,6 +106,8 @@ export async function renderEstados() {
     V('scr-estados').addEventListener('click', (e) => {
       if (e.target.closest('[data-act="verEstadoResultados"]')) consultarEstadoResultados();
       if (e.target.closest('[data-act="verBalanceGeneral"]')) consultarBalanceGeneral();
+      if (e.target.closest('[data-act="descargarEstadoResultados"]')) descargarEstadoResultados();
+      if (e.target.closest('[data-act="descargarBalanceGeneral"]')) descargarBalanceGeneral();
     });
   }
 }

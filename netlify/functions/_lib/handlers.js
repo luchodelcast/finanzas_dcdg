@@ -5,7 +5,7 @@
  * sea un one-liner. SilvIA (o la PWA) llaman estas rutas con el token de servicio.
  */
 
-import { authorize, parseBody, ok, bad } from './http.js';
+import { authorize, parseBody, ok, bad, csvFile } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
@@ -40,6 +40,9 @@ import { listPrestamos, insertPrestamo, marcarPrestamoSaldado } from './repo.js'
 import { calcularSaldoPrestamos } from './prestamos.js';
 import { crearSolicitudMejora, listarSolicitudesAbiertas } from './backlog.js';
 import { hoyISO } from '../../../app/src/utils/formatters.js';
+import {
+  csvLibroDiario, csvLibroMayor, csvComprobacion, csvEstadoResultados, csvBalanceGeneral,
+} from './csv.js';
 
 const CONFIG_GITHUB_RE = /Configura GITHUB_TOKEN_FINANZAS/;
 
@@ -458,6 +461,48 @@ export async function pwaBalanceGeneralHandler(req) {
   const g = (k) => url.searchParams.get(k);
   try {
     return ok({ ok: true, ...(await balanceGeneral({ fecha: g('fecha'), entidad_id: g('entidad_id') })) });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Exports contables en CSV (T12a, issue #91). Auth Google (equipo financiero, solo lectura).
+ *   GET /api/pwa-exportar?tipo=diario|mayor|comprobacion|estado-resultados|balance-general
+ *     &desde=&hasta=&cuenta=&fecha=&entidad_id=
+ * Reusa los mismos datos ya calculados por asientos.js/mayor.js/estados.js — sin escribir nada.
+ */
+export async function pwaExportarHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const g = (k) => url.searchParams.get(k);
+  const tipo = g('tipo');
+  try {
+    switch (tipo) {
+      case 'diario': {
+        const asientos = await queryAsientos({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id'), limit: 500 });
+        return csvFile('libro-diario.csv', csvLibroDiario(asientos));
+      }
+      case 'mayor': {
+        const r = await mayorCuenta({ cuenta: g('cuenta'), desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') });
+        return csvFile(`mayor-${r.cuenta.codigo}.csv`, csvLibroMayor(r.cuenta, r.lineas));
+      }
+      case 'comprobacion': {
+        const r = await balanceComprobacion({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') });
+        return csvFile('balance-comprobacion.csv', csvComprobacion(r));
+      }
+      case 'estado-resultados': {
+        const r = await estadoResultados({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') });
+        return csvFile('estado-resultados.csv', csvEstadoResultados(r));
+      }
+      case 'balance-general': {
+        const r = await balanceGeneral({ fecha: g('fecha'), entidad_id: g('entidad_id') });
+        return csvFile('balance-general.csv', csvBalanceGeneral(r));
+      }
+      default:
+        return bad('tipo inválido (usa diario|mayor|comprobacion|estado-resultados|balance-general)', 422);
+    }
   } catch (e) {
     return bad(e.message, 422);
   }

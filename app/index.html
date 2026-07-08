@@ -593,13 +593,21 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
 <!-- ── LIBRO MAYOR + BALANCE DE COMPROBACIÓN (T5, solo lectura) ── -->
 <div class="scr" id="scr-mayor">
   <div class="card">
+    <div class="card-ttl">Libro Diario</div>
+    <div style="font-size:12px;color:var(--gray-d);margin-bottom:6px">Usa el rango de fechas de la cuenta de abajo.</div>
+    <button class="btn btn-s" data-act="descargarDiario">⬇️ Descargar CSV</button>
+  </div>
+  <div class="card">
     <div class="card-ttl">Libro Mayor</div>
     <div class="fld"><label>Cuenta</label><select id="may-cuenta"></select></div>
     <div class="row2" style="gap:8px">
       <div class="fld"><label>Desde</label><input type="date" id="may-desde"></div>
       <div class="fld"><label>Hasta</label><input type="date" id="may-hasta"></div>
     </div>
-    <button class="btn btn-p" data-act="verMayor" style="margin-top:8px">Consultar →</button>
+    <div class="row2" style="gap:8px;margin-top:8px">
+      <button class="btn btn-p" data-act="verMayor">Consultar →</button>
+      <button class="btn btn-s" data-act="descargarMayor">⬇️ CSV</button>
+    </div>
     <div id="may-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
     <div id="may-saldo" style="font-size:12px;color:var(--gray-d);margin-top:8px;font-weight:600"></div>
     <div id="may-lineas" style="margin-top:8px"></div>
@@ -607,7 +615,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <div class="card">
     <div class="card-ttl">Balance de Comprobación</div>
     <div style="font-size:12px;color:var(--gray-d);margin-bottom:6px">Usa el mismo rango de fechas de arriba.</div>
-    <button class="btn btn-p" data-act="verComprobacion">Generar →</button>
+    <div class="row2" style="gap:8px">
+      <button class="btn btn-p" data-act="verComprobacion">Generar →</button>
+      <button class="btn btn-s" data-act="descargarComprobacion">⬇️ CSV</button>
+    </div>
     <div id="comp-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
     <div id="comp-body" style="margin-top:8px"></div>
     <div id="comp-total" style="margin-top:8px"></div>
@@ -623,7 +634,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       <div class="fld"><label>Desde</label><input type="date" id="er-desde"></div>
       <div class="fld"><label>Hasta</label><input type="date" id="er-hasta"></div>
     </div>
-    <button class="btn btn-p" data-act="verEstadoResultados" style="margin-top:8px">Generar →</button>
+    <div class="row2" style="gap:8px;margin-top:8px">
+      <button class="btn btn-p" data-act="verEstadoResultados">Generar →</button>
+      <button class="btn btn-s" data-act="descargarEstadoResultados">⬇️ CSV</button>
+    </div>
     <div id="er-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
     <div id="er-body" style="margin-top:8px"></div>
     <div id="er-total" style="margin-top:8px"></div>
@@ -631,7 +645,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <div class="card">
     <div class="card-ttl">Balance General</div>
     <div class="fld"><label>A la fecha</label><input type="date" id="bg-fecha"></div>
-    <button class="btn btn-p" data-act="verBalanceGeneral" style="margin-top:8px">Generar →</button>
+    <div class="row2" style="gap:8px;margin-top:8px">
+      <button class="btn btn-p" data-act="verBalanceGeneral">Generar →</button>
+      <button class="btn btn-s" data-act="descargarBalanceGeneral">⬇️ CSV</button>
+    </div>
     <div id="bg-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
     <div id="bg-body" style="margin-top:8px"></div>
     <div id="bg-total" style="margin-top:8px"></div>

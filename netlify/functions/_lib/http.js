@@ -23,6 +23,17 @@ export function bad(msg, status = 400) {
   return json(status, { ok: false, error: msg });
 }
 
+/** Respuesta CSV descargable (exports contables, T12a). */
+export function csvFile(filename, text) {
+  return new Response(text, {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="${filename}"`,
+    },
+  });
+}
+
 /** Comparación de tokens en tiempo constante (evita timing attacks). */
 function safeEqual(a, b) {
   const sa = String(a || '');
