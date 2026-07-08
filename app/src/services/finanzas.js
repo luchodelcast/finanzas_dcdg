@@ -91,3 +91,18 @@ export const getEstadoResultados = (params = {}) => request('/api/pwa-estado-res
 
 /** Balance General a una fecha (T7, solo lectura). Opcional fecha/entidad_id. */
 export const getBalanceGeneral = (params = {}) => request('/api/pwa-balance-general', { params });
+
+/** Pagos del mes (issue #73): catálogo + estado de un (anio, mes), y pendientes del mes anterior. */
+export const getPagosDelMes = (params = {}) => request('/api/pwa-pagos', { params });
+
+/** Marca un pago fijo como pagado en su mes (solo owners). */
+export const marcarPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'marcar', ...body } });
+
+/** Desmarca un pago fijo (vuelve a pendiente, solo owners). */
+export const desmarcarPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'desmarcar', ...body } });
+
+/** Agrega un pago fijo nuevo al catálogo (solo owners). */
+export const crearPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'crear', ...body } });
+
+/** Edita (o desactiva, con {activo:false}) un pago fijo existente (solo owners). */
+export const editarPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'editar', ...body } });
