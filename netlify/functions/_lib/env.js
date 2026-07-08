@@ -39,6 +39,12 @@ export const config = {
   googleClientId: () =>
     env('GOOGLE_CLIENT_ID', '473061009211-972b11u9s6gpqln7n0e6tdn51vjmnv5p.apps.googleusercontent.com'),
 
+  // "Solicitudes de mejoras" desde la PWA (issue #78): crea/lista issues en
+  // este mismo repo. Opcional — sin GITHUB_TOKEN_FINANZAS la función avisa en
+  // vez de fallar (ver _lib/backlog.js).
+  githubTokenFinanzas: () => env('GITHUB_TOKEN_FINANZAS', null),
+  githubRepoFinanzas: () => env('GITHUB_REPO_FINANZAS', 'luchodelcast/finanzas_dcdg'),
+
   // Integración SilvIA
   apiToken: () => requireEnv('DCDG_API_TOKEN'),
   finanzasUsers: () =>

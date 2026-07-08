@@ -38,7 +38,10 @@ import {
 import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes } from './pagos.js';
 import { listPrestamos, insertPrestamo, marcarPrestamoSaldado } from './repo.js';
 import { calcularSaldoPrestamos } from './prestamos.js';
+import { crearSolicitudMejora, listarSolicitudesAbiertas } from './backlog.js';
 import { hoyISO } from '../../../app/src/utils/formatters.js';
+
+const CONFIG_GITHUB_RE = /Configura GITHUB_TOKEN_FINANZAS/;
 
 /**
  * Contabiliza un movimiento recién registrado, best-effort: NUNCA debe tumbar la
@@ -1012,6 +1015,40 @@ export async function pwaPrestamosHandler(req) {
     }
     return bad('accion inválida (crear | marcar_saldado)');
   } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Solicitudes de mejoras (issue #78, Nocturno 7/7). Auth Google.
+ *   GET  /api/pwa-solicitudes → lista issues abiertos con label `autobuild` (equipo, lectura).
+ *   POST /api/pwa-solicitudes { texto } → crea el issue en GitHub. SOLO owners.
+ * Sin GITHUB_TOKEN_FINANZAS configurado, degrada con gracia (no falla la function).
+ */
+export async function pwaSolicitudesHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    try {
+      const solicitudes = await listarSolicitudesAbiertas();
+      return ok({ ok: true, configurado: true, solicitudes });
+    } catch (e) {
+      if (CONFIG_GITHUB_RE.test(e.message)) return ok({ ok: true, configurado: false, solicitudes: [], mensaje: e.message });
+      return bad(e.message, 422);
+    }
+  }
+
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden enviar solicitudes de mejoras.', 403);
+
+  const body = await parseBody(req);
+  try {
+    const issue = await crearSolicitudMejora(body.texto);
+    return ok({ ok: true, issue });
+  } catch (e) {
+    if (CONFIG_GITHUB_RE.test(e.message)) return bad(e.message, 501);
     return bad(e.message, 422);
   }
 }
