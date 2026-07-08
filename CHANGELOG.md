@@ -16,7 +16,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   mes pasado y el total pagado vs. pendiente; gestión para agregar/editar/
   desactivar pagos fijos (solo owners). Esquema nuevo (`pagos_fijos`,
   `pagos_estado`) vía DDL idempotente en runtime — sin `.sql` manual, como pide
-  el modo `auto-ok`. 🤖 auto-ok · PR pendiente. Closes #73.
+  el modo `auto-ok`. 🤖 auto-ok · PR #80. Closes #73.
 - **Backfill de extracto: "Contabilizar estas N líneas"** (Nocturno 1/7):
   en 🔗 Conciliación, las líneas `solo_extracto` (el banco las registró pero
   nunca se capturaron) ahora se pueden materializar directo desde ahí. Se
