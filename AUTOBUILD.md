@@ -57,6 +57,26 @@ prompt: "operar con loops en vez de prompts".
      cambios a autenticación / `FINANZAS_USERS` / secretos / tokens, force-push, o
      cualquier cosa que mueva dinero hacia afuera. Ante la duda, trátalo como
      candado.
+### Modo `auto-ok` (autorización explícita del dueño para auto-merge)
+
+Un issue con la etiqueta **`auto-ok`** está **pre-aprobado por Luis** para
+construirse y **auto-fusionarse con CI verde SIN revisión**, aunque toque
+esquema, datos financieros o clasificación (p. ej. lotes que Luis pide construir
+de noche mientras duerme). Reglas de este modo:
+
+- **Auto-merge** con `npm test` + `npm run build` + deploy preview en verde,
+  igual que lo aditivo — no lo dejes en borrador esperando aprobación.
+- **Sin migración manual:** NO crees un `.sql` que alguien deba correr a mano.
+  El esquema nuevo se crea con **DDL idempotente en runtime** — una función
+  `ensureSchema()` memoizada que corre `create table if not exists …` /
+  `alter table … add column if not exists …` en la capa de datos antes de sus
+  consultas. Así la funcionalidad queda operativa sin que nadie corra SQL.
+- **El CANDADO (paso 7) SIGUE VIGENTE** aun con `auto-ok`: nunca borres/renombres
+  columnas o tablas con datos, nunca transformes/borres datos existentes, nunca
+  toques auth/`FINANZAS_USERS`/secretos/tokens ni hagas force-push. `auto-ok`
+  autoriza lo **aditivo sensible**, no lo irreversible. Ante la duda, candado.
+- Igual que siempre: `Closes #<n>`, entrada en el CHANGELOG y aviso.
+
 8. **CHANGELOG:** agrega una entrada en [`CHANGELOG.md`](CHANGELOG.md) (fecha,
    qué se añadió, PR, nivel de riesgo, si quedó en firme o en revisión).
 9. **Avisa** (ver "Notificación"). Cierra el issue del backlog al fusionar
