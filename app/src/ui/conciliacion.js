@@ -9,18 +9,27 @@
  *  - match     → un solo candidato compatible → botón "Confirmar cruce".
  *  - ambiguo   → más de un candidato → el usuario elige cuál con un <select>
  *                antes de poder confirmar (nunca se auto-resuelve).
- *  - solo_extracto → nada capturado matchea → informativo (el usuario debe
- *                registrar el gasto/ingreso faltante desde las pantallas
- *                normales; este endpoint no lo crea automáticamente).
+ *  - solo_extracto → nada capturado matchea → informativo, y además se puede
+ *                "Contabilizar estas N líneas" (backfill, issue #72): revisa
+ *                una propuesta de clasificación y las materializa como
+ *                movimiento/ingreso ya contabilizado (ver `_lib/backfill.js`).
  */
 
-import { getExtractos, getPropuestasConciliacion, confirmarCruce } from '../services/finanzas.js';
+import {
+  getExtractos, getPropuestasConciliacion, confirmarCruce,
+  getPropuestasBackfill, materializarBackfill, getCatalogos,
+} from '../services/finanzas.js';
 import { formatCOP } from '../utils/formatters.js';
+import { CATEGORIAS, subcategorias } from '../config/categories.js';
 
 const V = (id) => document.getElementById(id);
 
 let _wired = false;
 let _extractoId = null;
+
+// ── Backfill de líneas `solo_extracto` (issue #72) ──────────────────────────
+let _bf = [];          // propuestas de la corrida actual, editables por el usuario
+let _bfCatalogos = null; // { entidades, cedulas } — se cargan solo si hace falta (ingresos)
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -104,6 +113,11 @@ async function refreshPropuestas() {
   const msg = V('conc-msg');
   const list = V('conc-list');
   msg.textContent = '';
+  _bf = [];
+  V('bf-card').style.display = _extractoId ? '' : 'none';
+  V('bf-resumen').textContent = '';
+  V('bf-msg').textContent = '';
+  renderBfList();
   if (!_extractoId) { list.innerHTML = '<div class="empty">Elige un extracto</div>'; return; }
   list.innerHTML = '<div class="empty">Cargando propuestas…</div>';
   try {
@@ -118,6 +132,150 @@ async function refreshPropuestas() {
       : '<div class="empty">Nada pendiente de revisar en este extracto.</div>';
   } catch (e) {
     list.innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message)}</div>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Backfill: "Contabilizar estas N líneas" (issue #72, Nocturno 1/7). El banco
+// registró la línea pero nunca se capturó — se materializa como movimiento/
+// ingreso ya contabilizado. Alta confianza (regla) va pre-marcada; el resto
+// (sin regla, ingresos, transferencias) queda para revisión antes de aceptar.
+// ---------------------------------------------------------------------------
+
+function bfRowHTML(p, idx) {
+  const fecha = String(p.fecha || '').slice(0, 10);
+  const monto = formatCOP(p.monto);
+  const checked = p._incluir ? ' checked' : '';
+  const etiqueta = p.auto ? '✓ regla' : (p.fuente_sugerencia === 'modelo' ? '🤖 sugerido' : 'revisar');
+  let campos = '';
+
+  if (p.tipo === 'gasto') {
+    const catOpts = CATEGORIAS.map((c) =>
+      `<option value="${esc(c)}"${c === p.categoria ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    const subOpts = subcategorias(p.categoria).map((s) =>
+      `<option value="${esc(s)}"${s === p.subcategoria ? ' selected' : ''}>${esc(s)}</option>`).join('');
+    campos = `
+      <div class="row2">
+        <div class="fld"><label>Categoría</label>
+          <select data-bf-f="categoria" data-bf-idx="${idx}"><option value="">—</option>${catOpts}</select></div>
+        <div class="fld"><label>Subcategoría</label>
+          <select data-bf-f="subcategoria" data-bf-idx="${idx}"><option value="">—</option>${subOpts}</select></div>
+      </div>
+      <div class="fld"><label>Quién pagó (opcional)</label>
+        <input type="text" data-bf-f="quien_pago" data-bf-idx="${idx}" value="${esc(p.quien_pago || '')}"></div>`;
+  } else if (p.tipo === 'ingreso') {
+    const entidades = (_bfCatalogos && _bfCatalogos.entidades) || [];
+    const cedulas = (_bfCatalogos && _bfCatalogos.cedulas) || [];
+    const entOpts = entidades.map((e) =>
+      `<option value="${e.id}"${String(e.id) === String(p.entidad_id) ? ' selected' : ''}>${esc(e.nombre)}</option>`).join('');
+    const cedOpts = cedulas.map((c) =>
+      `<option value="${esc(c.value)}"${c.value === p.cedula ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+    campos = `
+      <div class="row2">
+        <div class="fld"><label>Entidad</label>
+          <select data-bf-f="entidad_id" data-bf-idx="${idx}"><option value="">—</option>${entOpts}</select></div>
+        <div class="fld"><label>Cédula (tipo de renta)</label>
+          <select data-bf-f="cedula" data-bf-idx="${idx}"><option value="">—</option>${cedOpts}</select></div>
+      </div>`;
+  } else {
+    campos = `<div class="fld"><label>Cuenta destino</label>
+      <input type="text" data-bf-f="cuenta_destino" data-bf-idx="${idx}" value="${esc(p.cuenta_destino || '')}"
+        placeholder="Nombre exacto de la cuenta destino"></div>`;
+  }
+
+  return `<div class="h-item" style="flex-direction:column;align-items:stretch;gap:4px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <label style="display:flex;gap:8px;align-items:flex-start">
+        <input type="checkbox" data-bf-check="${idx}"${checked} style="width:auto;margin-top:3px">
+        <span><div class="h-name">${esc(p.descripcion || '(sin descripción)')}</div>
+        <div class="h-meta">${esc(fecha)} · ${p.tipo} · ${etiqueta}</div></span>
+      </label>
+      <div class="h-amt">${monto}</div>
+    </div>
+    ${p.motivo ? `<div class="h-meta" style="color:var(--gray-d)">${esc(p.motivo)}</div>` : ''}
+    ${campos}
+  </div>`;
+}
+
+function renderBfList() {
+  const list = V('bf-list');
+  const btn = V('bf-aceptar-todo');
+  if (!_bf.length) { list.innerHTML = ''; btn.style.display = 'none'; return; }
+  list.innerHTML = _bf.map(bfRowHTML).join('');
+  btn.style.display = '';
+}
+
+async function bfProponer() {
+  if (!_extractoId) return;
+  const msg = V('bf-msg');
+  msg.textContent = 'Buscando líneas sin capturar…'; msg.style.color = 'var(--gray-d)';
+  try {
+    const r = await getPropuestasBackfill(_extractoId);
+    const props = (r.propuestas || []).map((p) => ({ ...p, _incluir: !!p.auto }));
+    if (!_bfCatalogos && props.some((p) => p.tipo === 'ingreso')) {
+      try { _bfCatalogos = await getCatalogos(); } catch (_) { _bfCatalogos = { entidades: [], cedulas: [] }; }
+    }
+    _bf = props;
+    const res = r.resumen || {};
+    V('bf-resumen').textContent = props.length
+      ? `${res.n_solo_extracto} línea(s) sin capturar · ${res.n_auto} con regla (pre-marcadas) · ${res.n_dudosas} para revisar`
+      : 'No hay líneas sin capturar en este extracto.';
+    msg.textContent = '';
+    renderBfList();
+  } catch (e) {
+    msg.textContent = 'Error: ' + e.message; msg.style.color = 'var(--red)';
+  }
+}
+
+function bfLeerCampo(idx, campo, valor) {
+  const p = _bf[idx];
+  if (!p) return;
+  p[campo] = campo === 'entidad_id' ? (valor ? Number(valor) : null) : valor;
+  if (campo === 'categoria') p.subcategoria = ''; // cambia la lista de subcategorías disponibles
+  if (campo === 'categoria' || campo === 'subcategoria') renderBfList();
+}
+
+async function bfAceptarTodo() {
+  const msg = V('bf-msg');
+  const seleccionadas = _bf.filter((p) => p._incluir);
+  if (!seleccionadas.length) { msg.textContent = 'Marca al menos una línea.'; msg.style.color = 'var(--gold)'; return; }
+  for (const p of seleccionadas) {
+    if (p.tipo === 'ingreso' && (!p.entidad_id || !p.cedula)) {
+      msg.textContent = 'Completa entidad y cédula en cada ingreso marcado.'; msg.style.color = 'var(--red)'; return;
+    }
+    if (p.tipo === 'transferencia' && !String(p.cuenta_destino || '').trim()) {
+      msg.textContent = 'Completa la cuenta destino en cada transferencia marcada.'; msg.style.color = 'var(--red)'; return;
+    }
+  }
+
+  msg.textContent = `Contabilizando ${seleccionadas.length} línea(s)…`; msg.style.color = 'var(--gray-d)';
+  try {
+    let restante = seleccionadas.map((p) => ({
+      linea_id: p.linea_id, tipo: p.tipo, categoria: p.categoria, subcategoria: p.subcategoria,
+      metodo_pago: p.metodo_pago, quien_pago: p.quien_pago, notas: p.notas, moneda: p.moneda,
+      monto: p.monto, fecha: p.fecha, descripcion: p.descripcion,
+      cuenta_destino: p.cuenta_destino, entidad_id: p.entidad_id, cedula: p.cedula,
+    }));
+    let creadas = 0;
+    const errores = [];
+    while (restante.length) {
+      const r = await materializarBackfill({ extracto_id: _extractoId, lineas: restante });
+      creadas += r.creadas || 0;
+      const procesadosIds = new Set((r.resultados || []).map((x) => x.linea_id));
+      (r.resultados || []).filter((x) => !x.ok).forEach((x) => errores.push(x));
+      restante = restante.filter((l) => !procesadosIds.has(l.linea_id));
+      if (!r.procesadas) break; // corte de seguridad: nunca debería quedarse sin avanzar
+    }
+    const resumenTxt = `${creadas} línea${creadas === 1 ? '' : 's'} contabilizada${creadas === 1 ? '' : 's'} ✅`
+      + (errores.length ? ` (${errores.length} con error — revísalas e intenta de nuevo).` : '');
+    // Refresca ambas listas (algunas líneas dejaron de estar `sin_conciliar`); el
+    // mensaje de resultado se fija DESPUÉS porque refreshPropuestas/bfProponer lo limpian.
+    await refreshPropuestas();
+    await bfProponer();
+    V('bf-msg').textContent = resumenTxt;
+    V('bf-msg').style.color = errores.length ? 'var(--gold)' : 'var(--green)';
+  } catch (e) {
+    msg.textContent = 'Error: ' + e.message; msg.style.color = 'var(--red)';
   }
 }
 
@@ -153,6 +311,14 @@ export async function renderConciliacion() {
       if (btn) confirmar(btn.dataset.linea, btn.dataset.tipo, btn.dataset.id);
       const btnAmb = e.target.closest('[data-act="confirmarCruceAmbiguo"]');
       if (btnAmb) confirmarAmbiguo(btnAmb.dataset.linea);
+      if (e.target.closest('[data-act="bfProponer"]')) bfProponer();
+      if (e.target.closest('[data-act="bfAceptarTodo"]')) bfAceptarTodo();
+    });
+    V('scr-conciliacion').addEventListener('change', (e) => {
+      const chk = e.target.closest('[data-bf-check]');
+      if (chk) { const p = _bf[Number(chk.dataset.bfCheck)]; if (p) p._incluir = chk.checked; }
+      const fld = e.target.closest('[data-bf-f]');
+      if (fld) bfLeerCampo(Number(fld.dataset.bfIdx), fld.dataset.bfF, fld.value);
     });
     V('conc-extracto').addEventListener('change', refreshPropuestas);
   }

@@ -413,6 +413,14 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <div class="card-ttl">Cruces propuestos</div>
     <div id="conc-list"><div class="empty">—</div></div>
   </div>
+  <div class="card" id="bf-card" style="display:none">
+    <div class="card-ttl">Solo en el banco (sin capturar)</div>
+    <div id="bf-resumen" style="font-size:12px;color:var(--gray-d);margin-bottom:8px"></div>
+    <button class="btn btn-s" data-act="bfProponer" style="margin-bottom:10px">🔎 Revisar líneas sin capturar</button>
+    <div id="bf-msg" style="font-size:12px;margin-bottom:8px;font-weight:600"></div>
+    <div id="bf-list"></div>
+    <button class="btn btn-p" id="bf-aceptar-todo" data-act="bfAceptarTodo" style="margin-top:10px;display:none">✓ Contabilizar estas líneas</button>
+  </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 

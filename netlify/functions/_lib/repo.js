@@ -20,9 +20,11 @@ import { normalize } from '../../../app/src/config/rules.js';
 export async function insertMovimiento(m, sqlArg) {
   const sql = sqlArg || await getSql();
   const cols = ['fecha', 'tipo', 'categoria', 'subcategoria', 'descripcion', 'monto', 'moneda',
-    'metodo_pago', 'quien_pago', 'tarjeta', 'cuenta_destino', 'notas', 'origen', 'idempotency_key'];
+    'metodo_pago', 'quien_pago', 'tarjeta', 'cuenta_destino', 'notas', 'origen', 'idempotency_key',
+    'estado_conciliacion', 'extracto_linea_id'];
   const vals = [m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto, m.moneda || 'COP',
-    m.metodo_pago, m.quien_pago, m.tarjeta, m.cuenta_destino || null, m.notas, m.origen, m.idempotency_key];
+    m.metodo_pago, m.quien_pago, m.tarjeta, m.cuenta_destino || null, m.notas, m.origen, m.idempotency_key,
+    m.estado_conciliacion || 'provisional', m.extracto_linea_id || null];
   const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
   const ins = await sql.query(
     `insert into movimientos (${cols.join(', ')}) values (${ph})
@@ -347,10 +349,12 @@ export async function findOrCreateTercero({ nombre, nit, tipo }, sqlArg) {
 export async function insertIngreso(i, sqlArg) {
   const sql = sqlArg || await getSql();
   const cols = ['entidad_id', 'fecha', 'cedula', 'concepto', 'tercero_id', 'cuenta_id', 'monto',
-    'moneda', 'retencion_fuente', 'actividad', 'notas', 'origen', 'idempotency_key'];
+    'moneda', 'retencion_fuente', 'actividad', 'notas', 'origen', 'idempotency_key',
+    'estado_conciliacion', 'extracto_linea_id'];
   const vals = [i.entidad_id, i.fecha, i.cedula, i.concepto || null, i.tercero_id || null, i.cuenta_id || null,
     i.monto, i.moneda || 'COP', i.retencion_fuente || 0, i.actividad || null, i.notas || null,
-    i.origen || null, i.idempotency_key];
+    i.origen || null, i.idempotency_key,
+    i.estado_conciliacion || 'provisional', i.extracto_linea_id || null];
   const ph = vals.map((_, x) => `$${x + 1}`).join(', ');
   const ins = await sql.query(
     `insert into ingresos (${cols.join(', ')}) values (${ph})
@@ -548,6 +552,32 @@ export async function confirmarConciliacion({ linea_id, tipo, id }, sqlArg) {
   }
 
   return { linea_id, tipo: esIngreso ? 'ingreso' : 'movimiento', id };
+}
+
+/** Una línea de extracto por id (backfill de `solo_extracto`, issue #72). */
+export async function getExtractoLinea(id, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from extracto_lineas where id = $1 limit 1', [id]);
+  return rows[0] || null;
+}
+
+/**
+ * Marca una línea de extracto como materializada: el movimiento/ingreso ya se
+ * creó (ya nace `conciliado`, ver `insertMovimiento`/`insertIngreso`) y solo
+ * falta enlazarlo. Guarda-raíl: solo si la línea sigue `sin_conciliar` (evita
+ * re-materializar en una llamada repetida).
+ * @returns {Promise<boolean>} true si se marcó, false si ya no estaba `sin_conciliar`.
+ */
+export async function marcarLineaMaterializada({ linea_id, tipo, id }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const col = tipo === 'ingreso' ? 'ingreso_id' : 'movimiento_id';
+  const rows = await sql.query(
+    `update extracto_lineas set estado = 'conciliado', ${col} = $2
+      where id = $1 and estado = 'sin_conciliar'
+      returning id`,
+    [linea_id, id]
+  );
+  return rows.length > 0;
 }
 
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */

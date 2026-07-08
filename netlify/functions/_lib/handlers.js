@@ -13,6 +13,7 @@ import {
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
   queryAsientos, movimientosSinAsiento, ingresosSinAsiento,
+  insertMovimiento, getExtractoLinea, marcarLineaMaterializada,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
@@ -28,6 +29,7 @@ import { contabilizarMovimiento, contabilizarIngreso } from './contabilizar.js';
 import { mayorCuenta, balanceComprobacion } from './mayor.js';
 import { estadoResultados, balanceGeneral } from './estados.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
+import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
 
 /**
@@ -626,6 +628,185 @@ export async function conciliacionHandler(req) {
   try {
     const r = await confirmarConciliacion({ linea_id, tipo, id });
     return ok({ ok: true, ...r, mensaje: 'Cruce confirmado ✅ (conciliado)' });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+// Cuántas líneas 'solo_extracto' sin regla se mandan a Claude por corrida de GET
+// (protege el timeout ~10s de la function: no se manda TODO el extracto al modelo).
+const BACKFILL_MODELO_LIMITE = 12;
+// Cuántas líneas se materializan (crean+contabilizan) por llamada a POST — el resto
+// queda para que el cliente reintente (ver `restantes` en la respuesta).
+const BACKFILL_LOTE_LIMITE = 25;
+
+/**
+ * GET|POST /api/pwa-backfill — backfill de líneas `solo_extracto` de un
+ * extracto (issue #72, Nocturno 1/7): el banco registró la línea pero nunca
+ * se capturó en la App/SilvIA. El extracto es la fuente de verdad; esto
+ * MATERIALIZA la línea como movimiento/ingreso ya contabilizado.
+ *
+ * GET  ?extracto_id=NN → PROPONE la materialización de cada línea `solo_extracto`
+ * (clasificación por reglas; Claude como respaldo acotado para las que no
+ * matchean ninguna regla). Solo lectura: no escribe nada.
+ *
+ * POST { extracto_id, lineas: [{ linea_id, tipo, categoria, subcategoria,
+ * metodo_pago, quien_pago, tarjeta, notas, moneda, monto?, fecha?, descripcion?,
+ * cuenta_destino? (transferencia), entidad_id?, cedula? (ingreso) }], limit? }
+ * → crea el movimiento/ingreso (ya `conciliado`, ligado a la línea), lo
+ * contabiliza (reusa T4) y marca la línea materializada. Procesa un lote
+ * acotado por llamada; devuelve `restantes` para que el cliente reintente.
+ */
+export async function pwaBackfillHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const extracto_id = Number(url.searchParams.get('extracto_id')) || null;
+    if (!extracto_id) return bad('extracto_id requerido');
+    try {
+      const extracto = await getExtracto(extracto_id);
+      if (!extracto) return bad('Extracto no encontrado', 404);
+      const todasLineas = await queryExtractoLineas({ extracto_id });
+      const lineas = todasLineas
+        .filter((l) => l.estado === 'sin_conciliar')
+        .map((l) => ({ ...l, fecha: toISODate(l.fecha) }));
+      if (!lineas.length) {
+        return ok({ ok: true, extracto_id, cuenta: extracto.cuenta, propuestas: [], resumen: { n_solo_extracto: 0, n_auto: 0, n_dudosas: 0 } });
+      }
+      const fechasLineas = lineas.map((l) => l.fecha).filter(Boolean).sort();
+      const fechaDesde = toISODate(extracto.fecha_desde) || fechasLineas[0];
+      const fechaHasta = toISODate(extracto.fecha_hasta) || fechasLineas[fechasLineas.length - 1];
+      const desde = fechaDesde ? addDias(fechaDesde, -VENTANA_DIAS_DEFAULT) : fechasLineas[0];
+      const hasta = fechaHasta ? addDias(fechaHasta, VENTANA_DIAS_DEFAULT) : fechasLineas[fechasLineas.length - 1];
+
+      const [movimientos, ingresos] = await Promise.all([
+        queryMovimientosProvisionales({ desde, hasta }),
+        queryIngresosProvisionales({ desde, hasta }),
+      ]);
+      const norm = (arr) => arr.map((m) => ({ ...m, fecha: toISODate(m.fecha) }));
+      const cruces = proponerCruces(lineas, norm(movimientos), norm(ingresos), VENTANA_DIAS_DEFAULT);
+      const soloExtracto = cruces
+        .filter((p) => p.caso === 'solo_extracto')
+        .map((p) => ({ id: p.linea_id, fecha: p.fecha, descripcion: p.descripcion, monto: p.monto }));
+
+      const propuestas = proponerBackfillExtracto(soloExtracto, { cuenta: extracto.cuenta });
+
+      // Claude como respaldo (acotado) para gastos sin regla — nunca auto-acepta
+      // una sugerencia del modelo: solo prellena la fila dudosa para revisión.
+      let usados = 0;
+      for (const p of propuestas) {
+        if (p.auto || p.tipo !== 'gasto') continue;
+        if (usados >= BACKFILL_MODELO_LIMITE) { p.motivo = 'Sin regla de clasificación (límite de sugerencias IA alcanzado en esta corrida).'; continue; }
+        usados += 1;
+        try {
+          const cls = await clasificar(p.descripcion, { usarModelo: true });
+          if (cls && cls.categoria) {
+            p.categoria = cls.categoria;
+            p.subcategoria = cls.subcategoria || '';
+            if (cls.metodo_pago) p.metodo_pago = cls.metodo_pago;
+            p.confianza = Number(cls.confianza) || 0;
+            p.fuente_sugerencia = 'modelo';
+            p.motivo = 'Sugerido por IA: revisa antes de aceptar.';
+          }
+        } catch (e) {
+          console.error('backfill: sugerencia IA', p.linea_id, e.message);
+        }
+      }
+
+      const resumen = {
+        n_solo_extracto: propuestas.length,
+        n_auto: propuestas.filter((p) => p.auto).length,
+        n_dudosas: propuestas.filter((p) => !p.auto).length,
+      };
+      return ok({ ok: true, extracto_id, cuenta: extracto.cuenta, propuestas, resumen });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const body = await parseBody(req);
+  const extracto_id = Number(body.extracto_id) || null;
+  if (!extracto_id) return bad('extracto_id requerido');
+  const itemsTotal = Array.isArray(body.lineas) ? body.lineas : [];
+  if (!itemsTotal.length) return bad('lineas requerido (arreglo no vacío)');
+  const limit = Math.min(Number(body.limit) || BACKFILL_LOTE_LIMITE, BACKFILL_LOTE_LIMITE);
+  const lote = itemsTotal.slice(0, limit);
+
+  try {
+    const extracto = await getExtracto(extracto_id);
+    if (!extracto) return bad('Extracto no encontrado', 404);
+
+    const resultados = [];
+    for (const item of lote) {
+      const linea_id = Number(item.linea_id);
+      try {
+        if (!linea_id) throw new Error('linea_id requerido');
+        const linea = await getExtractoLinea(linea_id);
+        if (!linea) throw new Error('Línea de extracto no encontrada');
+        if (Number(linea.extracto_id) !== extracto_id) throw new Error('La línea no pertenece a este extracto');
+        if (linea.estado !== 'sin_conciliar') {
+          resultados.push({ linea_id, ok: true, ya_materializada: true });
+          continue;
+        }
+
+        const tipo = item.tipo === 'ingreso' ? 'ingreso'
+          : item.tipo === 'transferencia' ? 'transferencia' : 'gasto';
+        const monto = Math.abs(Number(item.monto ?? linea.monto) || 0);
+        if (!(monto > 0)) throw new Error('monto inválido');
+        const fecha = toISODate(item.fecha) || toISODate(linea.fecha);
+        const descripcion = String(item.descripcion || linea.descripcion || `Extracto línea ${linea_id}`).trim();
+        const idempotency_key = `extracto:linea:${linea_id}`;
+
+        if (tipo === 'ingreso') {
+          const entidad_id = Number(item.entidad_id) || null;
+          const cedula = String(item.cedula || '').trim();
+          if (!entidad_id) throw new Error('entidad_id requerido para un ingreso');
+          if (!cedula) throw new Error('cedula requerida para un ingreso');
+          const { inserted, row } = await insertIngreso({
+            entidad_id, fecha, cedula, concepto: descripcion, monto, moneda: item.moneda || 'COP',
+            origen: 'Extracto', idempotency_key,
+            estado_conciliacion: 'conciliado', extracto_linea_id: linea_id,
+          });
+          if (inserted && row) {
+            try { await contabilizarIngreso(row.id); } catch (e) { console.error('backfill contabilizar ingreso', row.id, e.message); }
+          }
+          const marcada = row ? await marcarLineaMaterializada({ linea_id, tipo: 'ingreso', id: row.id }) : false;
+          resultados.push({ linea_id, ok: true, tipo: 'ingreso', id: row && row.id, creado: inserted, marcada });
+        } else {
+          let cuenta_destino = null;
+          if (tipo === 'transferencia') {
+            cuenta_destino = String(item.cuenta_destino || '').trim();
+            if (!cuenta_destino) throw new Error('cuenta_destino requerida para una transferencia');
+          }
+          const { inserted, row } = await insertMovimiento({
+            fecha, tipo, categoria: item.categoria || null, subcategoria: item.subcategoria || null,
+            descripcion, monto, moneda: item.moneda || 'COP',
+            metodo_pago: item.metodo_pago || extracto.cuenta, quien_pago: item.quien_pago || null,
+            tarjeta: item.tarjeta || null, cuenta_destino, notas: item.notas || null,
+            origen: 'Extracto', idempotency_key,
+            estado_conciliacion: 'conciliado', extracto_linea_id: linea_id,
+          });
+          if (inserted && row) {
+            try { await contabilizarMovimiento(row.id); } catch (e) { console.error('backfill contabilizar movimiento', row.id, e.message); }
+          }
+          const marcada = row ? await marcarLineaMaterializada({ linea_id, tipo: 'movimiento', id: row.id }) : false;
+          resultados.push({ linea_id, ok: true, tipo, id: row && row.id, creado: inserted, marcada });
+        }
+      } catch (e) {
+        resultados.push({ linea_id: linea_id || item.linea_id, ok: false, error: e.message });
+      }
+    }
+
+    const creadas = resultados.filter((r) => r.ok && r.creado).length;
+    const restantes = itemsTotal.length - lote.length;
+    return ok({
+      ok: true, extracto_id, procesadas: lote.length, creadas, restantes, resultados,
+      mensaje: `${creadas} línea${creadas === 1 ? '' : 's'} contabilizada${creadas === 1 ? '' : 's'} ✅`
+        + (restantes ? ` (${restantes} restante${restantes === 1 ? '' : 's'}: vuelve a enviar el resto).` : '.'),
+    });
   } catch (e) {
     return bad(e.message, 422);
   }
