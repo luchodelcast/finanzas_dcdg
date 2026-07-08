@@ -109,3 +109,12 @@ export const crearPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST
 
 /** Edita (o desactiva, con {activo:false}) un pago fijo existente (solo owners). */
 export const editarPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'editar', ...body } });
+
+/** Préstamos entre Luis y Carolina (issue #77): lista + saldo neto por moneda. */
+export const getPrestamos = (params = {}) => request('/api/pwa-prestamos', { params });
+
+/** Registra un préstamo (o un abono, con "de"/"para" invertidos). Solo owners. */
+export const crearPrestamo = (body) => request('/api/pwa-prestamos', { method: 'POST', body: { accion: 'crear', ...body } });
+
+/** Marca (o desmarca, con {saldado:false}) un préstamo como saldado. Solo owners. */
+export const marcarPrestamoSaldado = (body) => request('/api/pwa-prestamos', { method: 'POST', body: { accion: 'marcar_saldado', ...body } });

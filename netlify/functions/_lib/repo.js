@@ -833,6 +833,84 @@ export async function desmarcarPagoEstado({ pago_fijo_id, anio, mes }, sqlArg) {
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// Préstamos entre Luis y Carolina (issue #77, Nocturno 6/7, `auto-ok`). Esquema
+// nuevo vía DDL idempotente en runtime (sin `.sql` manual) — mismo patrón que
+// ensurePagosFijosSchema. Ver AUTOBUILD.md § modo auto-ok.
+// ---------------------------------------------------------------------------
+let _prestamosSchemaPromise = null;
+
+/** Crea (si no existe) `prestamos`. Memoizado. */
+export async function ensurePrestamosSchema(sqlArg) {
+  if (!_prestamosSchemaPromise) {
+    _prestamosSchemaPromise = aplicarPrestamosSchema(sqlArg)
+      .catch((e) => { _prestamosSchemaPromise = null; throw e; }); // reintentable si falló
+  }
+  return _prestamosSchemaPromise;
+}
+
+async function aplicarPrestamosSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists prestamos (
+      id serial primary key,
+      fecha date not null,
+      de text not null,
+      para text not null,
+      monto numeric not null,
+      concepto text,
+      moneda text not null default 'COP',
+      saldado boolean not null default false,
+      notas text,
+      creado_en timestamptz not null default now()
+    )
+  `, []);
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetPrestamosSchemaParaTests() {
+  _prestamosSchemaPromise = null;
+}
+
+/** Lista los préstamos (todos por default; `saldado: false` para solo los abiertos). */
+export async function listPrestamos({ saldado } = {}, sqlArg) {
+  await ensurePrestamosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  if (saldado == null) {
+    return sql.query('select * from prestamos order by fecha desc, id desc', []);
+  }
+  return sql.query('select * from prestamos where saldado = $1 order by fecha desc, id desc', [!!saldado]);
+}
+
+const PERSONAS_VALIDAS = ['Luis', 'Carolina'];
+
+/** Registra un préstamo (o un abono, que es sencillamente uno en sentido inverso). */
+export async function insertPrestamo({ fecha, de, para, monto, concepto, moneda, notas }, sqlArg) {
+  if (!PERSONAS_VALIDAS.includes(de) || !PERSONAS_VALIDAS.includes(para)) {
+    throw new Error('"de" y "para" deben ser "Luis" o "Carolina".');
+  }
+  if (de === para) throw new Error('"de" y "para" no pueden ser la misma persona.');
+  const montoNum = Number(monto);
+  if (!(montoNum > 0)) throw new Error('El monto del préstamo debe ser mayor a 0.');
+  await ensurePrestamosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `insert into prestamos (fecha, de, para, monto, concepto, moneda, notas)
+     values ($1, $2, $3, $4, $5, $6, $7)
+     returning *`,
+    [fecha, de, para, montoNum, concepto || null, moneda || 'COP', notas || null]
+  );
+  return rows[0];
+}
+
+/** Marca (o desmarca) un préstamo como saldado — sale del cálculo del neto. */
+export async function marcarPrestamoSaldado(id, saldado = true, sqlArg) {
+  await ensurePrestamosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('update prestamos set saldado = $2 where id = $1 returning *', [Number(id), !!saldado]);
+  return rows[0] || null;
+}
+
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

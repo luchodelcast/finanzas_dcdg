@@ -36,6 +36,8 @@ import {
   upsertPagoEstado, desmarcarPagoEstado,
 } from './repo.js';
 import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes } from './pagos.js';
+import { listPrestamos, insertPrestamo, marcarPrestamoSaldado } from './repo.js';
+import { calcularSaldoPrestamos } from './prestamos.js';
 import { hoyISO } from '../../../app/src/utils/formatters.js';
 
 /**
@@ -963,6 +965,52 @@ export async function pwaPagosHandler(req) {
       return ok({ ok: true, pago_fijo: r });
     }
     return bad('accion inválida (marcar | desmarcar | crear | editar)');
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Préstamos entre Luis y Carolina (issue #77, Nocturno 6/7). Auth Google.
+ *   GET  /api/pwa-prestamos → lista + saldo neto por moneda (lectura, equipo).
+ *   POST /api/pwa-prestamos { accion: 'crear' | 'marcar_saldado', ... } → SOLO owners.
+ */
+export async function pwaPrestamosHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    try {
+      const prestamos = await listPrestamos({});
+      return ok({ ok: true, prestamos, saldo: calcularSaldoPrestamos(prestamos) });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden registrar préstamos.', 403);
+
+  const body = await parseBody(req);
+  const accion = String(body.accion || 'crear');
+  try {
+    if (accion === 'crear') {
+      const p = await insertPrestamo({
+        fecha: String(body.fecha || '').slice(0, 10) || hoyISO(),
+        de: body.de, para: body.para, monto: body.monto,
+        concepto: body.concepto, moneda: body.moneda, notas: body.notas,
+      });
+      return ok({ ok: true, prestamo: p });
+    }
+    if (accion === 'marcar_saldado') {
+      const id = Number(body.id);
+      if (!id) return bad('id requerido');
+      const p = await marcarPrestamoSaldado(id, body.saldado !== false);
+      if (!p) return bad('Préstamo no encontrado', 404);
+      return ok({ ok: true, prestamo: p });
+    }
+    return bad('accion inválida (crear | marcar_saldado)');
   } catch (e) {
     return bad(e.message, 422);
   }
