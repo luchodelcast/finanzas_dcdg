@@ -9,6 +9,18 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Corrida de Autobuild — backlog vacío, nueva propuesta.** Revisé los 7
+  issues abiertos con label `autobuild`: ninguno era elegible para construir
+  (bloqueados por dependencia sin fusionar, ya con PR borrador esperando OK
+  de Luis, o issues "padre" ya divididos en sub-issues en curso). Con la cola
+  vacía, propuse una funcionalidad nueva vía [`docs/conciliacion.md`](docs/conciliacion.md)
+  ("Siguiente" paso sin issue propio): **🔎 Propuesta #100 — cuadre de saldos
+  del extracto** (`saldo_inicial + Σ líneas = saldo_final`), para detectar
+  líneas mal cargadas o descuadres al conciliar. `AUTOBUILD_NOTIFY_URL`/
+  `AUTOBUILD_NOTIFY_SECRET` no están configurados en este entorno, así que el
+  aviso queda aquí (red de seguridad garantizada de `AUTOBUILD.md`) —
+  pendiente de tu OK en https://github.com/luchodelcast/finanzas_dcdg/issues/100.
+  Esta corrida no fusionó ni construyó código. 🤖
 - **Exports contables en CSV** (T12a, botón 📥, issue #91 — sub-issue de
   #52): descarga Libro Diario, Libro Mayor (por cuenta), Balance de
   Comprobación, Estado de Resultados y Balance General de un
