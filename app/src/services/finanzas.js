@@ -33,6 +33,33 @@ async function request(path, { method = 'GET', params = {}, body } = {}) {
   return data;
 }
 
+/** Descarga un reporte como CSV (issue #91): pide el archivo con el login de Google y lo guarda en el dispositivo. */
+export async function descargarCsv(path, params, nombreArchivo) {
+  const token = await getAccessToken();
+  const cfg = getConfig();
+  const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
+  const qs = new URLSearchParams(
+    Object.entries({ ...params, formato: 'csv' }).filter(([, v]) => v != null && v !== '')
+  ).toString();
+  const res = await fetch(`${base}${path}?${qs}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const err = new Error(data.error || `Error ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  const texto = await res.text();
+  const blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** Resumen de gastos de un periodo. */
 export const getResumen = (params = {}) => request('/api/pwa-resumen', { params });
 
