@@ -258,6 +258,59 @@ export async function queryComprobacion({ desde, hasta, entidad_id } = {}, sqlAr
 }
 
 // ---------------------------------------------------------------------------
+// Contabilización automática (T4): reglas de mapeo + búsquedas de apoyo.
+// ---------------------------------------------------------------------------
+
+/** Reglas de mapeo captura → PUC (categoría/cédula/medio → cuenta). */
+export async function listReglasContables(sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query('select ambito, clave, cuenta from reglas_contables', []);
+}
+
+/** Un movimiento por id (para contabilizarlo). */
+export async function getMovimiento(id, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from movimientos where id = $1 limit 1', [id]);
+  return rows[0] || null;
+}
+
+/** Un ingreso por id (para contabilizarlo). */
+export async function getIngreso(id, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from ingresos where id = $1 limit 1', [id]);
+  return rows[0] || null;
+}
+
+/** id de una entidad por nombre (p. ej. quien_pago 'Luis'), o null. */
+export async function entidadIdPorNombre(nombre, sqlArg) {
+  const n = String(nombre || '').trim();
+  if (!n) return null;
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select id from entidades where lower(nombre) = lower($1) limit 1', [n]);
+  return rows[0] ? rows[0].id : null;
+}
+
+/** Movimientos que todavía no tienen asiento (para recontabilizar en lote). */
+export async function movimientosSinAsiento({ limit = 500 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select id from movimientos m
+      where not exists (select 1 from asiento_lineas l where l.movimiento_id = m.id)
+      order by m.fecha, m.id
+      limit $1`, [Math.min(Number(limit) || 500, 2000)]);
+}
+
+/** Ingresos que todavía no tienen asiento. */
+export async function ingresosSinAsiento({ limit = 500 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select id from ingresos i
+      where not exists (select 1 from asiento_lineas l where l.ingreso_id = i.id)
+      order by i.fecha, i.id
+      limit $1`, [Math.min(Number(limit) || 500, 2000)]);
+}
+
+// ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
 

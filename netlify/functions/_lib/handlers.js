@@ -12,7 +12,7 @@ import {
   insertIngreso, queryIngresos, listPlanCuentas,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
-  queryAsientos,
+  queryAsientos, movimientosSinAsiento, ingresosSinAsiento,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta } from './cuentas.js';
@@ -24,10 +24,22 @@ import { parseCsvExtracto } from './extractos.js';
 import { parseExtractoPdfText } from './extracto-pdf.js';
 import { crearAsiento } from './asientos.js';
 import { construirApertura } from './apertura.js';
+import { contabilizarMovimiento, contabilizarIngreso } from './contabilizar.js';
 import { mayorCuenta, balanceComprobacion } from './mayor.js';
 import { estadoResultados, balanceGeneral } from './estados.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
+
+/**
+ * Contabiliza un movimiento recién registrado, best-effort: NUNCA debe tumbar la
+ * captura (si falta una regla o el plan de cuentas, se registra el fallo y ya).
+ */
+async function contabilizarMovSafe(result) {
+  if (result && result.registrado && result.id) {
+    try { await contabilizarMovimiento(result.id); } catch (e) { console.error('contabilizar mov', result.id, e.message); }
+  }
+  return result;
+}
 
 /** Handler genérico de registro para un tipo dado (gasto | pago | factura). */
 export function makeRegistrarHandler(tipo) {
@@ -38,6 +50,7 @@ export function makeRegistrarHandler(tipo) {
     const body = await parseBody(req);
     try {
       const result = await registrarMovimiento({ ...body, tipo, origen: body.origen || 'SilvIA' });
+      await contabilizarMovSafe(result);
       return ok(result);
     } catch (e) {
       return bad(e.message, 422);
@@ -91,7 +104,9 @@ export async function pwaRegistrarHandler(req) {
   }
   const body = await parseBody(req);
   try {
-    return ok(await registrarMovimiento({ ...body, origen: body.origen || 'App' }));
+    const result = await registrarMovimiento({ ...body, origen: body.origen || 'App' });
+    await contabilizarMovSafe(result);
+    return ok(result);
   } catch (e) {
     return bad(e.message, 422);
   }
@@ -310,6 +325,50 @@ export async function pwaAperturaHandler(req) {
 }
 
 /**
+ * Recontabiliza en LOTE los movimientos/ingresos que aún no tienen asiento
+ * (los capturados antes de T4). Auth Google, solo owners. Procesa un lote
+ * acotado por llamada (para no pasar el timeout) y reporta cuántos quedan.
+ *   POST /api/pwa-recontabilizar { limite? }
+ */
+export async function pwaRecontabilizarHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden recontabilizar.', 403);
+
+  const body = await parseBody(req);
+  const limite = Math.min(Math.max(Number(body.limite) || 40, 1), 100);
+  try {
+    const movs = await movimientosSinAsiento({ limit: limite });
+    let hechos = 0; let errores = 0;
+    for (const m of movs) {
+      try { await contabilizarMovimiento(m.id); hechos++; } catch (e) { errores++; console.error('recontab mov', m.id, e.message); }
+    }
+    let restanMov = 0;
+    if (movs.length >= limite) restanMov = (await movimientosSinAsiento({ limit: 2000 })).length;
+    // Ingresos solo si ya no quedan movimientos por procesar (para acotar el lote).
+    let hechosIng = 0; let erroresIng = 0; let restanIng = 0;
+    if (restanMov === 0) {
+      const ings = await ingresosSinAsiento({ limit: limite });
+      for (const i of ings) {
+        try { await contabilizarIngreso(i.id); hechosIng++; } catch (e) { erroresIng++; console.error('recontab ing', i.id, e.message); }
+      }
+      if (ings.length >= limite) restanIng = (await ingresosSinAsiento({ limit: 2000 })).length;
+    }
+    const restan = restanMov + restanIng;
+    return ok({
+      ok: true, contabilizados: hechos + hechosIng, con_error: errores + erroresIng, restan,
+      mensaje: `Contabilizados ${hechos + hechosIng} registro(s)`
+        + ((errores + erroresIng) ? `, ${errores + erroresIng} con error` : '')
+        + (restan ? `. Quedan ${restan}: vuelve a ejecutar.` : '.'),
+    });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
  * Libro Mayor de una cuenta (T5). Auth Google (equipo financiero, solo lectura).
  *   GET /api/pwa-mayor?cuenta=&desde=&hasta=&entidad_id= → renglones con saldo corrido.
  */
@@ -409,6 +468,9 @@ export async function pwaIngresoHandler(req) {
       moneda: body.moneda, retencion_fuente: Number(body.retencion_fuente) || 0,
       actividad: body.actividad, notas: body.notas, origen: 'App', idempotency_key,
     });
+    if (inserted && row && row.id) {
+      try { await contabilizarIngreso(row.id); } catch (e) { console.error('contabilizar ingreso', row.id, e.message); }
+    }
     return ok({
       ok: true, registrado: inserted, ya_existia: !inserted, id: row && row.id,
       mensaje: inserted ? 'Ingreso registrado ✅' : 'Ese ingreso ya estaba registrado (no se duplicó).',
