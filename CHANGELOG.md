@@ -8,7 +8,24 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
-## 2026-07-08
+## 2026-07-08 (autobuild, corrida nueva)
+- **[T8a] Roles de primera clase** (issue #97, sub-issue de #51 — split
+  explicado en #97/#98): `verifyFinanceUser` ahora devuelve `{ email, rol }`
+  leyendo la tabla `usuarios` (DDL + siembra idempotente en runtime, sin
+  `.sql` manual); si el email no tiene fila (o la DB no responde), cae al
+  mismo criterio que regía hoy vía `FINANZAS_OWNERS` (retrocompatible: nadie
+  pierde ni gana acceso). `esOwner` pasa de una lista de emails hardcodeada a
+  `rol === 'owner'`, reusado por los 9 endpoints que ya lo exigían. Además
+  **cierra un hueco real**: `pwaIngresoHandler`, `pwaExtractoHandler`,
+  `conciliacionHandler` (confirmar cruce) y `pwaBackfillHandler`
+  (materializar líneas) escribían sin ningún gate de rol — cualquier email de
+  `FINANZAS_USERS` podía registrar ingresos, cargar extractos, confirmar
+  conciliación o materializar backfill; ahora exigen `owner` como el resto,
+  cumpliendo la decisión documentada ("Solo Luis y Carolina escriben").
+  Endpoint nuevo `GET /api/pwa-whoami` (equipo, lectura) para que la PWA
+  (issue #98, bloqueado hasta que este se fusione) sepa qué rol tiene.
+  **Pendiente**: #98 (ocultar botones de captura/edición en la PWA según el
+  rol) queda para una corrida futura. 🤖 · PR pendiente. Closes #97.
 - **Exports contables en CSV** (T12a, botón 📥, issue #91 — sub-issue de
   #52): descarga Libro Diario, Libro Mayor (por cuenta), Balance de
   Comprobación, Estado de Resultados y Balance General de un

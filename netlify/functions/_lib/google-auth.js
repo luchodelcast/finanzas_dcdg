@@ -6,13 +6,24 @@
 // que ese email esté en FINANZAS_USERS. Así el navegador nunca necesita la API key
 // de Anthropic: clasifica llamando al backend, autenticado con su login de Google.
 import { config } from './env.js';
+import { getUsuarioRolPorEmail } from './repo.js';
 
 const TOKENINFO = 'https://oauth2.googleapis.com/tokeninfo';
 
 /**
+ * Rol de un email cuando no tiene fila en `usuarios` (o la tabla no responde):
+ * preserva el criterio de "quién escribe" que ya regía por `FINANZAS_OWNERS`
+ * antes de que existieran roles, para que nadie pierda ni gane acceso el día
+ * que se active esta tabla.
+ */
+function rolLegacy(email) {
+  return config.finanzasOwners().includes(email) ? 'owner' : 'solo_lectura';
+}
+
+/**
  * Verifica el access token de Google y que el usuario esté autorizado.
  * @param {string} accessToken
- * @returns {Promise<{ email: string }>}
+ * @returns {Promise<{ email: string, rol: string }>}
  * @throws Error con .status (401/403) si no es válido/autorizado.
  */
 export async function verifyFinanceUser(accessToken) {
@@ -45,5 +56,6 @@ export async function verifyFinanceUser(accessToken) {
   if (!config.finanzasUsers().includes(email)) {
     throw Object.assign(new Error('Usuario no autorizado para finanzas'), { status: 403 });
   }
-  return { email };
+  const rol = (await getUsuarioRolPorEmail(email)) || rolLegacy(email);
+  return { email, rol };
 }
