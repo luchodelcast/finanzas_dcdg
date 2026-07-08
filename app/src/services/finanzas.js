@@ -7,10 +7,10 @@
  */
 
 import { getConfig } from '../config/env.js';
-import { getAccessToken } from './auth.js';
+import { getSessionToken } from './auth.js';
 
 async function request(path, { method = 'GET', params = {}, body } = {}) {
-  const token = await getAccessToken();
+  const token = await getSessionToken();
   const cfg = getConfig();
   const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
   const qs = new URLSearchParams(
@@ -35,7 +35,7 @@ async function request(path, { method = 'GET', params = {}, body } = {}) {
 
 /** Descarga un reporte como CSV (issue #91): pide el archivo con el login de Google y lo guarda en el dispositivo. */
 export async function descargarCsv(path, params, nombreArchivo) {
-  const token = await getAccessToken();
+  const token = await getSessionToken();
   const cfg = getConfig();
   const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
   const qs = new URLSearchParams(
@@ -68,6 +68,9 @@ export const getMovimientos = (params = {}) => request('/api/pwa-movimientos', {
 
 /** Catálogos para el formulario de ingresos (entidades, terceros, cédulas). */
 export const getCatalogos = () => request('/api/pwa-catalogos');
+
+/** Cuentas/tarjetas activas del catálogo `⚙️ CUENTAS` (leídas en el backend). */
+export const getCuentas = () => request('/api/pwa-cuentas');
 
 /** Lista de ingresos. */
 export const getIngresos = (params = {}) => request('/api/pwa-ingreso', { params });

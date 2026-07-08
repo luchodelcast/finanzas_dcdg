@@ -15,11 +15,11 @@ import {
   isIwinAccount,
 } from './config/accounts.js';
 import { analizarTexto, analizarImagen } from './services/claude.js';
+import { getCuentas } from './services/finanzas.js';
 import {
-  appendValues,
-  loadCuentas as fetchCuentas,
-} from './services/sheets.js';
-import { getAccessToken, signOut as authSignOut, isSignedIn } from './services/auth.js';
+  getSessionToken, signOut as authSignOut, isSignedIn,
+  initSignIn, renderSignInButton, promptOneTap, gisReady,
+} from './services/auth.js';
 import { procesarRecibo } from './utils/imageProcessor.js';
 import { procesarReciboPDF } from './utils/pdfProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
@@ -122,43 +122,81 @@ function resetAll() {
   }
 }
 
-// ── Google Auth ───────────────────────────────────────────
+// ── Sesión (Google Sign-In + token de sesión) ─────────────
 function setConn(on) {
   V('conn-dot').className = 'conn-dot' + (on ? ' on' : '');
   V('conn-lbl').textContent = on ? 'Conectado' : 'Sin conectar';
 }
 
-/** Solicita/renueva el token y carga cuentas dinámicas. */
-async function connect({ forcePrompt = false } = {}) {
-  const cfg = getConfig();
-  if (!cfg.googleClientId) return false;
-  try {
-    await getAccessToken({ forcePrompt });
+/** Si hay sesión válida, refleja el estado y carga cuentas; si no, muestra el login. */
+async function connect() {
+  if (isSignedIn()) {
     setConn(true);
     await cargarCuentas();
     return true;
-  } catch (e) {
+  }
+  setConn(false);
+  mostrarLogin();
+  return false;
+}
+
+/** Muestra la pantalla de login con el botón oficial de Google Sign-In. */
+function mostrarLogin(msg) {
+  go('login');
+  const el = V('login-msg');
+  if (el) { el.textContent = msg || ''; el.style.color = 'var(--red)'; }
+  gisReady().then(() => {
+    try {
+      initSignIn({ onChange: onSessionChange });
+      renderSignInButton(V('gsi-button'));
+      promptOneTap();
+    } catch (e) {
+      if (el) el.textContent = 'No se pudo cargar Google Sign-In: ' + e.message;
+    }
+  });
+}
+
+/** Callback de cambios de sesión (login exitoso / fallo / cierre). */
+function onSessionChange(user, err) {
+  if (user) {
+    setConn(true);
+    cargarCuentas();
+    go('home');
+    renderHomeH();
+    toast('✓ Sesión iniciada');
+  } else {
     setConn(false);
-    if (forcePrompt) toast('No se pudo conectar: ' + e.message);
-    return false;
+    if (err) {
+      const el = V('login-msg');
+      if (el) { el.textContent = err.message || 'No se pudo iniciar sesión.'; el.style.color = 'var(--red)'; }
+    }
   }
 }
 
 function signOut() {
   authSignOut();
   setConn(false);
-  toast('Desconectado');
-  go('home');
+  toast('Sesión cerrada');
+  mostrarLogin();
 }
 
-// ── Cuentas dinámicas desde ⚙️ CUENTAS ────────────────────
+/** Si el error fue de auth (401/403), muestra el login y devuelve true (corta el flujo). */
+function esErrorAuth(e) {
+  if (e && (e.status === 401 || e.status === 403)) {
+    mostrarLogin('Tu sesión expiró. Vuelve a iniciar sesión.');
+    return true;
+  }
+  return false;
+}
+
+// ── Cuentas dinámicas desde ⚙️ CUENTAS (leídas en el backend) ──
 async function cargarCuentas() {
   try {
-    const cuentas = await fetchCuentas();
+    const r = await getCuentas();
+    const cuentas = r.cuentas || [];
     if (cuentas.length) {
       setCuentasDinamicas(cuentas);
       buildAccountsDropdown(cuentas);
-      toast(`✓ ${cuentas.length} cuentas cargadas`, 2000);
     } else {
       buildAccountsDropdown(CUENTAS_FALLBACK);
     }
@@ -409,10 +447,7 @@ function fillSubs() {
 
 // ── Guardar en Sheets ─────────────────────────────────────
 async function submit() {
-  if (!isSignedIn()) {
-    const okc = await connect({ forcePrompt: true });
-    if (!okc) return;
-  }
+  if (!isSignedIn()) { mostrarLogin(); return; }
   doSheet();
 }
 
@@ -457,18 +492,15 @@ async function doSheet(confirmar = false) {
       `${cat} · ${quien} · ${fecha}${r.actualizado ? ' · ✏️ actualizado' : ''}${empresas ? ' · 🏢 EMPRESAS' : ''}`;
     go('ok');
   } catch (e) {
-    if (e.status === 401 || e.status === 403) {
-      const okc = await connect({ forcePrompt: true });
-      if (okc) return doSheet(confirmar);
-    }
+    if (esErrorAuth(e)) return;
     toast('Error: ' + e.message);
     go('conf');
   }
 }
 
-/** POST a la API de finanzas (mismo origen) con el token de Google. */
+/** POST a la API de finanzas (mismo origen) con el token de sesión. */
 async function apiRegistrar(mov) {
-  const token = await getAccessToken();
+  const token = await getSessionToken();
   const cfg = getConfig();
   const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
   const res = await fetch(`${base}/api/pwa-registrar`, {
@@ -575,21 +607,16 @@ function abrirMailCET() {
 }
 
 async function registrarCET() {
-  if (!isSignedIn()) {
-    const okc = await connect({ forcePrompt: true });
-    if (!okc) return;
-  }
+  if (!isSignedIn()) { mostrarLogin(); return; }
   const asunto = generarAsuntoCET();
   if (!asunto) return toast('Completa los campos obligatorios');
 
-  const cfg = getConfig();
   const fecha = V('cet-fecha').value;
   const monto = parseFloat(V('cet-monto').value) || 0;
   const moneda = V('cet-moneda').value;
   const desde = V('cet-desde').value;
   const destino = cetDestino();
   const concepto = V('cet-concepto').value.trim();
-  const mes = new Date(fecha + 'T12:00:00').getMonth() + 1;
   const tipo = V('cet-tipo-dest').value;
 
   let cat, sub, quien;
@@ -607,10 +634,16 @@ async function registrarCET() {
 
   go('proc');
   V('proc-msg').textContent = 'Registrando CET…';
-  const row = [fecha, mes, cat, sub, concepto || destino, monto, metodo, quien, notas, tarjeta];
 
   try {
-    await appendValues(cfg.sheetGastos, row, 'A:J');
+    // El CET se registra por el backend (Neon + espejo Sheet + contabilización),
+    // igual que un gasto normal. `confirmar: true` mantiene la semántica previa
+    // de "siempre queda registrado" (antes se anexaba la fila directo al Sheet).
+    await apiRegistrar({
+      tipo: 'gasto', fecha, monto, moneda, categoria: cat, subcategoria: sub,
+      descripcion: concepto || destino, quien_pago: quien, metodo_pago: metodo,
+      tarjeta_ultimos4: tarjeta, notas, confirmar: true,
+    });
     addHistory({ fecha, monto, cat, sub, desc: concepto || destino, quien, ts: new Date().toISOString() });
     renderHomeH();
 
@@ -622,10 +655,7 @@ async function registrarCET() {
       window.open(`mailto:cetladca@gmail.com?subject=${encodeURIComponent(asunto)}`, '_blank');
     }, 800);
   } catch (e) {
-    if (e.status === 401) {
-      const okc = await connect({ forcePrompt: true });
-      if (okc) return registrarCET();
-    }
+    if (esErrorAuth(e)) return;
     toast('Error: ' + e.message);
     go('cet');
   }
@@ -659,10 +689,7 @@ function initTransfer() {
 }
 
 async function registrarTransfer() {
-  if (!isSignedIn()) {
-    const okc = await connect({ forcePrompt: true });
-    if (!okc) return;
-  }
+  if (!isSignedIn()) { mostrarLogin(); return; }
   const fecha = V('tr-fecha').value || today();
   const monto = parseFloat(V('tr-monto').value) || 0;
   const moneda = V('tr-moneda').value;
@@ -689,10 +716,7 @@ async function registrarTransfer() {
     V('ok-det').textContent = `Transferencia · ${cOrigen} → ${cDestino}`;
     go('ok');
   } catch (e) {
-    if (e.status === 401 || e.status === 403) {
-      const okc = await connect({ forcePrompt: true });
-      if (okc) return registrarTransfer();
-    }
+    if (esErrorAuth(e)) return;
     msg.textContent = 'Error: ' + e.message; msg.style.color = 'var(--red)';
     go('transfer');
   }
@@ -758,14 +782,19 @@ function init() {
   V('s-se').value = cfg.sheetEmpresas || 'EMPRESAS';
 
   // La PWA viene pre-configurada (Client ID y Spreadsheet por defecto) y ya no
-  // necesita la Anthropic key (la clasificación es server-side). Un dispositivo
-  // nuevo va directo a Home; solo inicia sesión con Google al primer uso.
+  // necesita la Anthropic key (la clasificación es server-side). Con sesión
+  // válida arranca en Home; si no, muestra el login de Google (Sign-In). Prepara
+  // Sign-In en segundo plano para el One Tap silencioso.
+  gisReady().then(() => { try { initSignIn({ onChange: onSessionChange }); } catch (_) { /* noop */ } });
   if (!cfg.googleClientId || !cfg.spreadsheetId) {
     go('setup');
-  } else {
+  } else if (isSignedIn()) {
     go('home');
     renderHomeH();
     connect();
+  } else {
+    renderHomeH();
+    mostrarLogin();
   }
 }
 
