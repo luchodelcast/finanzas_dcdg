@@ -9,6 +9,13 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Préstamos entre Luis y Carolina** (Nocturno 6/7, botón 🤝): registra
+  préstamos en ambos sentidos y muestra el saldo neto ("Carolina te debe
+  $X" / "Le debes a Carolina $Y"), agrupado por moneda. Un abono es
+  sencillamente un registro en sentido inverso; también se puede marcar un
+  préstamo como saldado (sale del cálculo del neto). Esquema nuevo
+  (`prestamos`) vía DDL idempotente en runtime — sin `.sql` manual.
+  Escritura solo owners, lectura equipo. 🤖 auto-ok · PR #87. Closes #77.
 - **Botón 🏠 en el header** (Nocturno 5/7): siempre accesible junto a los
   demás íconos, lleva al Home desde cualquier pantalla en un toque (antes
   había que usar "← Volver" varias veces). 🤖 auto-ok · PR #85. Closes #76.
