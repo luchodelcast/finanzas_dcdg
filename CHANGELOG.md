@@ -8,6 +8,33 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-08 (autobuild, corrida sin item elegible + limpieza de proceso)
+- Siguiendo `AUTOBUILD.md`, esta corrida sincronizó `main` y revisó el backlog
+  de issues `autobuild`. **Mismo diagnóstico que la corrida anterior (PR
+  #106, fusionado ahora)** — nada cambió en las ~4 h entre corridas:
+  - `#40`, `#41`, `#92`, `#98` siguen `autobuild-espera` con PR borrador
+    abierto (`#58`, `#55`, `#96`, `#103`) esperando revisión de Luis.
+  - `#51`, `#52` siguen siendo issues "padre" ya divididos en sub-issues.
+  - `#100` sigue como propuesta abierta esperando aprobación — no se creó una
+    segunda propuesta duplicada.
+  - Ningún issue `autofix` abierto sin `autofix-espera` que deba tener
+    prioridad.
+- **Limpieza de proceso** (guardrail "sin trabajo silencioso"): las últimas
+  corridas sin item elegible dejaban su propio PR de CHANGELOG abierto en
+  borrador en vez de fusionarlo (aunque son cambios aditivos de riesgo nulo,
+  que la regla general de `AUTOBUILD.md` dice fusionar con CI verde). Esta
+  corrida:
+  - **Fusionó #106** (la entrada de CHANGELOG más reciente y completa de esa
+    serie, CI verde).
+  - **Cerró sin fusionar**, por quedar duplicados/superados por #106: #105
+    (mismo diagnóstico), #101 (propuesta #100 ya reflejada), #62 (muy
+    desactualizado, el bookkeeping real —cerrar #37/#39— ya estaba hecho
+    aparte) y #27 (versión temprana de `AUTOBUILD.md`, ya superada por el
+    contenido fusionado en #20/#42/#59/#71). Ninguno perdía información real.
+
+  `npm test` → ✅ · `npm run build` → ✅ (sin cambios de comportamiento, solo
+  `CHANGELOG.md`).
+
 ## 2026-07-08 (autobuild, corrida sin item elegible)
 - Siguiendo `AUTOBUILD.md`, esta corrida sincronizó `main` (ya traía la Auth
   PWA Google Sign-In del PR #104, fusionada por Luis directamente) y revisó
