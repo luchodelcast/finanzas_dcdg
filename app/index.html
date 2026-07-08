@@ -210,6 +210,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <button class="ico-btn" data-go="extractos" title="Cargar extracto bancario">🧾</button>
     <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
     <button class="ico-btn" data-go="pagos" title="Pagos del mes">📅</button>
+    <button class="ico-btn" data-go="prestamos" title="Préstamos entre Luis y Carolina">🤝</button>
     <button class="ico-btn" data-go="aportes" title="Aportes IBC por persona">🧮</button>
     <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
     <button class="ico-btn" data-go="mayor" title="Libro Mayor y Balance de Comprobación">📒</button>
@@ -510,6 +511,35 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       </div>
       <button class="btn btn-p" data-act="pgCrear" style="margin-top:8px">＋ Agregar pago fijo</button>
     </div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── PRÉSTAMOS ENTRE LUIS Y CAROLINA (Nocturno 6/7, issue #77) ── -->
+<div class="scr" id="scr-prestamos">
+  <div class="card">
+    <div class="card-ttl">Saldo neto</div>
+    <div id="pr-saldo"><div class="empty">Cargando…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Registrar préstamo (o abono)</div>
+    <div style="font-size:12px;color:var(--gray-d);margin-bottom:6px">Un abono/pago es un registro en el sentido inverso al préstamo original.</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>De</label><select id="pr-n-de"><option value="Luis">Luis</option><option value="Carolina">Carolina</option></select></div>
+      <div class="fld"><label>Para</label><select id="pr-n-para"><option value="Carolina">Carolina</option><option value="Luis">Luis</option></select></div>
+    </div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Monto</label><input type="number" id="pr-n-monto" placeholder="0" inputmode="numeric"></div>
+      <div class="fld"><label>Moneda</label><select id="pr-n-moneda"><option value="COP">COP</option><option value="USD">USD</option></select></div>
+    </div>
+    <div class="fld"><label>Fecha</label><input type="date" id="pr-n-fecha"></div>
+    <div class="fld"><label>Concepto (opcional)</label><input type="text" id="pr-n-concepto" placeholder="Ej: abono de la mensualidad"></div>
+    <div id="pr-msg" style="font-size:12px;margin-top:6px;font-weight:600"></div>
+    <button class="btn btn-p" data-act="prCrear" style="margin-top:8px">＋ Registrar</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Historial</div>
+    <div id="pr-lista"></div>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
