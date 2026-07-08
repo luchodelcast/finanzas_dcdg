@@ -8,6 +8,26 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-08 (autobuild, corrida sin item elegible)
+- Siguiendo `AUTOBUILD.md`, esta corrida sincronizó `main` (ya traía la Auth
+  PWA Google Sign-In del PR #104, fusionada por Luis directamente) y revisó
+  el backlog de issues `autobuild`. **No había ningún item elegible para
+  construir**, mismo diagnóstico que la corrida anterior (PR #105, aún sin
+  fusionar):
+  - `#40`, `#41`, `#92`, `#98` — etiqueta `autobuild-espera` con PR en
+    borrador ya abierto (`#58`, `#55`, `#96`, `#103` respectivamente)
+    esperando revisión de Luis.
+  - `#51`, `#52` — issues "padre" ya divididos en sub-issues más chicos, en
+    curso vía sus splits; no se toman directo.
+  - `#100` — propuesta abierta (cuadre de saldos del extracto) esperando la
+    aprobación de Luis. Como ya cubre el hueco de la cola, esta corrida **no
+    creó una segunda propuesta** (evitar duplicar el mismo aviso).
+  - No hay issues `autofix` abiertos que deban tener prioridad.
+
+  Esta corrida **no fusionó ni construyó ningún código** — solo este cambio
+  de documentación/CHANGELOG. `npm test` → 229/229 ✅ · `npm run build` → ✅
+  (sin cambios de comportamiento).
+
 ## 2026-07-08 (autobuild, corrida nueva)
 - **Auth de la PWA: Google Sign-In + token de sesión** (Issue #2 de auth): el
   navegador ya no hace OAuth de *access token* con el scope pesado
