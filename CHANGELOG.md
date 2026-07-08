@@ -9,6 +9,31 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08 (autobuild, corrida nueva)
+- **[T8b] Portal solo-lectura en la PWA** (issue #98, segunda mitad del split
+  de #51 — ver #97): ahora que T8a (roles backend) está fusionado, la PWA pide
+  `GET /api/pwa-whoami` tras conectar con Google y oculta los botones/pantallas
+  de captura y edición (Registrar egresos, Ingresos, Extractos, Conciliación,
+  Pagos del mes, Préstamos, Apertura/alta de cuentas, Solicitudes) para
+  cualquier rol que no sea `owner`. Deja visibles: Home (tablero), Aportes IBC
+  y Dashboard (ambos ya eran de solo lectura sin ningún gate en el backend),
+  Libro Mayor/Balance de Comprobación, Estado de Resultados/Balance General y
+  los exports CSV. La UI **asume `owner` por defecto** hasta que
+  `/api/pwa-whoami` resuelva lo contrario (evita parpadeo para Luis/Carolina,
+  el uso diario) — el gate real sigue siendo el backend de T8a, esto es solo
+  UX. Nueva pantalla `go()` bloquea también la navegación directa a esas
+  pantallas para un no-owner, redirigiendo a Home. Lógica de bloqueo extraída
+  a `app/src/config/roles.js` (función pura, con tests). **Decisión que tomé
+  sin que estuviera explícita en el issue**: dejé Aportes IBC y Dashboard
+  visibles para el rol de solo lectura porque ninguno de los dos tiene ninguna
+  acción de escritura en todo su flujo (a diferencia de Pagos/Extractos/
+  Conciliación, que si bien muestran datos también incluyen acciones que
+  exigen `owner`) — avísame si prefieres que también quedaran ocultos.
+  Verificado con Playwright contra `npm run preview`: los 11 elementos
+  `data-owner-only` están visibles por defecto y desaparecen al simular un rol
+  no-owner (confirma que la regla `[hidden]{display:none!important}` agregada
+  gana sobre los `display:flex` de `.ico-btn`/`.act-btn`); Mayor/Aportes
+  siguen abiertos con normalidad. 🤖 · PR pendiente (en borrador — candado de
+  auth/portal, espera OK de Luis). Closes #98.
 - **[T8a] Roles de primera clase** (issue #97, sub-issue de #51 — split
   explicado en #97/#98): `verifyFinanceUser` ahora devuelve `{ email, rol }`
   leyendo la tabla `usuarios` (DDL + siembra idempotente en runtime, sin

@@ -14,6 +14,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231F3B6E'/><text y='23' x='7' font-size='17' font-family='sans-serif' fill='white' font-weight='700'>$</text></svg>">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 :root{
   --navy:#1F3B6E;--navy-d:#131E3A;--blue:#2E5FA3;--blue-l:#E6F1FB;
   --teal:#0F6E56;--teal-l:#E1F5EE;--teal-m:#5DCAA5;
@@ -206,14 +207,14 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
       <span id="conn-lbl" style="color:#fff">Sin conectar</span>
     </div>
     <button class="ico-btn" data-go="home" title="Inicio">🏠</button>
-    <button class="ico-btn" data-go="ingreso" title="Registrar ingreso">💵</button>
-    <button class="ico-btn" data-go="extractos" title="Cargar extracto bancario">🧾</button>
-    <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
-    <button class="ico-btn" data-go="pagos" title="Pagos del mes">📅</button>
-    <button class="ico-btn" data-go="prestamos" title="Préstamos entre Luis y Carolina">🤝</button>
-    <button class="ico-btn" data-go="solicitudes" title="Pedir una mejora">💡</button>
+    <button class="ico-btn" data-go="ingreso" data-owner-only title="Registrar ingreso">💵</button>
+    <button class="ico-btn" data-go="extractos" data-owner-only title="Cargar extracto bancario">🧾</button>
+    <button class="ico-btn" data-go="conciliacion" data-owner-only title="Conciliar extracto">🔗</button>
+    <button class="ico-btn" data-go="pagos" data-owner-only title="Pagos del mes">📅</button>
+    <button class="ico-btn" data-go="prestamos" data-owner-only title="Préstamos entre Luis y Carolina">🤝</button>
+    <button class="ico-btn" data-go="solicitudes" data-owner-only title="Pedir una mejora">💡</button>
     <button class="ico-btn" data-go="aportes" title="Aportes IBC por persona">🧮</button>
-    <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
+    <button class="ico-btn" data-go="apertura" data-owner-only title="Saldos iniciales (apertura)">🏦</button>
     <button class="ico-btn" data-go="mayor" title="Libro Mayor y Balance de Comprobación">📒</button>
     <button class="ico-btn" data-go="estados" title="Estado de Resultados y Balance General">📈</button>
     <button class="ico-btn" data-go="exports" title="Exports contables (CSV)">📥</button>
@@ -298,7 +299,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <div class="card">
     <div class="sec-hdr">
       <div class="card-ttl">Pagos de este mes</div>
-      <button class="sec-link" data-go="pagos">Ver todos →</button>
+      <button class="sec-link" data-go="pagos" data-owner-only>Ver todos →</button>
     </div>
     <div id="home-pagos-mes"><div class="empty">Cargando…</div></div>
   </div>
@@ -312,15 +313,15 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   </div>
   <div class="card">
     <div class="card-ttl">Accesos rápidos</div>
-    <button class="act-btn a-cam" data-go="registrar">
+    <button class="act-btn a-cam" data-go="registrar" data-owner-only>
       <div class="act-ico">🧾</div>
       <div class="act-txt"><strong>Registrar egresos</strong><span>Foto, texto, CET, transferencia</span></div>
     </button>
-    <button class="act-btn a-txt" data-go="ingreso" style="margin-top:10px">
+    <button class="act-btn a-txt" data-go="ingreso" data-owner-only style="margin-top:10px">
       <div class="act-ico">💵</div>
       <div class="act-txt"><strong>Ingresos</strong><span>Registrar un ingreso</span></div>
     </button>
-    <button class="act-btn a-cet" data-go="pagos" style="margin-top:10px">
+    <button class="act-btn a-cet" data-go="pagos" data-owner-only style="margin-top:10px">
       <div class="act-ico">📅</div>
       <div class="act-txt"><strong>Pagos del mes</strong><span>Qué se ha pagado y qué falta</span></div>
     </button>

@@ -69,6 +69,9 @@ export const getMovimientos = (params = {}) => request('/api/pwa-movimientos', {
 /** Catálogos para el formulario de ingresos (entidades, terceros, cédulas). */
 export const getCatalogos = () => request('/api/pwa-catalogos');
 
+/** Email y rol (owner/solo_lectura/etc.) del usuario autenticado (T8b, issue #98). */
+export const getWhoami = () => request('/api/pwa-whoami');
+
 /** Lista de ingresos. */
 export const getIngresos = (params = {}) => request('/api/pwa-ingreso', { params });
 

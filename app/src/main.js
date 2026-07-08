@@ -20,6 +20,8 @@ import {
   loadCuentas as fetchCuentas,
 } from './services/sheets.js';
 import { getAccessToken, signOut as authSignOut, isSignedIn } from './services/auth.js';
+import { getWhoami } from './services/finanzas.js';
+import { esPantallaBloqueada } from './config/roles.js';
 import { procesarRecibo } from './utils/imageProcessor.js';
 import { procesarReciboPDF } from './utils/pdfProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
@@ -47,8 +49,35 @@ let curImg = null; // { base64, mediaType, prev }
 let curIsIwin = false;
 let _accts = []; // cuentas cargadas (para los selects de transferencia)
 
+// ── Rol del usuario (T8b, issue #98) ─────────────────────
+// Asume `owner` hasta que /api/pwa-whoami resuelva lo contrario: los dueños
+// (Luis/Carolina) son el uso diario de la app y no deben ver botones
+// parpadear u ocultarse mientras carga; un rol restringido igual está
+// bloqueado en el servidor (T8a) aunque el botón tarde un instante en
+// ocultarse — la UI es solo una mejora de UX, no el control de acceso real.
+let _isOwner = true;
+
+/** Muestra/oculta los botones y pantallas de captura/edición según el rol. */
+function applyOwnerUI(isOwner) {
+  _isOwner = isOwner;
+  document.querySelectorAll('[data-owner-only]').forEach((el) => { el.hidden = !isOwner; });
+}
+
+/** Pide el rol del usuario autenticado y ajusta la UI. Si falla (red caída,
+ *  DB caída), no toca la UI — queda con el rol que ya tenía (por defecto,
+ *  owner) en vez de ocultar botones por un problema pasajero de red. */
+async function cargarRol() {
+  try {
+    const { owner } = await getWhoami();
+    applyOwnerUI(!!owner);
+  } catch (_) {
+    /* deja el estado de rol como estaba */
+  }
+}
+
 // ── Navegación ────────────────────────────────────────────
 function go(s) {
+  if (esPantallaBloqueada(s, _isOwner)) s = 'home';
   document.querySelectorAll('.scr').forEach((x) => x.classList.remove('on'));
   const el = V('scr-' + s);
   if (el) el.classList.add('on');
@@ -136,6 +165,7 @@ async function connect({ forcePrompt = false } = {}) {
     await getAccessToken({ forcePrompt });
     setConn(true);
     await cargarCuentas();
+    cargarRol();
     return true;
   } catch (e) {
     setConn(false);
@@ -147,6 +177,7 @@ async function connect({ forcePrompt = false } = {}) {
 function signOut() {
   authSignOut();
   setConn(false);
+  applyOwnerUI(false);
   toast('Desconectado');
   go('home');
 }
