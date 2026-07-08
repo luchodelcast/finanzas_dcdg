@@ -25,6 +25,7 @@ import { parseExtractoPdfText } from './extracto-pdf.js';
 import { crearAsiento } from './asientos.js';
 import { construirApertura } from './apertura.js';
 import { mayorCuenta, balanceComprobacion } from './mayor.js';
+import { estadoResultados, balanceGeneral } from './estados.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
@@ -335,6 +336,38 @@ export async function pwaComprobacionHandler(req) {
   const g = (k) => url.searchParams.get(k);
   try {
     return ok({ ok: true, ...(await balanceComprobacion({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Estado de Resultados (T6). Auth Google (equipo financiero, solo lectura).
+ *   GET /api/pwa-estado-resultados?desde=&hasta=&entidad_id= → ingresos − gastos − costos.
+ */
+export async function pwaEstadoResultadosHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const g = (k) => url.searchParams.get(k);
+  try {
+    return ok({ ok: true, ...(await estadoResultados({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Balance General (T7). Auth Google (equipo financiero, solo lectura).
+ *   GET /api/pwa-balance-general?fecha=&entidad_id= → activo/pasivo/patrimonio a una fecha.
+ */
+export async function pwaBalanceGeneralHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const g = (k) => url.searchParams.get(k);
+  try {
+    return ok({ ok: true, ...(await balanceGeneral({ fecha: g('fecha'), entidad_id: g('entidad_id') })) });
   } catch (e) {
     return bad(e.message, 422);
   }
