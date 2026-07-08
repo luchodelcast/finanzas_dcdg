@@ -25,7 +25,8 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   Endpoint nuevo `GET /api/pwa-whoami` (equipo, lectura) para que la PWA
   (issue #98, bloqueado hasta que este se fusione) sepa qué rol tiene.
   **Pendiente**: #98 (ocultar botones de captura/edición en la PWA según el
-  rol) queda para una corrida futura. 🤖 · PR pendiente. Closes #97.
+  rol) queda para una corrida futura. 🤖 · PR #99 (en borrador, espera OK de
+  Luis — candado/sensible). Closes #97.
 - **Exports contables en CSV** (T12a, botón 📥, issue #91 — sub-issue de
   #52): descarga Libro Diario, Libro Mayor (por cuenta), Balance de
   Comprobación, Estado de Resultados y Balance General de un
