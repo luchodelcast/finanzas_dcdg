@@ -32,8 +32,11 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   `data-owner-only` están visibles por defecto y desaparecen al simular un rol
   no-owner (confirma que la regla `[hidden]{display:none!important}` agregada
   gana sobre los `display:flex` de `.ico-btn`/`.act-btn`); Mayor/Aportes
-  siguen abiertos con normalidad. 🤖 · PR pendiente (en borrador — candado de
-  auth/portal, espera OK de Luis). Closes #98.
+  siguen abiertos con normalidad. 🤖 · PR #103 (en borrador — candado de
+  auth/portal, espera OK de Luis). Closes #98. **Aviso**:
+  `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` no están configurados en
+  este entorno, así que el aviso de "queda en revisión" va solo por este
+  CHANGELOG, no por WhatsApp.
 - **[T8a] Roles de primera clase** (issue #97, sub-issue de #51 — split
   explicado en #97/#98): `verifyFinanceUser` ahora devuelve `{ email, rol }`
   leyendo la tabla `usuarios` (DDL + siembra idempotente en runtime, sin
