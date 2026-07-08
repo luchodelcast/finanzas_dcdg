@@ -52,6 +52,14 @@ export const config = {
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),
+  // Fallback legacy de "quién escribe" (T8): se usa solo si el email no tiene
+  // fila en `usuarios` (o la tabla no responde). Una vez sembrado `usuarios`,
+  // el rol de ahí manda.
+  finanzasOwners: () =>
+    String(env('FINANZAS_OWNERS', 'luis@iwin.im,carodz2@gmail.com'))
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
 };
 
 /** Normaliza la clave privada PEM (Netlify suele escapar los saltos de línea). */

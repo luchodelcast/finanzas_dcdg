@@ -911,6 +911,77 @@ export async function marcarPrestamoSaldado(id, saldado = true, sqlArg) {
   return rows[0] || null;
 }
 
+// ---------------------------------------------------------------------------
+// Usuarios del equipo y su rol (T8, issue #97). Esquema nuevo vía DDL
+// idempotente en runtime (sin `.sql` manual) — mismo patrón que
+// ensurePrestamosSchema. `sql/contable.sql` documenta el mismo esquema/semilla
+// para quien prefiera correrlo a mano en Neon; aquí se crea solo si falta.
+// ---------------------------------------------------------------------------
+let _usuariosSchemaPromise = null;
+
+const USUARIOS_SEED = [
+  ['luis@iwin.im', 'Luis', 'owner', 'CO'],
+  ['carodz2@gmail.com', 'Carolina', 'owner', 'CO'],
+  ['angela@iwin.im', 'Angela Guerrero', 'admin_financiero', 'CO'],
+  ['ma.isabel@iwin.im', 'María Isabel Bolaños', 'tesoreria', 'CO'],
+  ['santiago@iwin.im', 'Santiago Rodríguez', 'contador', 'CO'],
+];
+
+/** Crea (si no existe) `usuarios` + siembra el equipo conocido. Memoizado. */
+export async function ensureUsuariosSchema(sqlArg) {
+  if (!_usuariosSchemaPromise) {
+    _usuariosSchemaPromise = aplicarUsuariosSchema(sqlArg)
+      .catch((e) => { _usuariosSchemaPromise = null; throw e; }); // reintentable si falló
+  }
+  return _usuariosSchemaPromise;
+}
+
+async function aplicarUsuariosSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists usuarios (
+      id      bigint generated always as identity primary key,
+      email   text not null unique,
+      nombre  text,
+      rol     text not null,
+      pais    text,
+      activo  boolean default true
+    )
+  `, []);
+  for (const [email, nombre, rol, pais] of USUARIOS_SEED) {
+    await sql.query(
+      'insert into usuarios (email, nombre, rol, pais) values ($1, $2, $3, $4) on conflict (email) do nothing',
+      [email, nombre, rol, pais]
+    );
+  }
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetUsuariosSchemaParaTests() {
+  _usuariosSchemaPromise = null;
+}
+
+/**
+ * Rol del email en `usuarios` (o null si no tiene fila, está inactivo, o la
+ * tabla no responde — el llamador decide el fallback). Nunca lanza: quien la
+ * usa para autenticar no debe quedar bloqueado por un problema transitorio.
+ */
+export async function getUsuarioRolPorEmail(email, sqlArg) {
+  const correo = String(email || '').toLowerCase().trim();
+  if (!correo) return null;
+  try {
+    await ensureUsuariosSchema(sqlArg);
+    const sql = sqlArg || await getSql();
+    const rows = await sql.query(
+      'select rol from usuarios where lower(email) = $1 and activo = true limit 1',
+      [correo]
+    );
+    return rows[0] ? rows[0].rol : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

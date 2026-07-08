@@ -230,6 +230,17 @@ const CEDULAS = [
   { value: 'pension', label: 'Pensiones' },
 ];
 
+/**
+ * Quién soy / qué rol tengo (T8, issue #97). Auth Google. La PWA lo llama tras
+ * el login para decidir qué botones de captura/edición mostrar según el rol.
+ */
+export async function pwaWhoamiHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  return ok({ ok: true, email: auth.email, rol: auth.rol, owner: esOwner(auth) });
+}
+
 /** Catálogos para el formulario de ingresos (entidades, terceros, cédulas). Auth Google. */
 export async function pwaCatalogosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
@@ -254,7 +265,7 @@ export async function pwaPlanCuentasHandler(req) {
   try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'POST') {
-    if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden agregar cuentas.', 403);
+    if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden agregar cuentas.', 403);
     const body = await parseBody(req);
     try {
       const cuenta = await insertPlanCuenta({ nombre: body.nombre, clase: body.clase, cuenta_padre: body.cuenta_padre });
@@ -274,11 +285,13 @@ export async function pwaPlanCuentasHandler(req) {
   }
 }
 
-/** ¿El email es de un dueño (Luis/Carolina)? Solo ellos escriben (decisión: equipo = lectura). */
-function esOwner(email) {
-  const owners = String(process.env.FINANZAS_OWNERS || 'luis@iwin.im,carodz2@gmail.com')
-    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  return owners.includes(String(email || '').toLowerCase());
+/**
+ * ¿El usuario autenticado puede escribir? (T8, issue #97). `auth.rol` viene de
+ * `verifyFinanceUser` — hoy solo `owner` (Luis/Carolina) escribe; el resto del
+ * equipo (admin_financiero/tesoreria/contador/solo_lectura) es de lectura.
+ */
+function esOwner(auth) {
+  return String((auth && auth.rol) || '').toLowerCase() === 'owner';
 }
 
 /**
@@ -304,7 +317,7 @@ export async function pwaAsientoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden crear asientos manuales.', 403);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden crear asientos manuales.', 403);
 
   const body = await parseBody(req);
   try {
@@ -340,7 +353,7 @@ export async function pwaAperturaHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden montar la apertura.', 403);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden montar la apertura.', 403);
 
   const body = await parseBody(req);
   const entidad_id = body.entidad_id || null;
@@ -370,7 +383,7 @@ export async function pwaRecontabilizarHandler(req) {
   let auth;
   try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden recontabilizar.', 403);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden recontabilizar.', 403);
 
   const body = await parseBody(req);
   const limite = Math.min(Math.max(Number(body.limite) || 40, 1), 100);
@@ -475,10 +488,11 @@ export async function pwaBalanceGeneralHandler(req) {
   }
 }
 
-/** Registra (POST) o lista (GET) ingresos. Auth Google (equipo financiero). */
+/** Registra (POST) o lista (GET) ingresos. Auth Google (equipo financiero); registrar es SOLO owners. */
 export async function pwaIngresoHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -491,6 +505,7 @@ export async function pwaIngresoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar ingresos.', 403);
 
   const body = await parseBody(req);
   const entidad_id = Number(body.entidad_id);
@@ -531,7 +546,8 @@ export async function pwaIngresoHandler(req) {
  */
 export async function pwaExtractoHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -548,6 +564,7 @@ export async function pwaExtractoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden cargar extractos.', 403);
 
   const body = await parseBody(req);
   const cuenta = String(body.cuenta || '').trim();
@@ -613,7 +630,8 @@ function addDias(fechaISO, dias) {
  */
 export async function conciliacionHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -660,6 +678,7 @@ export async function conciliacionHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden confirmar cruces de conciliación.', 403);
   const body = await parseBody(req);
   const linea_id = Number(body.linea_id);
   const id = Number(body.id);
@@ -700,7 +719,8 @@ const BACKFILL_LOTE_LIMITE = 25;
  */
 export async function pwaBackfillHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -768,6 +788,7 @@ export async function pwaBackfillHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden materializar líneas de extracto.', 403);
   const body = await parseBody(req);
   const extracto_id = Number(body.extracto_id) || null;
   if (!extracto_id) return bad('extracto_id requerido');
@@ -933,7 +954,7 @@ export async function pwaPagosHandler(req) {
   const body = await parseBody(req);
   const accion = String(body.accion || '');
 
-  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden gestionar pagos fijos.', 403);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden gestionar pagos fijos.', 403);
 
   try {
     if (accion === 'marcar') {
@@ -1005,7 +1026,7 @@ export async function pwaPrestamosHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden registrar préstamos.', 403);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar préstamos.', 403);
 
   const body = await parseBody(req);
   const accion = String(body.accion || 'crear');
@@ -1053,7 +1074,7 @@ export async function pwaSolicitudesHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden enviar solicitudes de mejoras.', 403);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden enviar solicitudes de mejoras.', 403);
 
   const body = await parseBody(req);
   try {
