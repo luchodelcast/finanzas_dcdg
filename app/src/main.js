@@ -33,6 +33,7 @@ import { renderAportes } from './ui/aportes.js';
 import { renderPagos } from './ui/pagos.js';
 import { renderPrestamos } from './ui/prestamos.js';
 import { renderSolicitudes } from './ui/solicitudes.js';
+import { renderExportsCsv } from './ui/exportsCsv.js';
 import { renderApertura } from './ui/apertura.js';
 import { renderMayor } from './ui/mayor.js';
 import { renderEstados } from './ui/estados.js';
@@ -71,6 +72,7 @@ function go(s) {
   if (s === 'pagos') renderPagos();
   if (s === 'prestamos') renderPrestamos();
   if (s === 'solicitudes') renderSolicitudes();
+  if (s === 'exports') renderExportsCsv();
   if (s === 'apertura') renderApertura();
   if (s === 'mayor') renderMayor();
   if (s === 'estados') renderEstados();

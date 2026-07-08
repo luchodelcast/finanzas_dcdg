@@ -216,6 +216,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
     <button class="ico-btn" data-go="mayor" title="Libro Mayor y Balance de Comprobación">📒</button>
     <button class="ico-btn" data-go="estados" title="Estado de Resultados y Balance General">📈</button>
+    <button class="ico-btn" data-go="exports" title="Exports contables (CSV)">📥</button>
     <button class="ico-btn" data-go="dash" title="Dashboard">📊</button>
     <button class="ico-btn" data-go="settings" title="Configuración">⚙</button>
   </div>
@@ -635,6 +636,50 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <div id="bg-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
     <div id="bg-body" style="margin-top:8px"></div>
     <div id="bg-total" style="margin-top:8px"></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── EXPORTS CONTABLES EN CSV (T12a, issue #91, solo lectura) ── -->
+<div class="scr" id="scr-exports">
+  <div id="exp-msg" style="font-size:12px;font-weight:600;margin-bottom:4px"></div>
+  <div class="card">
+    <div class="card-ttl">Libro Diario</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Desde</label><input type="date" id="exp-diario-desde"></div>
+      <div class="fld"><label>Hasta</label><input type="date" id="exp-diario-hasta"></div>
+    </div>
+    <button class="btn btn-p" data-act="expDiario" style="margin-top:8px">⬇ Descargar CSV</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Libro Mayor (por cuenta)</div>
+    <div class="fld"><label>Cuenta</label><select id="exp-mayor-cuenta"></select></div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Desde</label><input type="date" id="exp-mayor-desde"></div>
+      <div class="fld"><label>Hasta</label><input type="date" id="exp-mayor-hasta"></div>
+    </div>
+    <button class="btn btn-p" data-act="expMayor" style="margin-top:8px">⬇ Descargar CSV</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Balance de Comprobación</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Desde</label><input type="date" id="exp-comp-desde"></div>
+      <div class="fld"><label>Hasta</label><input type="date" id="exp-comp-hasta"></div>
+    </div>
+    <button class="btn btn-p" data-act="expComprobacion" style="margin-top:8px">⬇ Descargar CSV</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Estado de Resultados</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Desde</label><input type="date" id="exp-er-desde"></div>
+      <div class="fld"><label>Hasta</label><input type="date" id="exp-er-hasta"></div>
+    </div>
+    <button class="btn btn-p" data-act="expResultados" style="margin-top:8px">⬇ Descargar CSV</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Balance General</div>
+    <div class="fld"><label>A la fecha</label><input type="date" id="exp-bg-fecha"></div>
+    <button class="btn btn-p" data-act="expBalance" style="margin-top:8px">⬇ Descargar CSV</button>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>

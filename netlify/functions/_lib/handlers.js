@@ -5,7 +5,10 @@
  * sea un one-liner. SilvIA (o la PWA) llaman estas rutas con el token de servicio.
  */
 
-import { authorize, parseBody, ok, bad } from './http.js';
+import { authorize, parseBody, ok, bad, csv } from './http.js';
+import {
+  csvLibroDiario, csvLibroMayor, csvComprobacion, csvEstadoResultados, csvBalanceGeneral,
+} from './exports.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
@@ -294,6 +297,7 @@ export async function pwaAsientoHandler(req) {
     const g = (k) => url.searchParams.get(k);
     try {
       const asientos = await queryAsientos({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id'), limit: g('limit') });
+      if (g('formato') === 'csv') return csv('libro-diario.csv', csvLibroDiario(asientos));
       return ok({ ok: true, asientos, n: asientos.length });
     } catch (e) {
       return bad(e.message, 422);
@@ -409,7 +413,9 @@ export async function pwaMayorHandler(req) {
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
-    return ok({ ok: true, ...(await mayorCuenta({ cuenta: g('cuenta'), desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
+    const r = await mayorCuenta({ cuenta: g('cuenta'), desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') });
+    if (g('formato') === 'csv') return csv(`libro-mayor-${r.cuenta.codigo}.csv`, csvLibroMayor(r.cuenta, r.lineas));
+    return ok({ ok: true, ...r });
   } catch (e) {
     return bad(e.message, 422);
   }
@@ -425,7 +431,9 @@ export async function pwaComprobacionHandler(req) {
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
-    return ok({ ok: true, ...(await balanceComprobacion({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
+    const r = await balanceComprobacion({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') });
+    if (g('formato') === 'csv') return csv('balance-comprobacion.csv', csvComprobacion(r.cuentas));
+    return ok({ ok: true, ...r });
   } catch (e) {
     return bad(e.message, 422);
   }
@@ -441,7 +449,9 @@ export async function pwaEstadoResultadosHandler(req) {
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
-    return ok({ ok: true, ...(await estadoResultados({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
+    const r = await estadoResultados({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') });
+    if (g('formato') === 'csv') return csv('estado-resultados.csv', csvEstadoResultados(r));
+    return ok({ ok: true, ...r });
   } catch (e) {
     return bad(e.message, 422);
   }
@@ -457,7 +467,9 @@ export async function pwaBalanceGeneralHandler(req) {
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
-    return ok({ ok: true, ...(await balanceGeneral({ fecha: g('fecha'), entidad_id: g('entidad_id') })) });
+    const r = await balanceGeneral({ fecha: g('fecha'), entidad_id: g('entidad_id') });
+    if (g('formato') === 'csv') return csv('balance-general.csv', csvBalanceGeneral(r));
+    return ok({ ok: true, ...r });
   } catch (e) {
     return bad(e.message, 422);
   }
