@@ -8,6 +8,20 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-08
+- **[T5] Libro Mayor + Balance de Comprobación**: `_lib/mayor.js` deriva, de los
+  asientos de T2, el saldo corrido por cuenta (`GET /api/pwa-mayor?cuenta=`) y
+  el balance de comprobación de todas las cuentas con movimiento
+  (`GET /api/pwa-comprobacion`, valida Σdébito = Σcrédito). Pantalla PWA 📒
+  de solo lectura para ambos. Cierra la Semana 1 del motor contable — base de
+  Estado de Resultados (T6) y Balance General (T7). 🤖 PR #(pendiente).
+- **Limpieza de cola**: cerré #45 (T2) y #46 (T3) — ya estaban fusionados a
+  `main` (PR #65/#66) pero sus PR decían "Cierra #N" en vez de `Closes #N`,
+  así que GitHub no los auto-cerró. Cerré también el PR borrador #60,
+  duplicado de #45 ya superado por #65. Dejé anotado en #47 que hay dos PR
+  borrador paralelos (#67/#68) para lo mismo — a la espera de que Luis elija
+  cuál revisar.
+
 ## 2026-07-07
 - Motor de cruce automático de conciliación (botón 🔗), fase 2 de
   docs/conciliacion.md: para un extracto a la vez, propone cruces entre sus

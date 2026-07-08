@@ -24,6 +24,7 @@ import { parseCsvExtracto } from './extractos.js';
 import { parseExtractoPdfText } from './extracto-pdf.js';
 import { crearAsiento } from './asientos.js';
 import { construirApertura } from './apertura.js';
+import { mayorCuenta, balanceComprobacion } from './mayor.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { reporteAportes } from './aportes.js';
 
@@ -302,6 +303,38 @@ export async function pwaAperturaHandler(req) {
       lineas, idempotency_key: `apertura:${entidad_id || 'todas'}:${fecha}`,
     });
     return ok(r);
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Libro Mayor de una cuenta (T5). Auth Google (equipo financiero, solo lectura).
+ *   GET /api/pwa-mayor?cuenta=&desde=&hasta=&entidad_id= → renglones con saldo corrido.
+ */
+export async function pwaMayorHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const g = (k) => url.searchParams.get(k);
+  try {
+    return ok({ ok: true, ...(await mayorCuenta({ cuenta: g('cuenta'), desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Balance de Comprobación (T5). Auth Google (equipo financiero, solo lectura).
+ *   GET /api/pwa-comprobacion?desde=&hasta=&entidad_id= → saldo por cuenta + cuadre.
+ */
+export async function pwaComprobacionHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const g = (k) => url.searchParams.get(k);
+  try {
+    return ok({ ok: true, ...(await balanceComprobacion({ desde: g('desde'), hasta: g('hasta'), entidad_id: g('entidad_id') })) });
   } catch (e) {
     return bad(e.message, 422);
   }

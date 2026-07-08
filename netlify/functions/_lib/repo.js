@@ -220,6 +220,43 @@ export async function queryAsientos({ desde, hasta, entidad_id, limit = 100 } = 
       limit $${params.length}`, params);
 }
 
+/** Renglones de una cuenta en un rango, con fecha/descripción del asiento — Libro Mayor (T5). */
+export async function queryLineasCuenta({ cuenta, desde, hasta, entidad_id, limit = 500 } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [cuenta];
+  const cond = ['l.cuenta = $1'];
+  if (desde) { params.push(desde); cond.push(`a.fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`a.fecha <= $${params.length}`); }
+  if (entidad_id) { params.push(entidad_id); cond.push(`a.entidad_id = $${params.length}`); }
+  params.push(Math.min(Number(limit) || 500, 2000));
+  return sql.query(
+    `select a.id as asiento_id, a.fecha, a.descripcion, l.debito, l.credito
+       from asiento_lineas l join asientos a on a.id = l.asiento_id
+      where ${cond.join(' and ')}
+      order by a.fecha asc, a.id asc
+      limit $${params.length}`, params);
+}
+
+/** Σdébito/Σcrédito por cuenta en un rango, con su naturaleza — Balance de Comprobación (T5). */
+export async function queryComprobacion({ desde, hasta, entidad_id } = {}, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (desde) { params.push(desde); cond.push(`a.fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`a.fecha <= $${params.length}`); }
+  if (entidad_id) { params.push(entidad_id); cond.push(`a.entidad_id = $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  return sql.query(
+    `select p.codigo, p.nombre, p.clase, p.naturaleza,
+            coalesce(sum(l.debito), 0) as debito, coalesce(sum(l.credito), 0) as credito
+       from asiento_lineas l
+       join asientos a on a.id = l.asiento_id
+       join plan_cuentas p on p.codigo = l.cuenta
+       ${where}
+      group by p.codigo, p.nombre, p.clase, p.naturaleza
+      order by p.codigo`, params);
+}
+
 // ---------------------------------------------------------------------------
 // Ingresos / entidades / terceros (Horizonte 1 contable).
 // ---------------------------------------------------------------------------
