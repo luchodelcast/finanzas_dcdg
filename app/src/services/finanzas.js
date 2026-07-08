@@ -78,3 +78,9 @@ export const getMayor = (params = {}) => request('/api/pwa-mayor', { params });
 
 /** Balance de Comprobación (T5, solo lectura). Opcional desde/hasta/entidad_id. */
 export const getComprobacion = (params = {}) => request('/api/pwa-comprobacion', { params });
+
+/** Estado de Resultados (T6, solo lectura). Opcional desde/hasta/entidad_id. */
+export const getEstadoResultados = (params = {}) => request('/api/pwa-estado-resultados', { params });
+
+/** Balance General a una fecha (T7, solo lectura). Opcional fecha/entidad_id. */
+export const getBalanceGeneral = (params = {}) => request('/api/pwa-balance-general', { params });

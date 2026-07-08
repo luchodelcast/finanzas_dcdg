@@ -31,6 +31,7 @@ import { renderConciliacion } from './ui/conciliacion.js';
 import { renderAportes } from './ui/aportes.js';
 import { renderApertura } from './ui/apertura.js';
 import { renderMayor } from './ui/mayor.js';
+import { renderEstados } from './ui/estados.js';
 
 const V = (id) => document.getElementById(id);
 const today = () => hoyISO();
@@ -64,6 +65,7 @@ function go(s) {
   if (s === 'aportes') renderAportes();
   if (s === 'apertura') renderApertura();
   if (s === 'mayor') renderMayor();
+  if (s === 'estados') renderEstados();
 }
 
 function toast(msg, dur = 3000) {
