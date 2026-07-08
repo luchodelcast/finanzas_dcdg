@@ -9,6 +9,14 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Cierre mensual** (T12b, botón 🔒, issue #92 — sub-issue de #52): marca
+  un periodo como cerrado y congela sus asientos — `crearAsiento` rechaza
+  después cualquier fecha dentro de ese mes (los ajustes van con fecha
+  del mes siguiente), en las 4 vías de creación de asientos (manual,
+  apertura, contabilización automática T4, backfill). Cerrar es
+  idempotente; solo owners. 🔎 **En revisión — PR #96 en borrador**,
+  espera el OK de Luis (candado: cambia el comportamiento de
+  `crearAsiento` para toda la app).
 - **Exports contables en CSV** (T12a, botón 📥, issue #91 — sub-issue de
   #52): descarga Libro Diario, Libro Mayor (por cuenta), Balance de
   Comprobación, Estado de Resultados y Balance General de un
