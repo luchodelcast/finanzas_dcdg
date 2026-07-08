@@ -23,6 +23,7 @@ const yaAutorizo = () => { try { return localStorage.getItem(GRANTED_KEY) === '1
 let _token = null;
 let _expiresAt = 0;
 let _tokenClient = null;
+let _inflight = null; // promesa de token en curso (evita carreras con peticiones en paralelo)
 
 function gis() {
   // eslint-disable-next-line no-undef
@@ -55,7 +56,13 @@ export function getAccessToken({ forcePrompt = false } = {}) {
   if (_token && now < _expiresAt - 60_000 && !forcePrompt) {
     return Promise.resolve(_token);
   }
-  return new Promise((resolve, reject) => {
+  // Single-flight: si ya hay una solicitud de token en curso, todas las
+  // peticiones concurrentes comparten la MISMA promesa. Sin esto, varias
+  // llamadas en paralelo (p.ej. el Home dispara 4 al abrir) se pisan el
+  // `client.callback` compartido y solo la última resuelve — las demás
+  // quedan colgadas para siempre ("Cargando…" eterno).
+  if (_inflight && !forcePrompt) return _inflight;
+  _inflight = new Promise((resolve, reject) => {
     try {
       const client = ensureTokenClient();
       client.callback = (resp) => {
@@ -76,7 +83,8 @@ export function getAccessToken({ forcePrompt = false } = {}) {
     } catch (e) {
       reject(e);
     }
-  });
+  }).finally(() => { _inflight = null; });
+  return _inflight;
 }
 
 /** Revoca el token actual (logout). */
