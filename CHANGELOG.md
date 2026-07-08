@@ -9,6 +9,9 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Botón 🏠 en el header** (Nocturno 5/7): siempre accesible junto a los
+  demás íconos, lleva al Home desde cualquier pantalla en un toque (antes
+  había que usar "← Volver" varias veces). 🤖 auto-ok · PR #85. Closes #76.
 - **Nuevo Home útil + "Registrar egresos"** (Nocturno 4/7): la captura de
   gastos (foto, galería, texto, CET, transferencia + últimos registros) se
   mudó intacta a una pantalla nueva "Registrar egresos". El Home ahora abre
