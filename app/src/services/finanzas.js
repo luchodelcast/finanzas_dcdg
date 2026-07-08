@@ -72,3 +72,9 @@ export const getApertura = (params = {}) => request('/api/pwa-apertura', { param
 
 /** Guarda el asiento de apertura (saldos iniciales). */
 export const guardarApertura = (body) => request('/api/pwa-apertura', { method: 'POST', body });
+
+/** Libro Mayor de una cuenta (T5, solo lectura). Requiere {cuenta}, opcional desde/hasta/entidad_id. */
+export const getMayor = (params = {}) => request('/api/pwa-mayor', { params });
+
+/** Balance de Comprobación (T5, solo lectura). Opcional desde/hasta/entidad_id. */
+export const getComprobacion = (params = {}) => request('/api/pwa-comprobacion', { params });
