@@ -580,6 +580,164 @@ export async function marcarLineaMaterializada({ linea_id, tipo, id }, sqlArg) {
   return rows.length > 0;
 }
 
+// ---------------------------------------------------------------------------
+// Pagos del mes (issue #73, Nocturno 2/7, `auto-ok`). Esquema nuevo: en vez de
+// un `.sql` que alguien deba correr a mano en Neon, `ensurePagosFijosSchema`
+// aplica un DDL idempotente en runtime (create table/index if not exists) la
+// primera vez que se usa este módulo — memoizado para no repetirlo en cada
+// llamada. Ver AUTOBUILD.md § modo auto-ok.
+// ---------------------------------------------------------------------------
+// Memoiza la PROMESA (no un booleano): varias llamadas concurrentes (p. ej. el
+// Promise.all de listPagosFijos/queryPagosEstadoMes en el handler) deben
+// esperar la MISMA corrida del DDL/seed en vez de dispararla varias veces.
+let _pagosFijosSchemaPromise = null;
+
+const PAGOS_FIJOS_SEED = [
+  { concepto: 'Arriendo', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Vivienda' },
+  { concepto: 'Administración', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Vivienda' },
+  { concepto: 'Internet Apto', dia_vencimiento: 10, familia: 'DCDG', categoria: 'Servicios' },
+  { concepto: 'Claro (celular)', dia_vencimiento: 15, familia: 'DCDG', categoria: 'Servicios' },
+  { concepto: 'Tigo (celular)', dia_vencimiento: 15, familia: 'DCDG', categoria: 'Servicios' },
+  { concepto: 'Agua', dia_vencimiento: 12, familia: 'DCDG', categoria: 'Servicios' },
+  { concepto: 'Energía', dia_vencimiento: 18, familia: 'DCDG', categoria: 'Servicios' },
+  { concepto: 'Gas natural', dia_vencimiento: 20, familia: 'DCDG', categoria: 'Servicios' },
+  { concepto: 'Colegio Alemán', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Educación' },
+  { concepto: 'Extracurriculares', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Educación' },
+  { concepto: 'Seguro vehículo', dia_vencimiento: 8, familia: 'DCC', categoria: 'Transporte' },
+  { concepto: 'Cuota crédito vehículo', dia_vencimiento: 8, familia: 'DCC', categoria: 'Transporte' },
+];
+
+/** Crea (si no existen) `pagos_fijos`/`pagos_estado` y siembra el catálogo conocido. Memoizado. */
+export async function ensurePagosFijosSchema(sqlArg) {
+  if (!_pagosFijosSchemaPromise) {
+    _pagosFijosSchemaPromise = aplicarPagosFijosSchema(sqlArg)
+      .catch((e) => { _pagosFijosSchemaPromise = null; throw e; }); // reintentable si falló (p.ej. DB caída)
+  }
+  return _pagosFijosSchemaPromise;
+}
+
+async function aplicarPagosFijosSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists pagos_fijos (
+      id serial primary key,
+      concepto text not null,
+      monto numeric not null default 0,
+      dia_vencimiento int not null default 1,
+      familia text not null default 'DCDG',
+      categoria text,
+      moneda text not null default 'COP',
+      activo boolean not null default true,
+      creado_en timestamptz not null default now()
+    )
+  `, []);
+  await sql.query('create unique index if not exists pagos_fijos_concepto_familia_uk on pagos_fijos (concepto, familia)', []);
+  await sql.query(`
+    create table if not exists pagos_estado (
+      id serial primary key,
+      pago_fijo_id bigint not null references pagos_fijos (id),
+      anio int not null,
+      mes int not null,
+      estado text not null default 'pendiente',
+      fecha_pago date,
+      monto_pagado numeric,
+      movimiento_id bigint,
+      creado_en timestamptz not null default now(),
+      unique (pago_fijo_id, anio, mes)
+    )
+  `, []);
+  for (const p of PAGOS_FIJOS_SEED) {
+    await sql.query(
+      `insert into pagos_fijos (concepto, monto, dia_vencimiento, familia, categoria)
+       values ($1, 0, $2, $3, $4)
+       on conflict (concepto, familia) do nothing`,
+      [p.concepto, p.dia_vencimiento, p.familia, p.categoria]
+    );
+  }
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL/seed. */
+export function resetPagosFijosSchemaParaTests() {
+  _pagosFijosSchemaPromise = null;
+}
+
+/** Catálogo de pagos fijos (activos por default). */
+export async function listPagosFijos({ activo = true } = {}, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    activo == null
+      ? 'select * from pagos_fijos order by familia, dia_vencimiento, concepto'
+      : 'select * from pagos_fijos where activo = $1 order by familia, dia_vencimiento, concepto',
+    activo == null ? [] : [!!activo]
+  );
+  return rows;
+}
+
+/** Filas de `pagos_estado` de un (anio, mes) dado. */
+export async function queryPagosEstadoMes({ anio, mes }, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  return sql.query('select * from pagos_estado where anio = $1 and mes = $2', [Number(anio), Number(mes)]);
+}
+
+/** Agrega un pago fijo nuevo al catálogo (gestión, solo owners). */
+export async function insertPagoFijo(p, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `insert into pagos_fijos (concepto, monto, dia_vencimiento, familia, categoria, moneda)
+     values ($1, $2, $3, $4, $5, $6)
+     returning *`,
+    [p.concepto, Number(p.monto) || 0, Number(p.dia_vencimiento) || 1, p.familia || 'DCDG', p.categoria || null, p.moneda || 'COP']
+  );
+  return rows[0];
+}
+
+/** Edita campos de un pago fijo existente (gestión, solo owners). */
+export async function updatePagoFijo(id, patch, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `update pagos_fijos set
+        concepto = coalesce($2, concepto),
+        monto = coalesce($3, monto),
+        dia_vencimiento = coalesce($4, dia_vencimiento),
+        categoria = coalesce($5, categoria),
+        activo = coalesce($6, activo)
+      where id = $1
+      returning *`,
+    [id, patch.concepto ?? null, patch.monto != null ? Number(patch.monto) : null,
+      patch.dia_vencimiento != null ? Number(patch.dia_vencimiento) : null,
+      patch.categoria ?? null, patch.activo != null ? !!patch.activo : null]
+  );
+  return rows[0] || null;
+}
+
+/** Marca (o actualiza) el pago de un pago fijo en un mes: upsert en `pagos_estado`. */
+export async function upsertPagoEstado({ pago_fijo_id, anio, mes, fecha_pago, monto_pagado, movimiento_id }, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `insert into pagos_estado (pago_fijo_id, anio, mes, estado, fecha_pago, monto_pagado, movimiento_id)
+     values ($1, $2, $3, 'pagado', $4, $5, $6)
+     on conflict (pago_fijo_id, anio, mes) do update
+       set estado = 'pagado', fecha_pago = excluded.fecha_pago,
+           monto_pagado = excluded.monto_pagado, movimiento_id = excluded.movimiento_id
+     returning *`,
+    [pago_fijo_id, Number(anio), Number(mes), fecha_pago || null, monto_pagado != null ? Number(monto_pagado) : null, movimiento_id || null]
+  );
+  return rows[0];
+}
+
+/** Desmarca un pago (vuelve a pendiente): borra la fila de `pagos_estado` del mes. */
+export async function desmarcarPagoEstado({ pago_fijo_id, anio, mes }, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  await sql.query('delete from pagos_estado where pago_fijo_id = $1 and anio = $2 and mes = $3', [pago_fijo_id, Number(anio), Number(mes)]);
+  return true;
+}
+
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

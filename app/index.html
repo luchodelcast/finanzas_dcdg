@@ -208,6 +208,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <button class="ico-btn" data-go="ingreso" title="Registrar ingreso">💵</button>
     <button class="ico-btn" data-go="extractos" title="Cargar extracto bancario">🧾</button>
     <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
+    <button class="ico-btn" data-go="pagos" title="Pagos del mes">📅</button>
     <button class="ico-btn" data-go="aportes" title="Aportes IBC por persona">🧮</button>
     <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
     <button class="ico-btn" data-go="mayor" title="Libro Mayor y Balance de Comprobación">📒</button>
@@ -428,6 +429,44 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
 <div class="scr" id="scr-aportes">
   <div id="aportes-seg"></div>
   <div id="aportes-body"></div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── PAGOS DEL MES (Nocturno 2/7, issue #73) ── -->
+<div class="scr" id="scr-pagos">
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl">Pagos del mes</div>
+      <div id="pg-periodo" style="font-size:12px;color:var(--gray-d)"></div>
+    </div>
+    <div id="pg-resumen" style="font-size:13px;margin-bottom:8px"></div>
+    <div id="pg-msg" style="font-size:12px;margin-bottom:8px;font-weight:600"></div>
+    <div id="pg-dcdg"></div>
+    <div id="pg-dcc"></div>
+  </div>
+  <div class="card" id="pg-anteriores-card" style="display:none">
+    <div class="card-ttl">Pendientes del mes pasado</div>
+    <div id="pg-anteriores"></div>
+  </div>
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl">Gestionar pagos fijos</div>
+      <button class="sec-link" data-act="pgToggleGestion">＋ Agregar / editar</button>
+    </div>
+    <div id="pg-gestion" style="display:none">
+      <div id="pg-lista-gestion"></div>
+      <div class="fld" style="margin-top:8px"><label>Concepto</label><input type="text" id="pg-n-concepto" placeholder="Ej: Netflix"></div>
+      <div class="row2" style="gap:8px">
+        <div class="fld"><label>Monto</label><input type="number" id="pg-n-monto" placeholder="0" inputmode="numeric"></div>
+        <div class="fld"><label>Día vence</label><input type="number" id="pg-n-dia" placeholder="1-31" min="1" max="31"></div>
+      </div>
+      <div class="row2" style="gap:8px">
+        <div class="fld"><label>Familia</label><select id="pg-n-familia"><option value="DCDG">DCDG</option><option value="DCC">DCC</option></select></div>
+        <div class="fld"><label>Categoría</label><input type="text" id="pg-n-categoria" placeholder="Ej: Servicios"></div>
+      </div>
+      <button class="btn btn-p" data-act="pgCrear" style="margin-top:8px">＋ Agregar pago fijo</button>
+    </div>
+  </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 

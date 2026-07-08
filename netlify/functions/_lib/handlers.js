@@ -31,6 +31,12 @@ import { estadoResultados, balanceGeneral } from './estados.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
+import {
+  listPagosFijos, queryPagosEstadoMes, insertPagoFijo, updatePagoFijo,
+  upsertPagoEstado, desmarcarPagoEstado,
+} from './repo.js';
+import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes } from './pagos.js';
+import { hoyISO } from '../../../app/src/utils/formatters.js';
 
 /**
  * Contabiliza un movimiento recién registrado, best-effort: NUNCA debe tumbar la
@@ -825,6 +831,120 @@ export async function pwaAportesHandler(req) {
   const g = (k) => url.searchParams.get(k) || body[k];
   try {
     return ok(await reporteAportes({ periodo: g('periodo') }));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * GET|POST /api/pwa-pagos — Pagos del mes (issue #73, Nocturno 2/7, `auto-ok`).
+ * Auth Google (equipo financiero).
+ *
+ * GET ?anio=&mes= (default: mes en curso) → catálogo de pagos fijos activos
+ * con su estado (pagado/pendiente/vencido) para ese mes, el resumen de totales,
+ * y los pendientes (no pagados) del mes anterior. Solo lectura, todo el equipo.
+ *
+ * POST { accion: 'marcar', pago_fijo_id, fecha_pago?, monto_pagado?, anio?, mes? }
+ *   → marca un pago fijo como pagado en ese mes (upsert en `pagos_estado`).
+ * POST { accion: 'desmarcar', pago_fijo_id, anio?, mes? } → vuelve a pendiente.
+ * POST { accion: 'crear', concepto, monto?, dia_vencimiento?, familia?, categoria?, moneda? }
+ *   → agrega un pago fijo nuevo al catálogo.
+ * POST { accion: 'editar', id, concepto?, monto?, dia_vencimiento?, categoria?, activo? }
+ *   → edita/(des)activa un pago fijo existente.
+ * Toda escritura es SOLO owners (Luis/Carolina); lectura para el equipo.
+ */
+export async function pwaPagosHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  const hoy = hoyISO();
+  const [hoyAnio, hoyMes] = hoy.split('-').map(Number);
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const anio = Number(url.searchParams.get('anio')) || hoyAnio;
+    const mes = Number(url.searchParams.get('mes')) || hoyMes;
+    const incluirInactivos = url.searchParams.get('incluir_inactivos') === '1';
+    try {
+      const anterior = mesAnterior(anio, mes);
+      const [pagosFijos, estadosMes, estadosAnterior] = await Promise.all([
+        listPagosFijos({ activo: incluirInactivos ? null : true }),
+        queryPagosEstadoMes({ anio, mes }),
+        queryPagosEstadoMes({ anio: anterior.anio, mes: anterior.mes }),
+      ]);
+      const pagos = armarPagosDelMes(pagosFijos, estadosMes, anio, mes, hoy);
+      // Un pago fijo agregado HOY no "existía" el mes pasado: no debe aparecer
+      // como pendiente/vencido de un mes anterior a su creación.
+      const vigentesMesAnterior = pagosFijos.filter((p) => estaVigenteEnMes(p, anterior.anio, anterior.mes));
+      const pagosMesAnterior = armarPagosDelMes(vigentesMesAnterior, estadosAnterior, anterior.anio, anterior.mes, hoy);
+      const pendientesMesAnterior = pagosMesAnterior.filter((p) => p.estado !== 'pagado');
+      return ok({
+        ok: true,
+        anio, mes,
+        pagos,
+        // El resumen de totales es siempre sobre los pagos fijos ACTIVOS del mes,
+        // aunque la lista completa (con inactivos) se haya pedido para gestión.
+        resumen: resumenPagos(pagos.filter((p) => p.activo)),
+        mes_anterior: anterior,
+        pendientes_mes_anterior: pendientesMesAnterior,
+      });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const body = await parseBody(req);
+  const accion = String(body.accion || '');
+
+  if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden gestionar pagos fijos.', 403);
+
+  try {
+    if (accion === 'marcar') {
+      const pago_fijo_id = Number(body.pago_fijo_id);
+      if (!pago_fijo_id) return bad('pago_fijo_id requerido');
+      const r = await upsertPagoEstado({
+        pago_fijo_id,
+        anio: Number(body.anio) || hoyAnio,
+        mes: Number(body.mes) || hoyMes,
+        fecha_pago: body.fecha_pago || hoy,
+        monto_pagado: body.monto_pagado,
+        movimiento_id: body.movimiento_id,
+      });
+      return ok({ ok: true, pago: r });
+    }
+    if (accion === 'desmarcar') {
+      const pago_fijo_id = Number(body.pago_fijo_id);
+      if (!pago_fijo_id) return bad('pago_fijo_id requerido');
+      await desmarcarPagoEstado({ pago_fijo_id, anio: Number(body.anio) || hoyAnio, mes: Number(body.mes) || hoyMes });
+      return ok({ ok: true });
+    }
+    if (accion === 'crear') {
+      const concepto = String(body.concepto || '').trim();
+      if (!concepto) return bad('concepto requerido');
+      const familia = body.familia === 'DCC' ? 'DCC' : 'DCDG';
+      const dia_vencimiento = Math.min(Math.max(Number(body.dia_vencimiento) || 1, 1), 31);
+      try {
+        const r = await insertPagoFijo({ concepto, monto: body.monto, dia_vencimiento, familia, categoria: body.categoria, moneda: body.moneda });
+        return ok({ ok: true, pago_fijo: r });
+      } catch (e) {
+        if (/duplicate key|unique constraint/i.test(e.message)) {
+          return bad(`Ya existe un pago fijo "${concepto}" en ${familia}.`);
+        }
+        throw e;
+      }
+    }
+    if (accion === 'editar') {
+      const id = Number(body.id);
+      if (!id) return bad('id requerido');
+      const patch = { ...body };
+      if (patch.dia_vencimiento != null) patch.dia_vencimiento = Math.min(Math.max(Number(patch.dia_vencimiento) || 1, 1), 31);
+      const r = await updatePagoFijo(id, patch);
+      if (!r) return bad('Pago fijo no encontrado', 404);
+      return ok({ ok: true, pago_fijo: r });
+    }
+    return bad('accion inválida (marcar | desmarcar | crear | editar)');
   } catch (e) {
     return bad(e.message, 422);
   }

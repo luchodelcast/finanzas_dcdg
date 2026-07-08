@@ -9,6 +9,14 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Pagos del mes** (Nocturno 2/7, botón 📅): espejo del "Pagos Fijos" del Excel
+  de Luis — ~12 conceptos sembrados (Arriendo, Internet, Claro/Tigo, Colegio
+  Alemán, servicios…, DCDG y DCC) con día de vencimiento y estado ✅ pagado /
+  ⏳ pendiente / 🔴 vencido. Marca/desmarca pagado, muestra los pendientes del
+  mes pasado y el total pagado vs. pendiente; gestión para agregar/editar/
+  desactivar pagos fijos (solo owners). Esquema nuevo (`pagos_fijos`,
+  `pagos_estado`) vía DDL idempotente en runtime — sin `.sql` manual, como pide
+  el modo `auto-ok`. 🤖 auto-ok · PR pendiente. Closes #73.
 - **Backfill de extracto: "Contabilizar estas N líneas"** (Nocturno 1/7):
   en 🔗 Conciliación, las líneas `solo_extracto` (el banco las registró pero
   nunca se capturaron) ahora se pueden materializar directo desde ahí. Se
