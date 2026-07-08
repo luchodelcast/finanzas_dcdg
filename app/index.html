@@ -210,6 +210,8 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
     <button class="ico-btn" data-go="aportes" title="Aportes IBC por persona">🧮</button>
     <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
+    <button class="ico-btn" data-go="mayor" title="Libro Mayor y Balance de Comprobación">📒</button>
+    <button class="ico-btn" data-go="estados" title="Estado de Resultados y Balance General">📈</button>
     <button class="ico-btn" data-go="dash" title="Dashboard">📊</button>
     <button class="ico-btn" data-go="settings" title="Configuración">⚙</button>
   </div>
@@ -434,6 +436,55 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <div id="ap-capital" style="font-size:12px;color:var(--gray-d);margin-top:12px;font-weight:600"></div>
     <div id="ap-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
     <button class="btn btn-p" id="btn-save-apertura" data-act="saveApertura" style="margin-top:12px">✓ Guardar apertura</button>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── LIBRO MAYOR + BALANCE DE COMPROBACIÓN (T5, solo lectura) ── -->
+<div class="scr" id="scr-mayor">
+  <div class="card">
+    <div class="card-ttl">Libro Mayor</div>
+    <div class="fld"><label>Cuenta</label><select id="may-cuenta"></select></div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Desde</label><input type="date" id="may-desde"></div>
+      <div class="fld"><label>Hasta</label><input type="date" id="may-hasta"></div>
+    </div>
+    <button class="btn btn-p" data-act="verMayor" style="margin-top:8px">Consultar →</button>
+    <div id="may-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+    <div id="may-saldo" style="font-size:12px;color:var(--gray-d);margin-top:8px;font-weight:600"></div>
+    <div id="may-lineas" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Balance de Comprobación</div>
+    <div style="font-size:12px;color:var(--gray-d);margin-bottom:6px">Usa el mismo rango de fechas de arriba.</div>
+    <button class="btn btn-p" data-act="verComprobacion">Generar →</button>
+    <div id="comp-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+    <div id="comp-body" style="margin-top:8px"></div>
+    <div id="comp-total" style="margin-top:8px"></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── ESTADO DE RESULTADOS + BALANCE GENERAL (T6/T7, solo lectura) ── -->
+<div class="scr" id="scr-estados">
+  <div class="card">
+    <div class="card-ttl">Estado de Resultados</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Desde</label><input type="date" id="er-desde"></div>
+      <div class="fld"><label>Hasta</label><input type="date" id="er-hasta"></div>
+    </div>
+    <button class="btn btn-p" data-act="verEstadoResultados" style="margin-top:8px">Generar →</button>
+    <div id="er-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+    <div id="er-body" style="margin-top:8px"></div>
+    <div id="er-total" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Balance General</div>
+    <div class="fld"><label>A la fecha</label><input type="date" id="bg-fecha"></div>
+    <button class="btn btn-p" data-act="verBalanceGeneral" style="margin-top:8px">Generar →</button>
+    <div id="bg-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+    <div id="bg-body" style="margin-top:8px"></div>
+    <div id="bg-total" style="margin-top:8px"></div>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
