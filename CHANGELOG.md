@@ -9,6 +9,14 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Exports contables en CSV** (T12a, botón 📥, issue #91 — sub-issue de
+  #52): descarga Libro Diario, Libro Mayor (por cuenta), Balance de
+  Comprobación, Estado de Resultados y Balance General de un
+  periodo/fecha. Los 5 reportes de solo lectura ya existentes responden
+  CSV con `?formato=csv` (sin endpoints nuevos, sin escritura). Montos
+  como número plano para Excel/Sheets. **Pendiente**: #92 (cierre
+  mensual, la otra mitad de #52) queda para una corrida futura por su
+  riesgo medio. 🤖 · PR #94. Closes #91.
 - **Solicitudes de mejoras desde la PWA** (Nocturno 7/7, botón 💡): un
   textarea + botón crea un issue de GitHub (label `autobuild` +
   `enhancement`) para que Autobuild lo tome en una corrida futura; debajo,
