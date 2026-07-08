@@ -118,3 +118,9 @@ export const crearPrestamo = (body) => request('/api/pwa-prestamos', { method: '
 
 /** Marca (o desmarca, con {saldado:false}) un préstamo como saldado. Solo owners. */
 export const marcarPrestamoSaldado = (body) => request('/api/pwa-prestamos', { method: 'POST', body: { accion: 'marcar_saldado', ...body } });
+
+/** Solicitudes de mejoras (issue #78): lista issues abiertos con label `autobuild`. */
+export const getSolicitudes = () => request('/api/pwa-solicitudes');
+
+/** Envía una solicitud de mejora nueva (crea el issue en GitHub). Solo owners. */
+export const crearSolicitud = (body) => request('/api/pwa-solicitudes', { method: 'POST', body });

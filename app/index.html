@@ -211,6 +211,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <button class="ico-btn" data-go="conciliacion" title="Conciliar extracto">🔗</button>
     <button class="ico-btn" data-go="pagos" title="Pagos del mes">📅</button>
     <button class="ico-btn" data-go="prestamos" title="Préstamos entre Luis y Carolina">🤝</button>
+    <button class="ico-btn" data-go="solicitudes" title="Pedir una mejora">💡</button>
     <button class="ico-btn" data-go="aportes" title="Aportes IBC por persona">🧮</button>
     <button class="ico-btn" data-go="apertura" title="Saldos iniciales (apertura)">🏦</button>
     <button class="ico-btn" data-go="mayor" title="Libro Mayor y Balance de Comprobación">📒</button>
@@ -540,6 +541,22 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <div class="card">
     <div class="card-ttl">Historial</div>
     <div id="pr-lista"></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
+<!-- ── SOLICITUDES DE MEJORAS (Nocturno 7/7, issue #78) ── -->
+<div class="scr" id="scr-solicitudes">
+  <div class="card">
+    <div class="card-ttl">Pedir una mejora</div>
+    <div style="font-size:12px;color:var(--gray-d);margin-bottom:6px">¿Qué te gustaría que el sistema pudiera hacer?</div>
+    <div class="fld"><textarea id="sol-texto" rows="4" placeholder="Ej: que el dashboard también muestre el gasto por tarjeta"></textarea></div>
+    <div id="sol-msg" style="font-size:12px;margin-top:6px;font-weight:600"></div>
+    <button class="btn btn-p" data-act="solEnviar" style="margin-top:8px">Enviar</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Solicitudes/propuestas abiertas</div>
+    <div id="sol-lista"><div class="empty">Cargando…</div></div>
   </div>
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
