@@ -14,7 +14,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   el balance de comprobación de todas las cuentas con movimiento
   (`GET /api/pwa-comprobacion`, valida Σdébito = Σcrédito). Pantalla PWA 📒
   de solo lectura para ambos. Cierra la Semana 1 del motor contable — base de
-  Estado de Resultados (T6) y Balance General (T7). 🤖 PR #(pendiente).
+  Estado de Resultados (T6) y Balance General (T7). 🤖 PR #69.
 - **Limpieza de cola**: cerré #45 (T2) y #46 (T3) — ya estaban fusionados a
   `main` (PR #65/#66) pero sus PR decían "Cierra #N" en vez de `Closes #N`,
   así que GitHub no los auto-cerró. Cerré también el PR borrador #60,
