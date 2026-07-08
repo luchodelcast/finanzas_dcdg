@@ -19,9 +19,10 @@ import {
   insertMovimiento, getExtractoLinea, marcarLineaMaterializada,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
-import { registrarCuenta } from './cuentas.js';
+import { registrarCuenta, listCuentas } from './cuentas.js';
 import { clasificar } from './classify.js';
-import { verifyFinanceUser } from './google-auth.js';
+import { resolvePwaUser, verifyGoogleIdToken } from './google-auth.js';
+import { signSession, sessionSecretConfigured } from './session.js';
 import { callAnthropic, extractJson, buildReceiptContent } from './anthropic.js';
 import { buildSystemPrompt } from '../../../app/src/config/prompt.js';
 import { parseCsvExtracto } from './extractos.js';
@@ -114,7 +115,7 @@ export async function pwaRegistrarHandler(req) {
   if (req.method !== 'POST') return bad('Método no permitido', 405);
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   try {
-    await verifyFinanceUser(bearer);
+    await resolvePwaUser(bearer);
   } catch (e) {
     return bad(e.message, e.status || 401);
   }
@@ -143,7 +144,7 @@ export async function pwaClasificarHandler(req) {
   if (req.method !== 'POST') return bad('Método no permitido', 405);
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   try {
-    await verifyFinanceUser(bearer);
+    await resolvePwaUser(bearer);
   } catch (e) {
     return bad(e.message, e.status || 401);
   }
@@ -192,7 +193,7 @@ export async function movimientosHandler(req) {
  */
 export async function pwaResumenHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const body = req.method === 'POST' ? await parseBody(req) : {};
   const g = (k) => url.searchParams.get(k) || body[k];
@@ -205,7 +206,7 @@ export async function pwaResumenHandler(req) {
 
 export async function pwaMovimientosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const body = req.method === 'POST' ? await parseBody(req) : {};
   const g = (k) => url.searchParams.get(k) || body[k];
@@ -237,14 +238,52 @@ const CEDULAS = [
 export async function pwaWhoamiHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   return ok({ ok: true, email: auth.email, rol: auth.rol, owner: esOwner(auth) });
+}
+
+/**
+ * POST /api/pwa-login — Canjea un Google ID token (Sign-In) por un token de
+ * sesión propio (HMAC, 12 h). Arranque del carril de auth sin scopes de API: el
+ * navegador solo se identifica y a partir de aquí manda este token como Bearer,
+ * sin volver a ver la pantalla de autorización de Google en cada carga.
+ */
+export async function pwaLoginHandler(req) {
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!sessionSecretConfigured()) {
+    return bad('Login no disponible: falta configurar AUTH_SECRET en el servidor.', 503);
+  }
+  const body = await parseBody(req);
+  let user;
+  try {
+    user = await verifyGoogleIdToken(body.id_token || body.credential);
+  } catch (e) {
+    return bad(e.message, e.status || 401);
+  }
+  const token = signSession({ email: user.email });
+  return ok({ ok: true, token, email: user.email, rol: user.rol, ttl: 60 * 60 * 12 });
+}
+
+/**
+ * GET /api/pwa-cuentas — Catálogo `⚙️ CUENTAS` (cuentas/tarjetas activas) leído
+ * en el backend con la cuenta de servicio. Reemplaza el `loadCuentas` que el
+ * navegador hacía directo contra Sheets (lo que obligaba el scope spreadsheets).
+ */
+export async function pwaCuentasHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try {
+    const cuentas = await listCuentas();
+    return ok({ ok: true, cuentas, n: cuentas.length });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
 }
 
 /** Catálogos para el formulario de ingresos (entidades, terceros, cédulas). Auth Google. */
 export async function pwaCatalogosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   try {
     const [entidades, terceros] = await Promise.all([listEntidades(), listTerceros()]);
     return ok({ ok: true, entidades, terceros, cedulas: CEDULAS });
@@ -262,7 +301,7 @@ export async function pwaCatalogosHandler(req) {
 export async function pwaPlanCuentasHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'POST') {
     if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden agregar cuentas.', 403);
@@ -303,7 +342,7 @@ function esOwner(auth) {
 export async function pwaAsientoHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -339,7 +378,7 @@ export async function pwaAsientoHandler(req) {
 export async function pwaAperturaHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -381,7 +420,7 @@ export async function pwaAperturaHandler(req) {
 export async function pwaRecontabilizarHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
   if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden recontabilizar.', 403);
 
@@ -422,7 +461,7 @@ export async function pwaRecontabilizarHandler(req) {
  */
 export async function pwaMayorHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
@@ -440,7 +479,7 @@ export async function pwaMayorHandler(req) {
  */
 export async function pwaComprobacionHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
@@ -458,7 +497,7 @@ export async function pwaComprobacionHandler(req) {
  */
 export async function pwaEstadoResultadosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
@@ -476,7 +515,7 @@ export async function pwaEstadoResultadosHandler(req) {
  */
 export async function pwaBalanceGeneralHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const g = (k) => url.searchParams.get(k);
   try {
@@ -492,7 +531,7 @@ export async function pwaBalanceGeneralHandler(req) {
 export async function pwaIngresoHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -547,7 +586,7 @@ export async function pwaIngresoHandler(req) {
 export async function pwaExtractoHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -631,7 +670,7 @@ function addDias(fechaISO, dias) {
 export async function conciliacionHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -720,7 +759,7 @@ const BACKFILL_LOTE_LIMITE = 25;
 export async function pwaBackfillHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
@@ -881,7 +920,7 @@ export async function pwaBackfillHandler(req) {
  */
 export async function pwaAportesHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   const url = new URL(req.url);
   const body = req.method === 'POST' ? await parseBody(req) : {};
   const g = (k) => url.searchParams.get(k) || body[k];
@@ -912,7 +951,7 @@ export async function pwaAportesHandler(req) {
 export async function pwaPagosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   const hoy = hoyISO();
   const [hoyAnio, hoyMes] = hoy.split('-').map(Number);
@@ -1014,7 +1053,7 @@ export async function pwaPagosHandler(req) {
 export async function pwaPrestamosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     try {
@@ -1061,7 +1100,7 @@ export async function pwaPrestamosHandler(req) {
 export async function pwaSolicitudesHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
-  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'GET') {
     try {

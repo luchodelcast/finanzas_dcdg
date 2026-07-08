@@ -9,6 +9,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08 (autobuild, corrida nueva)
+- **Auth de la PWA: Google Sign-In + token de sesión** (Issue #2 de auth): el
+  navegador ya no hace OAuth de *access token* con el scope pesado
+  `spreadsheets` (que reaparecía la pantalla de autorización de Google en cada
+  apertura). Ahora solo hace **Google Sign-In** (ID token) y el backend emite un
+  **token de sesión propio** (HMAC, 12 h) que se guarda en localStorage; dentro
+  de esa ventana la app no vuelve a hablar con Google en cada recarga. Las dos
+  últimas llamadas directas del navegador a Sheets (leer `⚙️ CUENTAS` y anexar
+  el CET) pasan al backend (cuenta de servicio): nuevos `GET /api/pwa-cuentas` y
+  `POST /api/pwa-login`; el CET se registra por `pwa-registrar`. Los `pwa-*`
+  aceptan el token de sesión o, en transición, el access token viejo
+  (`resolvePwaUser`). **Config pendiente antes de fusionar**: setear
+  `AUTH_SECRET` en Netlify (ver `docs/auth-pwa-sesion.md`). Se elimina
+  `services/sheets.js` del cliente. 🔎 en revisión.
 - **[T8a] Roles de primera clase** (issue #97, sub-issue de #51 — split
   explicado en #97/#98): `verifyFinanceUser` ahora devuelve `{ email, rol }`
   leyendo la tabla `usuarios` (DDL + siembra idempotente en runtime, sin

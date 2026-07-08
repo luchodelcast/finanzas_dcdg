@@ -17,6 +17,30 @@ import { appendRow, readRange } from './sheets.js';
 const last4 = (v) => String(v || '').replace(/\D/g, '').slice(-4);
 
 /**
+ * Lee las cuentas/tarjetas ACTIVAS de `⚙️ CUENTAS` (B4:I100) con la cuenta de
+ * servicio del backend. Es el reemplazo server-side de `loadCuentas` de la PWA
+ * (antes el navegador leía el Sheet directo, lo que obligaba el scope pesado de
+ * `spreadsheets`). Devuelve el mismo shape normalizado que consumía el cliente.
+ * @returns {Promise<Array<{name,banco,titular,moneda,tipo,tipoEspecial,activa,tarjeta}>>}
+ */
+export async function listCuentas() {
+  const rows = await readRange("'⚙️ CUENTAS'!B4:I100");
+  return (rows || [])
+    .filter((row) => row[0] && row[6] !== 'No')
+    .map((row) => ({
+      name: row[0] || '',
+      banco: row[1] || '',
+      titular: row[2] || '',
+      moneda: row[3] || 'COP',
+      tipo: row[4] || 'Normal',
+      tipoEspecial: row[5] || 'Normal',
+      activa: row[6] !== 'No',
+      tarjeta: String(row[7] || '').trim(),
+    }))
+    .filter((c) => c.name && c.activa);
+}
+
+/**
  * Registra una cuenta/tarjeta nueva en `⚙️ CUENTAS`.
  * @param {{ nombre?, banco?, titular?, tarjeta?, tarjeta_ultimos4?, tipo?, moneda? }} c
  * @returns {Promise<Object>}

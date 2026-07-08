@@ -1,12 +1,15 @@
-// _lib/google-auth.js — Verifica el token de Google de la PWA y autoriza al usuario.
+// _lib/google-auth.js — Verifica la identidad del usuario de la PWA y lo autoriza.
 //
-// La PWA obtiene un access token de Google (scope openid/email/spreadsheets) con
-// GIS y lo manda como Bearer. Aquí lo validamos contra el endpoint tokeninfo de
-// Google: comprobamos que fue emitido para NUESTRO client_id, que trae un email, y
-// que ese email esté en FINANZAS_USERS. Así el navegador nunca necesita la API key
-// de Anthropic: clasifica llamando al backend, autenticado con su login de Google.
+// Dos carriles de credencial que la PWA puede mandar como Bearer:
+//   1) Token de sesión propio (HMAC, 12 h) emitido por /api/pwa-login tras un
+//      Google Sign-In (ID token). Es el camino nuevo: el navegador no pide
+//      scopes de API ni vuelve a ver la pantalla de autorización en cada carga.
+//   2) Access token de Google (flujo viejo, scope openid/email[/spreadsheets]).
+//      Se sigue aceptando por compatibilidad durante la transición.
+// En ambos casos exigimos que el email esté en FINANZAS_USERS y resolvemos su rol.
 import { config } from './env.js';
 import { getUsuarioRolPorEmail } from './repo.js';
+import { verifySession } from './session.js';
 
 const TOKENINFO = 'https://oauth2.googleapis.com/tokeninfo';
 
@@ -20,32 +23,22 @@ function rolLegacy(email) {
   return config.finanzasOwners().includes(email) ? 'owner' : 'solo_lectura';
 }
 
+/** Rol efectivo: la tabla `usuarios` manda; si no hay fila, el criterio legacy. */
+async function resolverRol(email) {
+  return (await getUsuarioRolPorEmail(email)) || rolLegacy(email);
+}
+
 /**
- * Verifica el access token de Google y que el usuario esté autorizado.
- * @param {string} accessToken
- * @returns {Promise<{ email: string, rol: string }>}
- * @throws Error con .status (401/403) si no es válido/autorizado.
+ * Valida los datos comunes de un token de Google (ya parseado por tokeninfo):
+ * que fue emitido para NUESTRO client_id, que trae email y que el email está
+ * autorizado. Devuelve el email normalizado.
  */
-export async function verifyFinanceUser(accessToken) {
-  const token = String(accessToken || '').trim();
-  if (!token) throw Object.assign(new Error('Falta el token de Google'), { status: 401 });
-
-  let info;
-  try {
-    const res = await fetch(`${TOKENINFO}?access_token=${encodeURIComponent(token)}`);
-    if (!res.ok) throw new Error('tokeninfo ' + res.status);
-    info = await res.json();
-  } catch (_) {
-    throw Object.assign(new Error('Token de Google inválido o expirado'), { status: 401 });
-  }
-
-  // El token debe haber sido emitido para nuestra app (evita tokens de otras apps).
+function gateGoogleInfo(info) {
   const aud = info.aud || info.azp;
   const clientId = config.googleClientId();
   if (clientId && aud && aud !== clientId) {
     throw Object.assign(new Error('Token emitido para otra aplicación'), { status: 401 });
   }
-
   const email = String(info.email || '').toLowerCase().trim();
   if (!email) {
     throw Object.assign(
@@ -56,6 +49,74 @@ export async function verifyFinanceUser(accessToken) {
   if (!config.finanzasUsers().includes(email)) {
     throw Object.assign(new Error('Usuario no autorizado para finanzas'), { status: 403 });
   }
-  const rol = (await getUsuarioRolPorEmail(email)) || rolLegacy(email);
-  return { email, rol };
+  return email;
+}
+
+/** Consulta tokeninfo con el parámetro dado (access_token | id_token). */
+async function tokeninfo(param, value) {
+  const res = await fetch(`${TOKENINFO}?${param}=${encodeURIComponent(value)}`);
+  if (!res.ok) throw new Error('tokeninfo ' + res.status);
+  return res.json();
+}
+
+/**
+ * Verifica el ACCESS token de Google (flujo viejo) y autoriza al usuario.
+ * @param {string} accessToken
+ * @returns {Promise<{ email: string, rol: string }>}
+ * @throws Error con .status (401/403) si no es válido/autorizado.
+ */
+export async function verifyFinanceUser(accessToken) {
+  const token = String(accessToken || '').trim();
+  if (!token) throw Object.assign(new Error('Falta el token de Google'), { status: 401 });
+  let info;
+  try {
+    info = await tokeninfo('access_token', token);
+  } catch (_) {
+    throw Object.assign(new Error('Token de Google inválido o expirado'), { status: 401 });
+  }
+  const email = gateGoogleInfo(info);
+  return { email, rol: await resolverRol(email) };
+}
+
+/**
+ * Verifica un ID token de Google Sign-In (para /api/pwa-login) y autoriza.
+ * @param {string} idToken
+ * @returns {Promise<{ email: string, rol: string }>}
+ * @throws Error con .status (401/403) si no es válido/autorizado.
+ */
+export async function verifyGoogleIdToken(idToken) {
+  const token = String(idToken || '').trim();
+  if (!token) throw Object.assign(new Error('Falta el ID token de Google'), { status: 401 });
+  let info;
+  try {
+    info = await tokeninfo('id_token', token);
+  } catch (_) {
+    throw Object.assign(new Error('ID token de Google inválido o expirado'), { status: 401 });
+  }
+  if (info.email_verified != null && String(info.email_verified) !== 'true') {
+    throw Object.assign(new Error('El email de Google no está verificado'), { status: 403 });
+  }
+  const email = gateGoogleInfo(info);
+  return { email, rol: await resolverRol(email) };
+}
+
+/**
+ * Resuelve el usuario de una petición de la PWA a partir del Bearer, aceptando
+ * el token de sesión propio (preferente) o, por compatibilidad, el access token
+ * de Google. Reemplaza el uso directo de verifyFinanceUser en los handlers pwa-*.
+ * @param {string} bearer  header Authorization o el token ya extraído.
+ * @returns {Promise<{ email: string, rol: string }>}
+ */
+export async function resolvePwaUser(bearer) {
+  const token = String(bearer || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) throw Object.assign(new Error('Falta el token'), { status: 401 });
+  const sess = verifySession(token);
+  if (sess && sess.email) {
+    const email = String(sess.email).toLowerCase().trim();
+    if (!config.finanzasUsers().includes(email)) {
+      throw Object.assign(new Error('Usuario no autorizado para finanzas'), { status: 403 });
+    }
+    return { email, rol: await resolverRol(email) };
+  }
+  return verifyFinanceUser(token);
 }

@@ -12,11 +12,11 @@
  */
 
 import { getConfig } from '../config/env.js';
-import { getAccessToken } from './auth.js';
+import { getSessionToken } from './auth.js';
 
-/** POST al endpoint de clasificación del backend, autenticado con el token de Google. */
+/** POST al endpoint de clasificación del backend, autenticado con el token de sesión. */
 async function callBackend(body) {
-  const token = await getAccessToken();
+  const token = await getSessionToken();
   const cfg = getConfig();
   // Mismo origen por defecto (la PWA y las Functions viven en dcdg.netlify.app).
   const base = (cfg.apiBaseUrl || '').replace(/\/$/, '');
