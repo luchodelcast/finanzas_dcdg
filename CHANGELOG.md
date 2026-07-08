@@ -9,6 +9,14 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Nuevo Home útil + "Registrar egresos"** (Nocturno 4/7): la captura de
+  gastos (foto, galería, texto, CET, transferencia + últimos registros) se
+  mudó intacta a una pantalla nueva "Registrar egresos". El Home ahora abre
+  directo en un tablero: saldos en bancos (Caja + Bancos y billeteras),
+  pagos pendientes/vencidos de este mes y pendientes del mes pasado (reusa
+  #73), comparativo del gasto vs. mes anterior, y accesos rápidos a
+  Registrar egresos / Ingresos / Pagos del mes / Reportes. 🤖 auto-ok · PR
+  #83. Closes #75.
 - **Plan de cuentas: más rubros de pasivo/activo + "＋ Agregar cuenta"**
   (Nocturno 3/7): en 🏦 Saldos Iniciales se agregan `2110` Obligaciones
   financieras (créditos bancarios/leasing), `1315` Cuentas por cobrar a
