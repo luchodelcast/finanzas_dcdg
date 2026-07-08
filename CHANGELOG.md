@@ -8,6 +8,31 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-08 (autobuild, corrida — sin item elegible)
+Siguiendo `AUTOBUILD.md`, esta corrida sincronizó `main` (ya incluía T5/T6/T7
+`#48`/`#49`/`#50` y T8a `#97`/PR `#99` fusionados) y revisó el backlog de
+issues `autobuild`. **No había ningún item elegible para construir**:
+
+- `#40`/`#41`/`#92`/`#98` — `autobuild-espera` con PR en borrador abierto
+  (`#58`, `#55`, `#96`, `#103`) esperando revisión de Luis.
+- `#51`/`#52` — issues "padre" ya divididos en sub-issues más chicos (en
+  curso vía sus splits); no se toman directo.
+- `#100` — propuesta abierta esperando la aprobación de Luis; como ya cubre
+  el hueco de la cola para hoy, esta corrida **no creó una segunda
+  propuesta** (evita duplicar el mismo aviso).
+
+**Housekeeping sin riesgo** (no es una funcionalidad, no cuenta como "una
+funcionalidad por corrida"): `#97` (T8a) seguía **abierto** aunque su PR
+`#99` ya está fusionado en `main` desde ayer — el `Closes #97` quedó solo en
+el texto del CHANGELOG, no en el PR real, así que GitHub nunca lo cerró
+solo. Lo cerré manualmente referenciando `#99`.
+
+Esta corrida no fusionó ni construyó ningún código — solo este cambio de
+documentación/CHANGELOG.
+
+Sin `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` en este entorno; el
+aviso queda aquí (la red de seguridad garantizada del proceso).
+
 ## 2026-07-08 (autobuild, corrida nueva)
 - **[T8a] Roles de primera clase** (issue #97, sub-issue de #51 — split
   explicado en #97/#98): `verifyFinanceUser` ahora devuelve `{ email, rol }`
