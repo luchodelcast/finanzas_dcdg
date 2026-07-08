@@ -9,6 +9,17 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Backfill de extracto: "Contabilizar estas N líneas"** (Nocturno 1/7):
+  en 🔗 Conciliación, las líneas `solo_extracto` (el banco las registró pero
+  nunca se capturaron) ahora se pueden materializar directo desde ahí. Se
+  clasifican automáticamente (reglas DCDG; Claude como respaldo acotado para
+  las que no matchean ninguna regla) y se separan en **alta confianza**
+  (pre-marcadas) y **dudosas** (tabla editable: categoría/subcategoría para
+  gastos, entidad/cédula para ingresos, cuenta destino para transferencias).
+  Al aceptar, cada línea crea su movimiento/ingreso ya `conciliado` y lo
+  contabiliza (reusa T4); es idempotente (reintentar no duplica) y procesa en
+  lotes acotados para no pasar el timeout de la function. 🤖 auto-ok · PR #79.
+  Closes #72.
 - **[T5] Libro Mayor + Balance de Comprobación**: `_lib/mayor.js` deriva, de los
   asientos de T2, el saldo corrido por cuenta (`GET /api/pwa-mayor?cuenta=`) y
   el balance de comprobación de todas las cuentas con movimiento
