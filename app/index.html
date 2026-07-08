@@ -285,8 +285,50 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   <button class="btn btn-s" style="color:var(--red);font-size:13px" data-act="resetAll">Borrar todo (reset)</button>
 </div>
 
-<!-- ── HOME ── -->
+<!-- ── HOME (tablero, Nocturno 4/7) ── -->
 <div class="scr" id="scr-home">
+  <div class="card">
+    <div class="card-ttl">Saldos en bancos</div>
+    <div id="home-saldos"><div class="empty">Cargando…</div></div>
+  </div>
+  <div class="card">
+    <div class="sec-hdr">
+      <div class="card-ttl">Pagos de este mes</div>
+      <button class="sec-link" data-go="pagos">Ver todos →</button>
+    </div>
+    <div id="home-pagos-mes"><div class="empty">Cargando…</div></div>
+  </div>
+  <div class="card" id="home-pagos-ant-card" style="display:none">
+    <div class="card-ttl">Pendientes del mes pasado</div>
+    <div id="home-pagos-ant"></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Este mes vs. mes pasado</div>
+    <div id="home-comparativo"><div class="empty">Cargando…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Accesos rápidos</div>
+    <button class="act-btn a-cam" data-go="registrar">
+      <div class="act-ico">🧾</div>
+      <div class="act-txt"><strong>Registrar egresos</strong><span>Foto, texto, CET, transferencia</span></div>
+    </button>
+    <button class="act-btn a-txt" data-go="ingreso" style="margin-top:10px">
+      <div class="act-ico">💵</div>
+      <div class="act-txt"><strong>Ingresos</strong><span>Registrar un ingreso</span></div>
+    </button>
+    <button class="act-btn a-cet" data-go="pagos" style="margin-top:10px">
+      <div class="act-ico">📅</div>
+      <div class="act-txt"><strong>Pagos del mes</strong><span>Qué se ha pagado y qué falta</span></div>
+    </button>
+    <button class="act-btn a-cam" data-go="dash" style="margin-top:10px">
+      <div class="act-ico">📊</div>
+      <div class="act-txt"><strong>Reportes</strong><span>Dashboard y comparativos</span></div>
+    </button>
+  </div>
+</div>
+
+<!-- ── REGISTRAR EGRESOS (captura, antiguo Home) ── -->
+<div class="scr" id="scr-registrar">
   <div class="card">
     <div class="card-ttl">Nuevo registro</div>
     <button class="act-btn a-cam" data-act="trigCam">
@@ -320,6 +362,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     </div>
     <div id="home-hist"><div class="empty">Aún no hay registros</div></div>
   </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
 <!-- ── DASHBOARD ── -->
@@ -345,7 +388,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <div id="tr-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
   </div>
   <div class="btn-row">
-    <button class="btn btn-s" data-go="home" style="flex:.55">✕ Cancelar</button>
+    <button class="btn btn-s" data-go="registrar" style="flex:.55">✕ Cancelar</button>
     <button class="btn btn-p" id="btn-save-transfer" data-act="registrarTransfer">✓ Registrar</button>
   </div>
 </div>
@@ -567,7 +610,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     </div>
   </div>
   <div class="btn-row">
-    <button class="btn btn-s" data-go="home">Cancelar</button>
+    <button class="btn btn-s" data-go="registrar">Cancelar</button>
     <button class="btn btn-p" data-act="doText">Analizar →</button>
   </div>
 </div>
@@ -639,7 +682,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-d" data-go="home" style="flex:.55">✕ Cancelar</button>
+    <button class="btn btn-d" data-go="registrar" style="flex:.55">✕ Cancelar</button>
     <button class="btn btn-p" data-act="submit">✓ Registrar en Sheets</button>
   </div>
 </div>
@@ -652,7 +695,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     <div class="suc-amt" id="ok-amt"></div>
     <div class="suc-sub" id="ok-det"></div>
   </div>
-  <button class="btn btn-p" data-go="home">+ Nuevo registro</button>
+  <button class="btn btn-p" data-go="registrar">+ Nuevo registro</button>
   <button class="btn btn-s" data-go="history">Ver historial</button>
 </div>
 
@@ -665,7 +708,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
     </div>
     <div id="hist-list"><div class="empty">Sin registros aún</div></div>
   </div>
-  <button class="btn btn-s" data-go="home">← Volver</button>
+  <button class="btn btn-s" data-go="registrar">← Volver</button>
 </div>
 
 <!-- ── CET ── -->
@@ -729,7 +772,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text'
   </div>
 
   <div class="btn-row">
-    <button class="btn btn-s" data-go="home" style="flex:.45">✕ Cancelar</button>
+    <button class="btn btn-s" data-go="registrar" style="flex:.45">✕ Cancelar</button>
     <button class="btn btn-p" style="background:#854F0B" data-act="abrirMailCET">📧 Abrir en Mail</button>
   </div>
   <button class="btn btn-p" data-act="registrarCET">✓ Registrar en Sheets</button>

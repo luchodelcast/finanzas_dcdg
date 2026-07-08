@@ -73,7 +73,7 @@ function segHTML() {
 }
 
 /** HTML del indicador de variación (▲/▼ + %). `compact` omite el sufijo "vs. …". */
-function variacionHTML(actual, anterior, { compact = false, sufijo = '' } = {}) {
+export function variacionHTML(actual, anterior, { compact = false, sufijo = '' } = {}) {
   const pct = variacionPct(actual, anterior);
   if (pct == null) return '';
   const bajo = pct <= 0;
