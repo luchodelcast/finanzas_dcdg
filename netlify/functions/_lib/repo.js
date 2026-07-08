@@ -144,6 +144,7 @@ export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
 
 /** Lista el plan de cuentas activo (opcionalmente filtra por clase 1–6). */
 export async function listPlanCuentas({ clase } = {}, sqlArg) {
+  await ensurePlanCuentasSchema(sqlArg);
   const sql = sqlArg || await getSql();
   const params = [];
   let filtro = 'activo';
@@ -157,12 +158,106 @@ export async function listPlanCuentas({ clase } = {}, sqlArg) {
 
 /** Devuelve una cuenta del PUC por su código (o null). */
 export async function getPlanCuenta(codigo, sqlArg) {
+  await ensurePlanCuentasSchema(sqlArg);
   const sql = sqlArg || await getSql();
   const rows = await sql.query(
     'select codigo, nombre, clase, naturaleza, cuenta_padre from plan_cuentas where codigo = $1 limit 1',
     [String(codigo || '')]
   );
   return rows[0] || null;
+}
+
+// ---------------------------------------------------------------------------
+// Ampliación del plan de cuentas (issue #74, Nocturno 3/7, `auto-ok`): más
+// rubros de pasivo (obligaciones financieras, CxP a empresas) y activo (CxC a
+// empresas), y la opción de agregar cuentas propias desde la pantalla 🏦. El
+// plan base vive en sql/plan-cuentas.sql (ya corrido a mano en Neon); esto se
+// agrega con DDL/inserts idempotentes en runtime, sin `.sql` manual — mismo
+// patrón que ensurePagosFijosSchema. Memoizado.
+// ---------------------------------------------------------------------------
+let _planCuentasExtraPromise = null;
+
+const PLAN_CUENTAS_EXTRA_SEED = [
+  { codigo: '2110', nombre: 'Obligaciones financieras (créditos bancarios/leasing)', clase: 2, naturaleza: 'credito', cuenta_padre: '21' },
+  { codigo: '1315', nombre: 'Cuentas por cobrar a empresas/socios', clase: 1, naturaleza: 'debito', cuenta_padre: '13' },
+  { codigo: '2340', nombre: 'Cuentas por pagar a empresas/socios', clase: 2, naturaleza: 'credito', cuenta_padre: '23' },
+];
+
+/** Crea (si no existe) `plan_cuentas` y agrega las cuentas nuevas del catálogo. Memoizado. */
+export async function ensurePlanCuentasSchema(sqlArg) {
+  if (!_planCuentasExtraPromise) {
+    _planCuentasExtraPromise = aplicarPlanCuentasExtra(sqlArg)
+      .catch((e) => { _planCuentasExtraPromise = null; throw e; }); // reintentable si falló
+  }
+  return _planCuentasExtraPromise;
+}
+
+async function aplicarPlanCuentasExtra(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists plan_cuentas (
+      codigo       text primary key,
+      nombre       text not null,
+      clase        int  not null,
+      naturaleza   text not null default 'debito',
+      cuenta_padre text references plan_cuentas (codigo),
+      entidad_id   bigint references entidades (id),
+      activo       boolean not null default true,
+      creado_en    timestamptz not null default now()
+    )
+  `, []);
+  await sql.query('create index if not exists plan_cuentas_clase_idx on plan_cuentas (clase)', []);
+  for (const c of PLAN_CUENTAS_EXTRA_SEED) {
+    await sql.query(
+      `insert into plan_cuentas (codigo, nombre, clase, naturaleza, cuenta_padre)
+       values ($1, $2, $3, $4, $5)
+       on conflict (codigo) do nothing`,
+      [c.codigo, c.nombre, c.clase, c.naturaleza, c.cuenta_padre]
+    );
+  }
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL/seed. */
+export function resetPlanCuentasSchemaParaTests() {
+  _planCuentasExtraPromise = null;
+}
+
+/** Naturaleza contable esperada por clase (1 Activo … 6 Costos). Débito: activo/gasto/costo. */
+export function naturalezaDeClase(clase) {
+  return [1, 5, 6].includes(Number(clase)) ? 'debito' : 'credito';
+}
+
+/** Sugiere el próximo código "hoja" (≥4 dígitos) libre dentro de una clase. */
+export async function sugerirCodigoCuenta(clase, sqlArg) {
+  await ensurePlanCuentasSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const claseNum = Number(clase);
+  const rows = await sql.query(
+    'select codigo from plan_cuentas where clase = $1 and length(codigo) >= 4 order by codigo desc limit 1',
+    [claseNum]
+  );
+  const ultimo = rows[0] && rows[0].codigo;
+  return ultimo ? String(Number(ultimo) + 5) : `${claseNum}105`;
+}
+
+/** Agrega una cuenta nueva de Activo (1) o Pasivo (2) al plan de cuentas (gestión, solo owners). */
+export async function insertPlanCuenta({ nombre, clase, cuenta_padre, codigo } = {}, sqlArg) {
+  const claseNum = Number(clase);
+  if (![1, 2].includes(claseNum)) throw new Error('Solo se pueden agregar cuentas de Activo (1) o Pasivo (2).');
+  const nombreLimpio = String(nombre || '').trim();
+  if (!nombreLimpio) throw new Error('El nombre de la cuenta es obligatorio.');
+  await ensurePlanCuentasSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const cod = codigo || await sugerirCodigoCuenta(claseNum, sql);
+  const naturaleza = naturalezaDeClase(claseNum);
+  const padre = cuenta_padre || String(claseNum);
+  const rows = await sql.query(
+    `insert into plan_cuentas (codigo, nombre, clase, naturaleza, cuenta_padre)
+     values ($1, $2, $3, $4, $5)
+     returning codigo, nombre, clase, naturaleza, cuenta_padre`,
+    [cod, nombreLimpio, claseNum, naturaleza, padre]
+  );
+  return rows[0];
 }
 
 // ---------------------------------------------------------------------------

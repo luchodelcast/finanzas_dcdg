@@ -9,7 +9,7 @@ import { authorize, parseBody, ok, bad } from './http.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
-  insertIngreso, queryIngresos, listPlanCuentas,
+  insertIngreso, queryIngresos, listPlanCuentas, insertPlanCuenta,
   insertExtracto, insertExtractoLineas, queryExtractos, queryExtractoLineas,
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
   queryAsientos, movimientosSinAsiento, ingresosSinAsiento,
@@ -234,10 +234,28 @@ export async function pwaCatalogosHandler(req) {
   }
 }
 
-/** Plan de cuentas (PUC) para consulta. Auth Google (equipo financiero, lectura). */
+/**
+ * Plan de cuentas (PUC). Auth Google.
+ *   GET  /api/pwa-plan-cuentas?clase= → lista (lectura, todo el equipo).
+ *   POST /api/pwa-plan-cuentas { clase, nombre } → agrega una cuenta nueva de
+ *        Activo (1) o Pasivo (2), con código sugerido automático. SOLO owners.
+ */
 export async function pwaPlanCuentasHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-  try { await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  let auth;
+  try { auth = await verifyFinanceUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'POST') {
+    if (!esOwner(auth.email)) return bad('Solo Luis o Carolina pueden agregar cuentas.', 403);
+    const body = await parseBody(req);
+    try {
+      const cuenta = await insertPlanCuenta({ nombre: body.nombre, clase: body.clase, cuenta_padre: body.cuenta_padre });
+      return ok({ ok: true, cuenta });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+
   const url = new URL(req.url);
   const clase = url.searchParams.get('clase');
   try {

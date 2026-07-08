@@ -74,6 +74,9 @@ export const getAportes = (params = {}) => request('/api/pwa-aportes', { params 
 /** Plan de cuentas (PUC). Opcional ?clase=1..6. */
 export const getPlanCuentas = (params = {}) => request('/api/pwa-plan-cuentas', { params });
 
+/** Agrega una cuenta nueva de Activo o Pasivo al plan de cuentas (solo owners). */
+export const crearCuentaPlan = (body) => request('/api/pwa-plan-cuentas', { method: 'POST', body });
+
 /** Apertura existente de una entidad (o null). */
 export const getApertura = (params = {}) => request('/api/pwa-apertura', { params });
 

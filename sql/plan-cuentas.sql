@@ -35,12 +35,15 @@ insert into plan_cuentas (codigo, nombre, clase, naturaleza, cuenta_padre) value
   ('13',   'Deudores',                            1, 'debito',  '1'),
   ('1305', 'Cuentas por cobrar',                  1, 'debito',  '13'),
   ('1310', 'Cuentas por cobrar a sociedades',     1, 'debito',  '13'),  -- p.ej. Delca2
+  ('1315', 'Cuentas por cobrar a empresas/socios', 1, 'debito',  '13'),
   -- Clase 2 · PASIVO
   ('2',    'PASIVO',                              2, 'credito', null),
   ('21',   'Obligaciones financieras',            2, 'credito', '2'),
   ('2105', 'Tarjetas de crédito por pagar',       2, 'credito', '21'),
+  ('2110', 'Obligaciones financieras (créditos bancarios/leasing)', 2, 'credito', '21'),
   ('23',   'Cuentas por pagar',                   2, 'credito', '2'),
   ('2335', 'Cuentas por pagar',                   2, 'credito', '23'),
+  ('2340', 'Cuentas por pagar a empresas/socios',  2, 'credito', '23'),
   -- Clase 3 · PATRIMONIO
   ('3',    'PATRIMONIO',                          3, 'credito', null),
   ('3105', 'Capital / saldo inicial',             3, 'credito', '3'),

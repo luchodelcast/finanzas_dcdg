@@ -9,6 +9,15 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Plan de cuentas: más rubros de pasivo/activo + "＋ Agregar cuenta"**
+  (Nocturno 3/7): en 🏦 Saldos Iniciales se agregan `2110` Obligaciones
+  financieras (créditos bancarios/leasing), `1315` Cuentas por cobrar a
+  empresas/socios y `2340` Cuentas por pagar a empresas/socios (DDL/inserts
+  idempotentes en runtime, sin `.sql` manual). Además, una sección nueva para
+  crear cuentas propias de Activo o Pasivo al vuelo, con código sugerido
+  automático dentro de su clase y naturaleza inferida (solo owners). El
+  asiento de apertura sigue cuadrando sin cambios (es agnóstico a la cuenta).
+  🤖 auto-ok · PR #82. Closes #74.
 - **Pagos del mes** (Nocturno 2/7, botón 📅): espejo del "Pagos Fijos" del Excel
   de Luis — ~12 conceptos sembrados (Arriendo, Internet, Claro/Tigo, Colegio
   Alemán, servicios…, DCDG y DCC) con día de vencimiento y estado ✅ pagado /
