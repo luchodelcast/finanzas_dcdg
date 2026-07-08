@@ -33,6 +33,10 @@ documentación/CHANGELOG.
 Sin `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` en este entorno; el
 aviso queda aquí (la red de seguridad garantizada del proceso).
 
+🤖 · PR #105 · 🔎 en borrador (sin riesgo — solo doc; no hay herramienta en
+esta corrida para sacarlo de borrador y fusionarlo, así que queda para que
+Luis lo fusione).
+
 ## 2026-07-08 (autobuild, corrida nueva)
 - **[T8a] Roles de primera clase** (issue #97, sub-issue de #51 — split
   explicado en #97/#98): `verifyFinanceUser` ahora devuelve `{ email, rol }`
