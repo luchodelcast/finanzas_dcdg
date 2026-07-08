@@ -9,6 +9,14 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-08
+- **Solicitudes de mejoras desde la PWA** (Nocturno 7/7, botón 💡): un
+  textarea + botón crea un issue de GitHub (label `autobuild` +
+  `enhancement`) para que Autobuild lo tome en una corrida futura; debajo,
+  la lista de solicitudes/propuestas abiertas. Usa `GITHUB_TOKEN_FINANZAS`/
+  `GITHUB_REPO_FINANZAS` (opcionales, sin secretos hardcodeados); sin el
+  token configurado, degrada con gracia en vez de fallar. **Pendiente**:
+  configurar `GITHUB_TOKEN_FINANZAS` en Netlify para activarla. 🤖 auto-ok
+  · PR #89. Closes #78.
 - **Préstamos entre Luis y Carolina** (Nocturno 6/7, botón 🤝): registra
   préstamos en ambos sentidos y muestra el saldo neto ("Carolina te debe
   $X" / "Le debes a Carolina $Y"), agrupado por moneda. Un abono es
