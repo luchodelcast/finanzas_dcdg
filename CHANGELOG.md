@@ -9,6 +9,21 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar G] Cierre del mes — ritual de revisión de la pareja**
+  (issue #118, `auto-ok`, PR pendiente): nueva pantalla PWA **"🗓️ Cierre del
+  mes"** que en una sola vista consolida, por persona, el ingreso del mes, lo
+  aportado al fondo común vs. su cuota (#113), su patrimonio neto y variación
+  vs. el mes anterior (#115), más el bolsillo Común y el consolidado familiar
+  — solo lectura, sin recalcular nada (reusa `reporteAportesHogar` y
+  `patrimonioPorPersona`/`evolucionPatrimonio`). Metas (#117) se muestra si
+  ya está fusionado, y degrada con gracia si no. Nuevo endpoint
+  `GET/POST /api/pwa-cierre-mes` (GET = resumen; POST `enviar_resumen`
+  intenta, opcionalmente, que SilvIA le mande el resumen por WhatsApp vía
+  `AUTOBUILD_NOTIFY_URL` — sin configurar, degrada con un mensaje en vez de
+  fallar). Aditivo, solo lectura sobre datos existentes, sin esquema nuevo.
+  `npm test` (294/294) + `npm run build` en verde → auto-merge. ✅
+
+## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar D] Préstamos entre personas integrados a la partida
   doble** (issue #116, `auto-ok`, PR #126): un préstamo real Luis↔Carolina
   ahora genera su asiento de partida doble usando las cuentas inter-personas

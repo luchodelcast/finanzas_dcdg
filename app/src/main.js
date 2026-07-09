@@ -39,6 +39,7 @@ import { renderApertura } from './ui/apertura.js';
 import { renderMayor } from './ui/mayor.js';
 import { renderEstados } from './ui/estados.js';
 import { renderPatrimonio } from './ui/patrimonio.js';
+import { renderCierreMes } from './ui/cierre-mes.js';
 
 const V = (id) => document.getElementById(id);
 const today = () => hoyISO();
@@ -95,6 +96,7 @@ function go(s) {
   if (s === 'mayor') renderMayor();
   if (s === 'estados') renderEstados();
   if (s === 'patrimonio') renderPatrimonio();
+  if (s === 'cierre-mes') renderCierreMes();
 }
 
 function toast(msg, dur = 3000) {
