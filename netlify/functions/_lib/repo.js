@@ -1458,3 +1458,67 @@ export async function updateMeta(id, patch, sqlArg) {
   );
   return rows[0] || null;
 }
+
+// ---------------------------------------------------------------------------
+// Presupuesto mensual por categoría (issue #135, `auto-ok`). Esquema nuevo vía
+// DDL idempotente en runtime — mismo patrón que ensureMetasSchema. Ver
+// AUTOBUILD.md § modo auto-ok.
+// ---------------------------------------------------------------------------
+let _presupuestosSchemaPromise = null;
+
+/** Crea (si no existe) `presupuestos`. Memoizado. */
+export async function ensurePresupuestosSchema(sqlArg) {
+  if (!_presupuestosSchemaPromise) {
+    _presupuestosSchemaPromise = aplicarPresupuestosSchema(sqlArg)
+      .catch((e) => { _presupuestosSchemaPromise = null; throw e; }); // reintentable si falló
+  }
+  return _presupuestosSchemaPromise;
+}
+
+async function aplicarPresupuestosSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists presupuestos (
+      id              bigint generated always as identity primary key,
+      categoria       text not null,
+      anio            int not null,
+      mes             int not null check (mes between 1 and 12),
+      monto_ptto      numeric(14,2) not null default 0 check (monto_ptto >= 0),
+      creado_en       timestamptz not null default now(),
+      actualizado_en  timestamptz not null default now(),
+      unique (categoria, anio, mes)
+    )
+  `, []);
+  await sql.query('create index if not exists presupuestos_periodo_idx on presupuestos (anio, mes)', []);
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetPresupuestosSchemaParaTests() {
+  _presupuestosSchemaPromise = null;
+}
+
+/** Presupuestos fijados para un mes (anio/mes), uno por categoría. */
+export async function listPresupuestos({ anio, mes }, sqlArg) {
+  await ensurePresupuestosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    'select * from presupuestos where anio = $1 and mes = $2 order by categoria asc',
+    [anio, mes]
+  );
+}
+
+/** Crea o actualiza (upsert) el presupuesto de una categoría en un mes. */
+export async function upsertPresupuesto({ categoria, anio, mes, monto_ptto }, sqlArg) {
+  await ensurePresupuestosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `insert into presupuestos (categoria, anio, mes, monto_ptto)
+     values ($1, $2, $3, $4)
+     on conflict (categoria, anio, mes) do update set
+       monto_ptto = excluded.monto_ptto,
+       actualizado_en = now()
+     returning *`,
+    [categoria, anio, mes, monto_ptto]
+  );
+  return rows[0];
+}

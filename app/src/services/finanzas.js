@@ -155,6 +155,12 @@ export const crearMeta = (body) => request('/api/pwa-metas', { method: 'POST', b
 /** Edita una meta existente (monto objetivo, cuentas vinculadas, activa/inactiva, etc). Solo owners. */
 export const editarMeta = (body) => request('/api/pwa-metas', { method: 'POST', body: { accion: 'editar', ...body } });
 
+/** Presupuesto vs. ejecutado por categoría de un mes (issue #135, solo lectura). Opcional {anio, mes}. */
+export const getPresupuesto = (params = {}) => request('/api/pwa-presupuesto', { params });
+
+/** Fija (crea o actualiza) el presupuesto de una categoría en un mes. Solo owners. */
+export const guardarPresupuesto = (body) => request('/api/pwa-presupuesto', { method: 'POST', body });
+
 /** Estado de Resultados (T6, solo lectura). Opcional desde/hasta/entidad_id. */
 export const getEstadoResultados = (params = {}) => request('/api/pwa-estado-resultados', { params });
 

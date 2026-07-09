@@ -8,6 +8,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-09 (autobuild)
+- 🤖 **Presupuesto mensual por categoría + ejecutado y variación** (issue #135,
+  `auto-ok`, PR #TBD): nueva pantalla **📊 Presupuesto** (Más → Presupuesto)
+  con el reporte PTTO · Ejecutado · Variación de cada categoría del mes —
+  barra + indicador verde/rojo (dentro/sobre presupuesto) — y un formulario
+  para fijar el presupuesto de una categoría (solo owners; lectura para el
+  equipo). Tabla nueva `presupuestos` (categoría/año/mes/monto), DDL
+  idempotente en runtime (`ensurePresupuestosSchema`, mismo patrón que
+  Metas #117). El "ejecutado" reusa el mismo agregado por categoría que ya
+  usa el Dashboard (`queryResumen`) — sin consulta nueva ahí, solo se cruza
+  contra el PTTO. Aditivo puro, no toca datos existentes. `npm test`
+  (337/337) + `npm run build` en verde → auto-merge. ✅
+
 ## 2026-07-09
 - **Taxonomía de categorías completa y alineada (Excel maestro)**: el
   desplegable del formulario (`config/categories.js`) no tenía **Servicios

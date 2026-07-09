@@ -35,6 +35,7 @@ import { mayorCuenta, balanceComprobacion } from './mayor.js';
 import { estadoResultados, balanceGeneral } from './estados.js';
 import { patrimonioPorPersona, miPatrimonio } from './patrimonio.js';
 import { listarMetasConProgreso, crearMeta, editarMeta, CATEGORIAS_META } from './metas.js';
+import { reportePresupuesto, guardarPresupuesto } from './presupuesto.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
@@ -690,6 +691,46 @@ export async function pwaMetasHandler(req) {
       nombre: body.nombre, categoria: body.categoria, monto_objetivo: body.monto_objetivo,
       fecha_objetivo: body.fecha_objetivo, cuentas_puc: body.cuentas_puc,
       entidad_id: body.entidad_id ? Number(body.entidad_id) : null, notas: body.notas,
+    });
+    return ok(r);
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Presupuesto mensual por categoría (issue #135, `auto-ok`). Auth Google.
+ *   GET  /api/pwa-presupuesto?anio=&mes= → reporte PTTO/ejecutado/variación
+ *        por categoría del mes (por defecto, el mes en curso). Lectura, todo
+ *        el equipo.
+ *   POST /api/pwa-presupuesto { categoria, anio, mes, monto_ptto } → fija
+ *        (crea o actualiza) el presupuesto de una categoría en un mes. Solo
+ *        owners.
+ */
+export async function pwaPresupuestoHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    try {
+      const r = await reportePresupuesto({
+        anio: url.searchParams.get('anio') || undefined,
+        mes: url.searchParams.get('mes') || undefined,
+      });
+      return ok(r);
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden fijar el presupuesto.', 403);
+
+  const body = await parseBody(req);
+  try {
+    const r = await guardarPresupuesto({
+      categoria: body.categoria, anio: body.anio, mes: body.mes, monto_ptto: body.monto_ptto,
     });
     return ok(r);
   } catch (e) {

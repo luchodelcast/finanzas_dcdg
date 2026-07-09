@@ -40,6 +40,7 @@ import { renderMayor } from './ui/mayor.js';
 import { renderEstados } from './ui/estados.js';
 import { renderPatrimonio } from './ui/patrimonio.js';
 import { renderMetas } from './ui/metas.js';
+import { renderPresupuesto } from './ui/presupuesto.js';
 import { renderCierreMes } from './ui/cierre-mes.js';
 
 const V = (id) => document.getElementById(id);
@@ -98,6 +99,7 @@ function go(s) {
   if (s === 'estados') renderEstados();
   if (s === 'patrimonio') renderPatrimonio();
   if (s === 'metas') renderMetas();
+  if (s === 'presupuesto') renderPresupuesto();
   if (s === 'cierre-mes') renderCierreMes();
 }
 

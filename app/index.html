@@ -833,6 +833,31 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
+<!-- ── PRESUPUESTO MENSUAL POR CATEGORÍA (issue #135) ── -->
+<div class="scr" id="scr-presupuesto">
+  <div class="card">
+    <div class="card-ttl" id="pt-titulo">Presupuesto</div>
+    <div class="fld"><label>Mes (AAAA-MM, opcional)</label><input type="text" id="pt-periodo" placeholder="mes actual"></div>
+    <button class="btn btn-p" data-act="ptActualizar" style="margin-top:8px">Actualizar →</button>
+    <div id="pt-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+    <div id="pt-total" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Por categoría</div>
+    <div id="pt-body"><div class="empty">Cargando…</div></div>
+  </div>
+  <div class="card" id="pt-form">
+    <div class="card-ttl">Fijar presupuesto</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Categoría</label><select id="pt-n-categoria"></select></div>
+      <div class="fld"><label>Monto presupuestado</label><input type="number" id="pt-n-monto" placeholder="0" inputmode="numeric"></div>
+    </div>
+    <div id="pt-n-msg" style="font-size:12px;margin-top:6px;font-weight:600"></div>
+    <button class="btn btn-p" data-act="ptGuardar" style="margin-top:8px">Guardar presupuesto</button>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
 <!-- ── CIERRE DEL MES (issue #118, Contab. familiar G, solo lectura) ── -->
 <div class="scr" id="scr-cierre-mes">
   <div class="card">
@@ -1120,6 +1145,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
     <button class="mas-item" data-go="estados"><div class="mas-ico">📈</div><div class="mas-txt"><strong>Estados financieros</strong><span>Resultados y balance general</span></div></button>
     <button class="mas-item" data-go="patrimonio"><div class="mas-ico">🪙</div><div class="mas-txt"><strong>Mi patrimonio</strong><span>Neto por persona y evolución</span></div></button>
     <button class="mas-item" data-go="metas"><div class="mas-ico">🎯</div><div class="mas-txt"><strong>Metas</strong><span>Emergencia, retiro, educación…</span></div></button>
+    <button class="mas-item" data-go="presupuesto"><div class="mas-ico">📊</div><div class="mas-txt"><strong>Presupuesto</strong><span>PTTO vs. ejecutado por categoría</span></div></button>
     <button class="mas-item" data-go="cierre-mes"><div class="mas-ico">🗓️</div><div class="mas-txt"><strong>Cierre del mes</strong><span>Ritual de revisión de la pareja</span></div></button>
     <button class="mas-item" data-go="exports"><div class="mas-ico">📥</div><div class="mas-txt"><strong>Exportar CSV</strong><span>Reportes contables</span></div></button>
   </div>
