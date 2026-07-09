@@ -120,20 +120,58 @@ async function cargarGestion() {
   }
 }
 
+/** Parse "1.459.896" / "$ 1459896" → 1459896 (solo dígitos). '' → null. */
+export function parseMonto(str) {
+  const limpio = String(str == null ? '' : str).replace(/[^\d]/g, '');
+  return limpio === '' ? null : Number(limpio);
+}
+
+/**
+ * Plan de marcas para un pago que puede cubrir el mes actual + parte de un mes
+ * anterior (split por período, #136-seguimiento). `previo` es la porción que
+ * corresponde al mes inmediatamente anterior. Devuelve una o dos marcas (mes
+ * anterior + mes actual) con su `monto_pagado`. Lanza si `previo` ≥ `total`.
+ */
+export function planMarcarSplit({ pago_fijo_id, total, previo, anio, mes }) {
+  const t = Number(total) || 0;
+  const p = Math.max(0, Number(previo) || 0);
+  if (p > 0 && p >= t) throw new Error('La parte de meses anteriores debe ser menor que el total.');
+  const marcas = [];
+  if (p > 0) {
+    const ant = Number(mes) === 1 ? { anio: Number(anio) - 1, mes: 12 } : { anio: Number(anio), mes: Number(mes) - 1 };
+    marcas.push({ pago_fijo_id, anio: ant.anio, mes: ant.mes, monto_pagado: p });
+  }
+  marcas.push({ pago_fijo_id, anio: Number(anio), mes: Number(mes), monto_pagado: t - p });
+  return marcas;
+}
+
 async function marcar(id) {
   // Preguntar el valor REAL pagado (el presupuesto varía cada mes). Se prellena
   // con el presupuesto; el usuario lo ajusta a lo que de verdad pagó.
   const pago = _pagos.find((p) => Number(p.id) === Number(id));
   const ptto = pago ? Number(pago.monto) || 0 : 0;
   const entrada = prompt(
-    `¿Cuánto pagaste realmente por "${pago ? pago.concepto : 'este pago'}"?\n\n`
+    `¿Cuánto pagaste realmente EN TOTAL por "${pago ? pago.concepto : 'este pago'}"?\n\n`
     + 'Escribe el valor en pesos (sin puntos ni $). El presupuesto va prellenado como referencia.',
     String(ptto || ''));
   if (entrada === null) return; // canceló
-  const limpio = String(entrada).replace(/[^\d]/g, '');
-  const monto_pagado = limpio === '' ? (ptto || null) : Number(limpio);
+  const total = parseMonto(entrada) ?? (ptto || 0);
+  // Split por período: ¿parte del pago cubre la factura de un mes anterior?
+  const previoStr = prompt(
+    `De esos ${formatCOP(total)}, ¿cuánto corresponde a la factura de un mes ANTERIOR?\n\n`
+    + `Escribe 0 si todo es de ${String(_mes).padStart(2, '0')}/${_anio}. `
+    + 'Si escribes un valor, ese monto se marca como pagado en el mes anterior y el resto en este mes.',
+    '0');
+  if (previoStr === null) return; // canceló
+  const previo = parseMonto(previoStr) || 0;
+  let marcas;
   try {
-    await marcarPagoFijo({ pago_fijo_id: Number(id), anio: _anio, mes: _mes, monto_pagado });
+    marcas = planMarcarSplit({ pago_fijo_id: Number(id), total, previo, anio: _anio, mes: _mes });
+  } catch (err) {
+    V('pg-msg').textContent = err.message; V('pg-msg').style.color = 'var(--red)'; return;
+  }
+  try {
+    for (const m of marcas) await marcarPagoFijo(m); // mes anterior (si hay) + mes actual
     await cargar();
   } catch (e) {
     V('pg-msg').textContent = (e.status === 401 || e.status === 403)
