@@ -175,6 +175,9 @@ export const crearPrestamo = (body) => request('/api/pwa-prestamos', { method: '
 /** Marca (o desmarca, con {saldado:false}) un préstamo como saldado. Solo owners. */
 export const marcarPrestamoSaldado = (body) => request('/api/pwa-prestamos', { method: 'POST', body: { accion: 'marcar_saldado', ...body } });
 
+/** "Pagar con mi plata algo del otro" (issue #116): registra el pago + el préstamo en un solo toque. Solo owners. */
+export const pagarDeudaOtro = (body) => request('/api/pwa-prestamos', { method: 'POST', body: { accion: 'pagar_deuda_otro', ...body } });
+
 /** Solicitudes de mejoras (issue #78): lista issues abiertos con label `autobuild`. */
 export const getSolicitudes = () => request('/api/pwa-solicitudes');
 

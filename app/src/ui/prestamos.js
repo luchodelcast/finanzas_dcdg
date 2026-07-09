@@ -2,17 +2,20 @@
  * ui/prestamos.js — Préstamos entre Luis y Carolina (issue #77, Nocturno 6/7).
  *
  * Saldo neto arriba ("Carolina te debe $X" / "Le debes a Carolina $Y"),
- * registro de un préstamo (o abono, con "de"/"para" invertidos) y la lista con
- * su sentido, monto y opción de marcar/desmarcar saldado.
+ * registro de un préstamo (o abono, con "de"/"para" invertidos), el flujo
+ * "pagar con mi plata algo del otro" en un solo toque (issue #116, Contab.
+ * familiar D) y la lista con su sentido, monto y opción de marcar/desmarcar
+ * saldado.
  */
 
-import { getPrestamos, crearPrestamo, marcarPrestamoSaldado } from '../services/finanzas.js';
+import { getPrestamos, crearPrestamo, marcarPrestamoSaldado, pagarDeudaOtro, getCuentas } from '../services/finanzas.js';
 import { formatCOP } from '../utils/formatters.js';
 import { hoyISO } from '../utils/formatters.js';
 
 const V = (id) => document.getElementById(id);
 
 let _wired = false;
+let _cuentasCargadas = false;
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -101,10 +104,54 @@ async function toggleSaldado(id, saldado) {
   }
 }
 
+async function cargarCuentas() {
+  if (_cuentasCargadas) return;
+  try {
+    const r = await getCuentas();
+    const opts = '<option value="">(elegir cuenta)</option>'
+      + (r.cuentas || []).map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+    V('pdo-metodo').innerHTML = opts;
+    _cuentasCargadas = true;
+  } catch (_) { /* el select queda vacío; se reintenta al reabrir la pantalla */ }
+}
+
+/** "Pagar con mi plata algo del otro" (issue #116): un toque, pago + préstamo. */
+async function pagarPorOtro() {
+  const msg = V('pdo-msg');
+  const pagador = V('pdo-pagador').value;
+  const deudor = V('pdo-deudor').value;
+  const monto = Number(V('pdo-monto').value);
+  const metodo_pago = V('pdo-metodo').value;
+  if (pagador === deudor) { msg.textContent = 'Quién paga y de quién es la deuda no pueden ser la misma persona.'; msg.style.color = 'var(--red)'; return; }
+  if (!(monto > 0)) { msg.textContent = 'Ingresa un monto mayor a 0.'; msg.style.color = 'var(--red)'; return; }
+  if (!metodo_pago) { msg.textContent = 'Elige con qué cuenta se pagó.'; msg.style.color = 'var(--red)'; return; }
+  const body = {
+    fecha: V('pdo-fecha').value || hoyISO(),
+    pagador, deudor, monto, metodo_pago,
+    concepto: V('pdo-concepto').value.trim() || null,
+  };
+  msg.textContent = 'Guardando…'; msg.style.color = 'var(--gray-d)';
+  try {
+    const r = await pagarDeudaOtro(body);
+    msg.textContent = r.mensaje || 'Registrado ✅';
+    msg.style.color = 'var(--green)';
+    V('pdo-monto').value = '';
+    V('pdo-concepto').value = '';
+    await cargar();
+  } catch (e) {
+    msg.textContent = (e.status === 401 || e.status === 403)
+      ? (e.message || 'Solo Luis o Carolina pueden registrar préstamos.')
+      : 'Error: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
 /** Llamado por main.js al navegar a la pantalla de Préstamos. */
 export async function renderPrestamos() {
   V('pr-n-fecha').value = hoyISO();
+  V('pdo-fecha').value = hoyISO();
   await cargar();
+  await cargarCuentas();
   if (!_wired) {
     _wired = true;
     V('scr-prestamos').addEventListener('click', (e) => {
@@ -114,6 +161,7 @@ export async function renderPrestamos() {
       if (act === 'prCrear') crear();
       else if (act === 'psaldar') toggleSaldado(id, true);
       else if (act === 'pdesmarcar') toggleSaldado(id, false);
+      else if (act === 'pdoRegistrar') pagarPorOtro();
     });
   }
 }
