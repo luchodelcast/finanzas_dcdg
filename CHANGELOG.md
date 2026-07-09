@@ -10,7 +10,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-09 (autobuild)
 - 🤖 **Presupuesto mensual por categoría + ejecutado y variación** (issue #135,
-  `auto-ok`, PR #TBD): nueva pantalla **📊 Presupuesto** (Más → Presupuesto)
+  `auto-ok`, PR #138): nueva pantalla **📊 Presupuesto** (Más → Presupuesto)
   con el reporte PTTO · Ejecutado · Variación de cada categoría del mes —
   barra + indicador verde/rojo (dentro/sobre presupuesto) — y un formulario
   para fijar el presupuesto de una categoría (solo owners; lectura para el
