@@ -7,7 +7,7 @@
  */
 
 import {
-  getPagosDelMes, marcarPagoFijo, desmarcarPagoFijo, crearPagoFijo, editarPagoFijo,
+  getPagosDelMes, getHistorialPagos, marcarPagoFijo, desmarcarPagoFijo, crearPagoFijo, editarPagoFijo,
 } from '../services/finanzas.js';
 import { formatCOP } from '../utils/formatters.js';
 
@@ -262,6 +262,46 @@ function toggleGestion() {
   if (_gestionAbierta) cargarGestion();
 }
 
+/** Historial de pagos: tabla por mes (últimos 6) + acumulado por quién asume. */
+function historialHTML(data) {
+  const filas = (data.por_mes || []).map((m) => {
+    const ptto = Number(m.total_presupuestado) || 0;
+    const pagado = Number(m.total_pagado) || 0;
+    const pct = ptto > 0 ? Math.round((pagado / ptto) * 100) : 0;
+    const w = Math.min(100, pct);
+    return `<div style="padding:7px 0;border-bottom:1px solid var(--gray)">
+      <div class="row2" style="align-items:baseline;gap:8px">
+        <div style="font-size:13px;font-weight:600">${MESES[m.mes]} ${m.anio}</div>
+        <div style="text-align:right;font-size:12px">${formatCOP(pagado)} <span style="color:var(--gray-d)">/ ${formatCOP(ptto)} · ${pct}%</span></div>
+      </div>
+      <div style="height:6px;background:var(--gray);border-radius:4px;overflow:hidden;margin-top:4px">
+        <div style="height:100%;width:${w}%;background:${pct > 100 ? 'var(--red)' : 'var(--primary)'}"></div>
+      </div>
+    </div>`;
+  }).join('');
+  const acc = data.acumulado || { por_asumido: {} };
+  const asum = ['LADCC', 'CMDG', 'Común']
+    .filter((q) => acc.por_asumido && acc.por_asumido[q])
+    .map((q) => `${esc(q)} ${formatCOP(acc.por_asumido[q])}`).join(' · ');
+  return filas
+    + `<div style="margin-top:10px;font-size:13px;font-weight:600">Acumulado ${data.meses} meses: ${formatCOP(acc.total_pagado || 0)} pagado</div>`
+    + (asum ? `<div style="font-size:12px;color:var(--gray-d)">Por quién asume: ${asum}</div>` : '');
+}
+
+let _historialAbierto = false;
+async function toggleHistorial() {
+  _historialAbierto = !_historialAbierto;
+  const cont = V('pg-historial');
+  cont.style.display = _historialAbierto ? '' : 'none';
+  if (!_historialAbierto) return;
+  cont.innerHTML = '<div class="empty">Cargando…</div>';
+  try {
+    cont.innerHTML = historialHTML(await getHistorialPagos(6));
+  } catch (e) {
+    cont.innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message || 'No se pudo cargar el historial.')}</div>`;
+  }
+}
+
 /** Avanza/retrocede el mes mostrado (con rollover de año) y recarga. */
 async function cambiarMes(delta) {
   let m = _mes + delta;
@@ -300,6 +340,7 @@ export async function renderPagos() {
       else if (act === 'pgToggleActivo') toggleActivo(id, activo);
       else if (act === 'pgCrear') crear();
       else if (act === 'pgToggleGestion') toggleGestion();
+      else if (act === 'pgToggleHistorial') toggleHistorial();
       else if (act === 'pgMesPrev' || act === 'pgIrMesPrev') cambiarMes(-1);
       else if (act === 'pgMesNext') cambiarMes(1);
       else if (act === 'pgMesHoy') irHoy();

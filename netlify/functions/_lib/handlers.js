@@ -43,10 +43,10 @@ import { reporteAportesHogar, registrarAporteHogar } from './aportes-hogar.js';
 import { cierreDelMes, armarResumenTexto } from './cierre-mes.js';
 import { notificarSilvia } from './silvia-notify.js';
 import {
-  listPagosFijos, queryPagosEstadoMes, insertPagoFijo, updatePagoFijo,
+  listPagosFijos, queryPagosEstadoMes, queryPagosEstadoRango, insertPagoFijo, updatePagoFijo,
   upsertPagoEstado, desmarcarPagoEstado,
 } from './repo.js';
-import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes } from './pagos.js';
+import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes, ultimosMeses, historialPagos } from './pagos.js';
 import { listPrestamos } from './repo.js';
 import {
   calcularSaldoPrestamos, registrarPrestamoConAsiento, marcarSaldadoConAsiento, registrarPagoDeOtro,
@@ -1252,6 +1252,22 @@ export async function pwaPagosHandler(req) {
 
   if (req.method === 'GET') {
     const url = new URL(req.url);
+    // Reporte histórico: ?historial=1&meses=N → resumen por mes (últimos N) + acumulado.
+    if (url.searchParams.get('historial') === '1') {
+      const n = Math.min(Math.max(Number(url.searchParams.get('meses')) || 6, 1), 24);
+      try {
+        const meses = ultimosMeses(hoyAnio, hoyMes, n);
+        const desde = meses[meses.length - 1];
+        const hasta = meses[0];
+        const [pagosFijos, estados] = await Promise.all([
+          listPagosFijos({ activo: true }),
+          queryPagosEstadoRango({ desde, hasta }),
+        ]);
+        return ok({ ok: true, meses: n, ...historialPagos(pagosFijos, estados, meses, hoy) });
+      } catch (e) {
+        return bad(e.message, 422);
+      }
+    }
     const anio = Number(url.searchParams.get('anio')) || hoyAnio;
     const mes = Number(url.searchParams.get('mes')) || hoyMes;
     const incluirInactivos = url.searchParams.get('incluir_inactivos') === '1';

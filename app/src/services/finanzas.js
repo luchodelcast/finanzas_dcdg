@@ -176,6 +176,9 @@ export const getMiPatrimonio = (params = {}) => request('/api/pwa-mi-patrimonio'
 /** Pagos del mes (issue #73): catálogo + estado de un (anio, mes), y pendientes del mes anterior. */
 export const getPagosDelMes = (params = {}) => request('/api/pwa-pagos', { params });
 
+/** Historial de pagos: resumen por mes (últimos N) + acumulado por quién asume. */
+export const getHistorialPagos = (meses = 6) => request('/api/pwa-pagos', { params: { historial: 1, meses } });
+
 /** Marca un pago fijo como pagado en su mes (solo owners). */
 export const marcarPagoFijo = (body) => request('/api/pwa-pagos', { method: 'POST', body: { accion: 'marcar', ...body } });
 

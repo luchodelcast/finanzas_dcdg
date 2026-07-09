@@ -95,3 +95,41 @@ export function resumenPagos(pagos) {
   }
   return out;
 }
+
+/** Lista los últimos `n` meses (incluido el actual), del más reciente al más antiguo. */
+export function ultimosMeses(anio, mes, n) {
+  const out = [];
+  let a = Number(anio);
+  let m = Number(mes);
+  for (let i = 0; i < n; i++) {
+    out.push({ anio: a, mes: m });
+    m -= 1;
+    if (m < 1) { m = 12; a -= 1; }
+  }
+  return out;
+}
+
+/**
+ * Historial de pagos por mes (reporte histórico): dado el catálogo activo, TODAS
+ * las filas de estado del rango y la lista de meses, arma para cada mes su
+ * resumen (presupuestado/pagado/pendiente + por_asumido), más un **acumulado**
+ * del rango completo (total pagado y por quién asume). Módulo puro.
+ */
+export function historialPagos(pagosFijos, estados, meses, hoyISO) {
+  const porMes = meses.map(({ anio, mes }) => {
+    const delMes = estados.filter((e) => Number(e.anio) === Number(anio) && Number(e.mes) === Number(mes));
+    const pagos = armarPagosDelMes(pagosFijos, delMes, anio, mes, hoyISO);
+    const r = resumenPagos(pagos);
+    return { anio, mes, ...r };
+  });
+  // Acumulado del rango: suma de lo REALMENTE pagado por quién asume.
+  const acumulado = { total_pagado: 0, por_asumido: {} };
+  for (const m of porMes) {
+    acumulado.total_pagado += m.total_pagado;
+    for (const [quien, t] of Object.entries(m.por_asumido || {})) {
+      if (!acumulado.por_asumido[quien]) acumulado.por_asumido[quien] = 0;
+      acumulado.por_asumido[quien] += t.total_pagado;
+    }
+  }
+  return { por_mes: porMes, acumulado };
+}
