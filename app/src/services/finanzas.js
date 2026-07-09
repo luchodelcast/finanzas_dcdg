@@ -109,6 +109,12 @@ export const materializarBackfill = (body) => request('/api/pwa-backfill', { met
 /** Reporte mensual de aportes IBC por persona (Fase 3.2, solo lectura). */
 export const getAportes = (params = {}) => request('/api/pwa-aportes', { params });
 
+/** Reporte mensual de aportes al fondo común del hogar (issue #113): por persona, cuota y % cumplido. */
+export const getAportesHogar = (params = {}) => request('/api/pwa-aportes-hogar', { params });
+
+/** Registra un aporte al fondo común (solo owners). */
+export const registrarAporteHogar = (body) => request('/api/pwa-aportes-hogar', { method: 'POST', body });
+
 /** Plan de cuentas (PUC). Opcional ?clase=1..6. */
 export const getPlanCuentas = (params = {}) => request('/api/pwa-plan-cuentas', { params });
 

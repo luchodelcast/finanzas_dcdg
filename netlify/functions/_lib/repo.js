@@ -249,6 +249,7 @@ const PLAN_CUENTAS_EXTRA_SEED = [
   { codigo: '2110', nombre: 'Obligaciones financieras (créditos bancarios/leasing)', clase: 2, naturaleza: 'credito', cuenta_padre: '21' },
   { codigo: '1315', nombre: 'Cuentas por cobrar a empresas/socios', clase: 1, naturaleza: 'debito', cuenta_padre: '13' },
   { codigo: '2340', nombre: 'Cuentas por pagar a empresas/socios', clase: 2, naturaleza: 'credito', cuenta_padre: '23' },
+  { codigo: '1115', nombre: 'Fondo común del hogar', clase: 1, naturaleza: 'debito', cuenta_padre: '11' },
 ];
 
 /** Crea (si no existe) `plan_cuentas` y agrega las cuentas nuevas del catálogo. Memoizado. */
@@ -1143,4 +1144,89 @@ export async function queryMovimientos({ desde, hasta, categoria, quien, texto, 
     params
   );
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Fondo común del hogar (issue #113, Contab. familiar A, `auto-ok`): aportes
+// de cada persona al fondo, para el reporte de cuota proporcional. Esquema
+// nuevo vía DDL idempotente en runtime (sin `.sql` manual) — mismo patrón que
+// ensurePrestamosSchema/ensurePagosFijosSchema.
+// ---------------------------------------------------------------------------
+let _aportesHogarSchemaPromise = null;
+
+/** Crea (si no existe) `aportes_hogar`. Memoizado. */
+export async function ensureAportesHogarSchema(sqlArg) {
+  if (!_aportesHogarSchemaPromise) {
+    _aportesHogarSchemaPromise = aplicarAportesHogarSchema(sqlArg)
+      .catch((e) => { _aportesHogarSchemaPromise = null; throw e; }); // reintentable si falló
+  }
+  return _aportesHogarSchemaPromise;
+}
+
+async function aplicarAportesHogarSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists aportes_hogar (
+      id              bigint generated always as identity primary key,
+      entidad_id      bigint not null references entidades (id),
+      fecha           date not null,
+      monto           numeric(14,2) not null check (monto > 0),
+      moneda          text not null default 'COP',
+      metodo_pago     text,
+      notas           text,
+      origen          text,
+      idempotency_key text unique,
+      creado_en       timestamptz not null default now()
+    )
+  `, []);
+  await sql.query('create index if not exists aportes_hogar_entidad_fecha_idx on aportes_hogar (entidad_id, fecha)', []);
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetAportesHogarSchemaParaTests() {
+  _aportesHogarSchemaPromise = null;
+}
+
+/** Registra un aporte al fondo común. Idempotente por idempotency_key. */
+export async function insertAporteHogar(a, sqlArg) {
+  await ensureAportesHogarSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const cols = ['entidad_id', 'fecha', 'monto', 'moneda', 'metodo_pago', 'notas', 'origen', 'idempotency_key'];
+  const vals = [a.entidad_id, a.fecha, a.monto, a.moneda || 'COP', a.metodo_pago || null,
+    a.notas || null, a.origen || 'manual', a.idempotency_key];
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const ins = await sql.query(
+    `insert into aportes_hogar (${cols.join(', ')}) values (${ph})
+     on conflict (idempotency_key) do nothing
+     returning *`,
+    vals
+  );
+  if (ins.length) return { inserted: true, row: ins[0] };
+  const prev = await sql.query('select * from aportes_hogar where idempotency_key = $1 limit 1', [a.idempotency_key]);
+  return { inserted: false, row: prev[0] || null };
+}
+
+/** Un aporte por id (para contabilizarlo). */
+export async function getAporteHogar(id, sqlArg) {
+  await ensureAportesHogarSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from aportes_hogar where id = $1 limit 1', [id]);
+  return rows[0] || null;
+}
+
+/** Aportes al fondo común en un rango de fechas (para el reporte mensual). */
+export async function listAportesHogarPeriodo({ desde, hasta } = {}, sqlArg) {
+  await ensureAportesHogarSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (desde) { params.push(desde); cond.push(`fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`fecha <= $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  return sql.query(
+    `select id, entidad_id, fecha, monto, moneda, metodo_pago, notas
+       from aportes_hogar ${where}
+      order by fecha desc, id desc`,
+    params
+  );
 }

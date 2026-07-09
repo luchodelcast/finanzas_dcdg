@@ -30,6 +30,7 @@ import { renderIngresos } from './ui/ingresos.js';
 import { renderExtractos } from './ui/extractos.js';
 import { renderConciliacion } from './ui/conciliacion.js';
 import { renderAportes } from './ui/aportes.js';
+import { renderAportesHogar } from './ui/aportes-hogar.js';
 import { renderPagos } from './ui/pagos.js';
 import { renderPrestamos } from './ui/prestamos.js';
 import { renderSolicitudes } from './ui/solicitudes.js';
@@ -84,6 +85,7 @@ function go(s) {
   if (s === 'extractos') renderExtractos();
   if (s === 'conciliacion') renderConciliacion();
   if (s === 'aportes') renderAportes();
+  if (s === 'aportes-hogar') renderAportesHogar();
   if (s === 'pagos') renderPagos();
   if (s === 'prestamos') renderPrestamos();
   if (s === 'solicitudes') renderSolicitudes();

@@ -39,7 +39,7 @@ function cuentaPara(reglas, ambito, clave) {
  * prioridad sobre la heurística por palabra clave del nombre (comportamiento
  * preservado como fallback cuando la cuenta no tiene fila en `cuentas_meta`).
  */
-function cuentaMedio(reglas, metodo, cuentasMeta) {
+export function cuentaMedio(reglas, metodo, cuentasMeta) {
   const meta = cuentasMeta && cuentasMeta.get(normalizarNombreCuenta(metodo));
   if (meta && meta.cuenta_puc) return meta.cuenta_puc;
   const m = String(metodo || '').toLowerCase();

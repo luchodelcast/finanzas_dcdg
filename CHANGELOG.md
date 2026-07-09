@@ -9,6 +9,18 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar A] Fondo común + reporte de aportes al hogar** (issue
+  #113, `auto-ok`, PR #123): nueva tabla `aportes_hogar` (DDL idempotente en
+  runtime) para que cada persona registre su aporte al fondo común del hogar,
+  distinto de una transferencia genérica. Cada aporte se contabiliza solo
+  (débito a la cuenta PUC nueva `1115` "Fondo común del hogar" / crédito el
+  medio de pago de origen, usando la prioridad de `cuenta_puc` de `cuentas_meta`
+  de #112 cuando aplica). El reporte del mes ("🏡 Fondo común" en Más → Familia)
+  muestra cuánto aportó cada quien, su cuota proporcional sugerida (según su
+  ingreso del periodo) y el % cumplido. Aditivo puro (candado de `AUTOBUILD.md`
+  respetado). `npm test` + `npm run build` en verde → auto-merge. ✅
+
+## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar 0] Dueño/bolsillo por cuenta (`cuentas_meta`)** (issue
   #112, `auto-ok`, PR #122): la contabilización automática agrupaba cada
   cuenta a una cuenta PUC solo por palabra clave del nombre
