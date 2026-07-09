@@ -8,6 +8,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-09
+- **Taxonomía de categorías completa y alineada (Excel maestro)**: el
+  desplegable del formulario (`config/categories.js`) no tenía **Servicios
+  Públicos** (ni Vivienda, Seguros/Medicina Prepagada, Créditos y Tarjetas), así
+  que un recibo de agua (Triple A) caía en "Hogar/Aseo". Se completa la
+  taxonomía con la del Excel DCDG (Presupuesto + Pagos Fijos) y —clave— el
+  **clasificador ahora enumera y se limita a esa MISMA lista** (`config/prompt.js`
+  importa `CATEGORIAS`), con reglas nuevas para servicios públicos (Triple A→Agua,
+  Air-e→Energía, Gases del Caribe→Gas, Movistar/Claro/Tigo→Internet/Telefonía),
+  vivienda, seguros/medicina prepagada y pagos de créditos/tarjetas. Una sola
+  fuente de verdad → formulario y clasificación dejan de desalinearse. Solo
+  config/prompt (sin datos ni esquema). ✅
+
 ## 2026-07-09 (autobuild)
 - 🔎 **Cola de `autobuild` revisada, sin item elegible para construir directo**:
   #40/#41/#92/#98 ya tienen PR borrador esperando revisión (#58/#55/#96/#103),

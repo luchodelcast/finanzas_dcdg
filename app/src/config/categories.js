@@ -5,20 +5,28 @@
  * selects de la pantalla de confirmación y valida la salida del clasificador.
  */
 
+// Taxonomía completa DCDG, alineada con el Excel maestro (Presupuesto + Pagos
+// Fijos + Registro de Gastos). Es la ÚNICA fuente de verdad: la usa el
+// desplegable del formulario Y el clasificador (config/prompt.js la enumera),
+// para que formulario y clasificación no se desalineen.
 export const CATS = {
   'Alimentación': ['Mercado', 'Restaurante', 'Domicilios'],
-  'Transporte': ['Uber/Taxi', 'Gasolina/EDS', 'Vehículos/Lavado', 'SOAT Vehículo', 'Bus/Metro', 'Peajes'],
+  'Servicios Públicos': ['Agua', 'Gas', 'Energía', 'Internet', 'Telefonía', 'Aseo/Basuras'],
+  'Vivienda': ['Arriendo', 'Administración', 'Reparaciones y mantenimiento'],
+  'Transporte': ['Uber/Taxi', 'Gasolina/EDS', 'Vehículos/Lavado', 'SOAT Vehículo', 'Parqueadero', 'Peajes', 'Bus/Metro'],
+  'Salud': ['Salud: Medicamentos', 'Salud: Citas Médicas', 'Salud: Otros'],
+  'Seguros y Medicina Prepagada': ['Medicina Prepagada', 'Plan Complementario', 'Seguro Vehículo', 'Otros seguros'],
+  'Educación': ['Colegio', 'Extracurriculares', 'Útiles y materiales'],
+  'Gastos Luhijo - Luciano': ['Meriendas y Almuerzos Colegio', 'Actividades', 'Otros hijos'],
+  'Entretenimiento': ['Suscripciones Online', 'Ocio y entretenimiento', 'Actividades niños'],
+  'Ropa': ['Ropa adultos', 'Ropa niños', 'Calzado'],
+  'Hogar/Aseo': ['Artículos del hogar', 'Productos de aseo'],
+  'Regalos y celebraciones': ['Regalo', 'Celebración'],
+  'Viajes': ['Tiquetes', 'Hotel', 'Gastos en viaje'],
+  'Créditos y Tarjetas': ['Pago crédito bancario', 'Pago tarjeta de crédito'],
+  'Gastos Bancarios': ['4x1000', 'Cuota manejo', 'Comisiones'],
   'Personal LADCC': ['Gastos Personales LADCC'],
   'Personal CMDG': ['Gastos Personales CMDG'],
-  'Salud': ['Salud: Medicamentos', 'Salud: Citas Médicas', 'Salud: Otros'],
-  'Entretenimiento': ['Suscripciones Online', 'Ocio y entretenimiento'],
-  'Regalos y celebraciones': ['Regalo', 'Celebración'],
-  'Educación': ['Colegio', 'Útiles y materiales', 'Extracurriculares'],
-  'Gastos Luhijo - Luciano': ['Meriendas y Almuerzos Colegio', 'Actividades', 'Otros hijos'],
-  'Hogar/Aseo': ['Artículos del hogar', 'Productos de aseo'],
-  'Ropa': ['Ropa adultos', 'Ropa niños', 'Calzado'],
-  'Viajes': ['Tiquetes', 'Hotel', 'Gastos en viaje'],
-  'Gastos Bancarios': ['4x1000', 'Cuota manejo', 'Comisiones'],
   'Imprevistos': ['Otros'],
 };
 

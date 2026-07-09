@@ -7,6 +7,7 @@
  */
 
 import { hoyISO } from '../utils/formatters.js';
+import { CATEGORIAS } from './categories.js';
 
 /** Construye el system prompt DCDG con la fecha de referencia. */
 export function buildSystemPrompt(hoy = hoyISO()) {
@@ -26,8 +27,12 @@ SALUD FARMA: Farmatodo, Cruz Verde, Droguería → Salud / Salud: Medicamentos /
 SALUD CITA: clínica, médico, Sanitas, AXA Colpatria cita → Salud / Salud: Citas Médicas / LADCC
 SUSCRIPCIONES: Netflix, Spotify, Amazon, Google Play, Apple, Disney, HBO, YouTube → Entretenimiento / Suscripciones Online / LADCC
 BIOFOOD: Biofood → Gastos Luhijo - Luciano / Meriendas y Almuerzos Colegio / LADCC
-COLEGIO: Colegio Alemán, colegio → Educación / Colegio / LADCC
-BANCARIO: Impto Gobierno, 4x1000 → Gastos Bancarios / 4x1000 / LADCC
+COLEGIO: Colegio Alemán, colegio, Deutsche Schule, escuela, extracurriculares → Educación / Colegio (o Extracurriculares) / LADCC
+SERVICIOS PÚBLICOS (facturas de casa): Triple A, acueducto, alcantarillado → Servicios Públicos / Agua. Air-e, Electricaribe, Afinia, energía eléctrica → Servicios Públicos / Energía. Gases del Caribe, gas natural, gas domiciliario → Servicios Públicos / Gas. Movistar internet, banda ancha, internet apto → Servicios Públicos / Internet. Claro, Tigo, plan celular, recarga → Servicios Públicos / Telefonía. (quien_pago según la cuenta/titular)
+VIVIENDA: Arriendo, canon de arrendamiento, administración del edificio/apto → Vivienda / Arriendo (o Administración) / LADCC
+SEGUROS / MEDICINA PREPAGADA: Sanitas, Colsanitas, medicina prepagada, Plan Complementario, AXA Colpatria (cuota mensual de plan) → Seguros y Medicina Prepagada / Medicina Prepagada (o Plan Complementario) / según titular
+CRÉDITOS Y TARJETAS: pago/cuota de crédito bancario (Crédito Bcol, leasing) → Créditos y Tarjetas / Pago crédito bancario. Pago a tarjeta de crédito (Colpatria, Serfinanza, Visa) → Créditos y Tarjetas / Pago tarjeta de crédito
+BANCARIO: Impto Gobierno, 4x1000, cuota de manejo, comisión → Gastos Bancarios / 4x1000 (o Cuota manejo/Comisiones) / LADCC
 IWIN/SUPERLIKERS: Si el pago se realizó con tarjeta iWin, Jeeves, Superlikers o mencionan "iWin" como método de pago → metodo_pago = "TC iWin (Superlikers)", iwin_prestamo = true
 TARJETAS DÉBITO: Si ves los últimos 4 dígitos de una tarjeta en el comprobante, extráelos en tarjeta_ultimos4 y usa la regla correspondiente:
   2331 → metodo_pago = "Bcol Aho 0965 · Débito 2331 (Luis)", quien_pago = "Luis"
@@ -42,6 +47,8 @@ FECHA: si no ves fecha, usa hoy ${hoy}.
 MONEDA: $ sin símbolo = COP. $ con "USD" o "dólares" = USD.
 BAJO UMBRAL: si monto < 10000 COP, bajo_umbral = true.
 CONFIANZA: "alta" si la regla es exacta, "media" si infieres por contexto, "baja" si no puedes determinar.
+
+CATEGORÍAS VÁLIDAS (usa EXACTAMENTE una de estas en "categoria", nunca inventes otra): ${CATEGORIAS.join(', ')}.
 
 Devuelve ÚNICAMENTE JSON válido, sin markdown, sin explicaciones:
 {"fecha":"YYYY-MM-DD","monto":0,"moneda":"COP","comercio":"","descripcion":"","categoria":"","subcategoria":"","quien_pago":"Luis","cc":"LADCC","metodo_pago":"Débito Bancolombia","notas":"","confianza":"alta","bajo_umbral":false,"iwin_prestamo":false,"tarjeta_ultimos4":""}`;
