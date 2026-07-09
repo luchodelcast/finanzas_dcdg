@@ -146,6 +146,15 @@ export const getMayor = (params = {}) => request('/api/pwa-mayor', { params });
 /** Balance de Comprobación (T5, solo lectura). Opcional desde/hasta/entidad_id. */
 export const getComprobacion = (params = {}) => request('/api/pwa-comprobacion', { params });
 
+/** Metas financieras con su progreso (issue #117, solo lectura). */
+export const getMetas = (params = {}) => request('/api/pwa-metas', { params });
+
+/** Crea una meta nueva. Solo owners. */
+export const crearMeta = (body) => request('/api/pwa-metas', { method: 'POST', body: { accion: 'crear', ...body } });
+
+/** Edita una meta existente (monto objetivo, cuentas vinculadas, activa/inactiva, etc). Solo owners. */
+export const editarMeta = (body) => request('/api/pwa-metas', { method: 'POST', body: { accion: 'editar', ...body } });
+
 /** Estado de Resultados (T6, solo lectura). Opcional desde/hasta/entidad_id. */
 export const getEstadoResultados = (params = {}) => request('/api/pwa-estado-resultados', { params });
 

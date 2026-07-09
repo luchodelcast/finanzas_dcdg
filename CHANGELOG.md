@@ -9,6 +9,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar E] Metas financieras (emergencia/retiro/educación) +
+  pensión de Carolina** (issue #117, `auto-ok`, PR #127): nuevo módulo de
+  metas/objetivos con barra de progreso (tabla `metas`, DDL idempotente en
+  runtime). Metas semilla creadas automáticamente la primera vez (Fondo de
+  emergencia, Retiro, Educación de los hijos, Pensión/ahorro voluntario de
+  Carolina ligada a su entidad). El saldo actual de cada meta suma el saldo
+  (Libro Mayor, T5) de la(s) cuenta(s) PUC de respaldo que se le vinculen
+  contra su `monto_objetivo`; sin cuenta vinculada queda en 0% con gracia.
+  Nueva pantalla PWA **🎯 Metas** (Más → Metas): crear una meta (nombre,
+  categoría, monto objetivo, fecha opcional, cuenta(s) de respaldo del plan de
+  cuentas) y ver la lista con su avance. Escritura solo `owner`, lectura para
+  el equipo. Aditivo puro, solo lectura sobre asientos existentes. `npm test`
+  (308/308) + `npm run build` en verde → auto-merge. ✅
 - 🤖 **Transferencias entre monedas (USD↔COP), modelo pragmático de dos patas**
   (issue #121, `auto-ok`): una transferencia ahora puede llevar `monto_destino`/
   `moneda_destino` opcionales (lo que realmente llegó al destino), además de

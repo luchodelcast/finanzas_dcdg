@@ -34,6 +34,7 @@ import { contabilizarMovimiento, contabilizarIngreso } from './contabilizar.js';
 import { mayorCuenta, balanceComprobacion } from './mayor.js';
 import { estadoResultados, balanceGeneral } from './estados.js';
 import { patrimonioPorPersona, miPatrimonio } from './patrimonio.js';
+import { listarMetasConProgreso, crearMeta, editarMeta, CATEGORIAS_META } from './metas.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
@@ -640,6 +641,57 @@ export async function pwaMiPatrimonioHandler(req) {
       fecha: url.searchParams.get('fecha') || undefined,
     });
     return ok({ ok: true, ...r });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Metas financieras (issue #117, Contab. familiar E, `auto-ok`). Auth Google.
+ *   GET  /api/pwa-metas → lista de metas con su progreso (saldo actual de la(s)
+ *        cuenta(s) PUC vinculadas vs. `monto_objetivo`); crea las semillas
+ *        (Fondo de emergencia/Retiro/Educación/Pensión de Carolina) la primera
+ *        vez. Lectura, todo el equipo.
+ *   POST /api/pwa-metas { accion: 'crear', nombre, categoria?, monto_objetivo,
+ *        fecha_objetivo?, cuentas_puc?, entidad_id?, notas? } → crea una meta.
+ *   POST /api/pwa-metas { accion: 'editar', id, ...campos } → edita una meta
+ *        existente (monto objetivo, cuentas vinculadas, activa/inactiva, etc).
+ *   Toda escritura es SOLO owners (Luis/Carolina); lectura para el equipo.
+ */
+export async function pwaMetasHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    try {
+      const r = await listarMetasConProgreso({ incluirInactivas: url.searchParams.get('incluir_inactivas') === '1' });
+      return ok({ ...r, categorias: CATEGORIAS_META });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden crear o editar metas.', 403);
+
+  const body = await parseBody(req);
+  try {
+    if (body.accion === 'editar') {
+      if (!body.id) return bad('id de la meta requerido');
+      const r = await editarMeta(Number(body.id), {
+        nombre: body.nombre, categoria: body.categoria, monto_objetivo: body.monto_objetivo,
+        fecha_objetivo: body.fecha_objetivo, cuentas_puc: body.cuentas_puc,
+        activa: body.activa != null ? !!body.activa : undefined, notas: body.notas,
+      });
+      return ok(r);
+    }
+    const r = await crearMeta({
+      nombre: body.nombre, categoria: body.categoria, monto_objetivo: body.monto_objetivo,
+      fecha_objetivo: body.fecha_objetivo, cuentas_puc: body.cuentas_puc,
+      entidad_id: body.entidad_id ? Number(body.entidad_id) : null, notas: body.notas,
+    });
+    return ok(r);
   } catch (e) {
     return bad(e.message, 422);
   }

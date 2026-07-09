@@ -122,8 +122,11 @@ test('cierreDelMes: consolida aportes/ingresos, patrimonio y variación vs. el m
 
   assert.equal(r.comun.neto, 0);
   assert.equal(r.consolidado.neto, 1800000);
-  assert.equal(r.metas, null); // #117 aún no fusionado — se omite con gracia
-  assert.match(r.nota, /metas/);
+  // #117 ya está fusionado: metas.js existe, pero el fakeDb de este test no
+  // tiene datos de metas sembrados, así que la sección llega vacía (no null).
+  assert.equal(r.metas.ok, true);
+  assert.deepEqual(r.metas.metas, []);
+  assert.equal(r.nota, null);
 
   reset();
 });
