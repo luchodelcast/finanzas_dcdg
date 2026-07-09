@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatCOP,
+  formatMoneda,
   parseMonto,
   normalizarFecha,
   mesDeISO,
@@ -11,6 +12,13 @@ import {
 test('formatCOP formatea pesos', () => {
   assert.equal(formatCOP(45000), '$45.000');
   assert.equal(formatCOP(1200000), '$1.200.000');
+});
+
+test('formatMoneda: USD con prefijo US$, COP como pesos', () => {
+  assert.equal(formatMoneda(3899, 'USD'), 'US$ 3,899');
+  assert.equal(formatMoneda(45000, 'COP'), '$45.000');
+  assert.equal(formatMoneda(45000, undefined), '$45.000'); // sin moneda → COP
+  assert.equal(formatMoneda(3899, 'usd'), 'US$ 3,899'); // case-insensitive
 });
 
 test('parseMonto: formato CO con puntos de miles', () => {

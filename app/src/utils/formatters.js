@@ -9,6 +9,13 @@ export function formatCOP(n) {
   return '$' + Math.round(num).toLocaleString('es-CO');
 }
 
+/** Formatea un monto según su moneda: COP → "$45.000"; USD → "US$ 3,899". */
+export function formatMoneda(n, moneda) {
+  return String(moneda || 'COP').toUpperCase() === 'USD'
+    ? 'US$ ' + (Number(n) || 0).toLocaleString('en-US')
+    : formatCOP(n);
+}
+
 /**
  * Parsea montos escritos por humanos a número.
  * Soporta: "45.000", "45,000", "$120.000", "120mil", "1.2M", "45k".
