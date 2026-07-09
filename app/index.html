@@ -903,6 +903,15 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
       <input type="text" id="cf-tarjeta" placeholder="Ej: 2331" maxlength="4" inputmode="numeric">
       <div id="cf-tarjeta-resolved" style="font-size:11px;color:var(--teal);margin-top:4px;font-weight:600"></div>
     </div>
+    <div class="fld">
+      <label>¿Hogar o personal?</label>
+      <select id="cf-hogar">
+        <option value="">Auto (según la cuenta)</option>
+        <option value="hogar">🏡 Hogar (compartido)</option>
+        <option value="personal:Luis">👤 Personal de Luis</option>
+        <option value="personal:Carolina">👤 Personal de Carolina</option>
+      </select>
+    </div>
   </div>
 
   <div class="btn-row">

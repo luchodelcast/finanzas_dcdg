@@ -9,6 +9,20 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar B] Clasificar gasto compartido (hogar) vs. personal**
+  (issue #114, `auto-ok`, PR pendiente): al capturar un egreso, cada movimiento
+  ahora lleva un marcador `hogar` (compartido) o `personal de <persona>`. Por
+  defecto se **infiere** del `bolsillo` de la cuenta usada (`cuentas_meta`,
+  #112): bolsillo `comun` → hogar; `gasto_individual`/`patrimonio_individual`
+  → personal del dueño de esa cuenta. La PWA permite **override manual** en la
+  pantalla de confirmación de registro ("¿Hogar o personal?"), y el marcador
+  queda visible en el historial del Dashboard y filtrable vía
+  `GET /api/pwa-movimientos?tipo_gasto=hogar|personal`. Columnas nuevas
+  (`tipo_gasto`, `tipo_gasto_persona`, `tipo_gasto_auto`) vía DDL idempotente
+  en runtime, sin `.sql` manual — aditivo puro (candado de `AUTOBUILD.md`
+  respetado). `npm test` (267/267) + `npm run build` en verde → auto-merge. ✅
+
+## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar A] Fondo común + reporte de aportes al hogar** (issue
   #113, `auto-ok`, PR #123): nueva tabla `aportes_hogar` (DDL idempotente en
   runtime) para que cada persona registre su aporte al fondo común del hogar,

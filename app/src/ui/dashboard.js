@@ -109,6 +109,13 @@ function comerciosHTML(top) {
     </div>`).join('');
 }
 
+/** Etiqueta hogar/personal (#114) para el historial: "🏡 Hogar" o "👤 Personal de X". */
+function tipoGastoLabel(m) {
+  if (m.tipo_gasto === 'personal') return `👤 Personal${m.tipo_gasto_persona ? ' de ' + m.tipo_gasto_persona : ''}`;
+  if (m.tipo_gasto === 'hogar') return '🏡 Hogar';
+  return '';
+}
+
 function movsHTML(movs, owner) {
   if (!movs || !movs.length) return '<div class="empty">Sin movimientos en este periodo</div>';
   return movs.map((m) => {
@@ -116,8 +123,9 @@ function movsHTML(movs, owner) {
     const fix = owner
       ? `<button class="sec-link mov-fix" data-mov-id="${esc(m.id)}" style="margin-top:4px">Corregir</button>`
       : '';
+    const tg = tipoGastoLabel(m);
     return `<div class="h-item">
-      <div><div class="h-name">${esc(m.descripcion)}</div><div class="h-meta">${esc(m.categoria || '—')}${m.subcategoria ? ' · ' + esc(m.subcategoria) : ''} · ${esc(fecha)}</div>${fix}</div>
+      <div><div class="h-name">${esc(m.descripcion)}</div><div class="h-meta">${esc(m.categoria || '—')}${m.subcategoria ? ' · ' + esc(m.subcategoria) : ''} · ${esc(fecha)}${tg ? ' · ' + esc(tg) : ''}</div>${fix}</div>
       <div><div class="h-amt">${esc(formatMoneda(Number(m.monto) || 0, m.moneda))}</div><div class="h-who">${esc(m.quien_pago || '')}${m.metodo_pago ? ' · ' + esc(m.metodo_pago) : ''}</div></div>
     </div>`;
   }).join('');
