@@ -32,8 +32,8 @@ export function construirEstadoResultados(cuentas) {
 }
 
 /** Estado de Resultados de un periodo: agrega el comprobante (T5) y clasifica clases 4/5/6. */
-export async function estadoResultados({ desde, hasta, entidad_id }, sqlArg) {
-  const { cuentas } = await balanceComprobacion({ desde, hasta, entidad_id }, sqlArg);
+export async function estadoResultados({ desde, hasta, entidad_id, soloSinEntidad }, sqlArg) {
+  const { cuentas } = await balanceComprobacion({ desde, hasta, entidad_id, soloSinEntidad }, sqlArg);
   return construirEstadoResultados(cuentas);
 }
 
@@ -66,9 +66,13 @@ export function construirBalanceGeneral(cuentas, resultadoEjercicio = 0) {
   };
 }
 
-/** Balance General a una fecha: comprobante acumulado (sin `desde`) + resultado del periodo. */
-export async function balanceGeneral({ fecha, entidad_id }, sqlArg) {
-  const { cuentas } = await balanceComprobacion({ hasta: fecha, entidad_id }, sqlArg);
+/**
+ * Balance General a una fecha: comprobante acumulado (sin `desde`) + resultado
+ * del periodo. `soloSinEntidad` filtra los asientos sin dueño individual
+ * (bolsillo "Común", #115) — tiene prioridad sobre `entidad_id` si ambos llegan.
+ */
+export async function balanceGeneral({ fecha, entidad_id, soloSinEntidad }, sqlArg) {
+  const { cuentas } = await balanceComprobacion({ hasta: fecha, entidad_id, soloSinEntidad }, sqlArg);
   const { resultado } = construirEstadoResultados(cuentas);
   return construirBalanceGeneral(cuentas, resultado);
 }

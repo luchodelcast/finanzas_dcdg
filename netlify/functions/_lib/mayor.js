@@ -62,7 +62,7 @@ export async function mayorCuenta({ cuenta, desde, hasta, entidad_id }, sqlArg) 
 }
 
 /** Balance de Comprobación: agrega todas las cuentas con movimiento en el rango. */
-export async function balanceComprobacion({ desde, hasta, entidad_id }, sqlArg) {
-  const filas = await queryComprobacion({ desde, hasta, entidad_id }, sqlArg);
+export async function balanceComprobacion({ desde, hasta, entidad_id, soloSinEntidad }, sqlArg) {
+  const filas = await queryComprobacion({ desde, hasta, entidad_id, soloSinEntidad }, sqlArg);
   return construirComprobacion(filas);
 }

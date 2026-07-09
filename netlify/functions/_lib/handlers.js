@@ -33,6 +33,7 @@ import { construirApertura } from './apertura.js';
 import { contabilizarMovimiento, contabilizarIngreso } from './contabilizar.js';
 import { mayorCuenta, balanceComprobacion } from './mayor.js';
 import { estadoResultados, balanceGeneral } from './estados.js';
+import { patrimonioPorPersona, miPatrimonio } from './patrimonio.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
@@ -592,6 +593,48 @@ export async function pwaBalanceGeneralHandler(req) {
   try {
     const r = await balanceGeneral({ fecha: g('fecha'), entidad_id: g('entidad_id') });
     if (g('formato') === 'csv') return csv('balance-general.csv', csvBalanceGeneral(r));
+    return ok({ ok: true, ...r });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Patrimonio individual (T7 filtrado por dueño, issue #115). Auth Google
+ * (equipo financiero, solo lectura).
+ *   GET /api/pwa-patrimonio?fecha= → Balance General de Luis, Carolina, el
+ *   fondo/bolsillo Común (asientos sin dueño individual) y el consolidado.
+ */
+export async function pwaPatrimonioHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  try {
+    const r = await patrimonioPorPersona({ fecha: url.searchParams.get('fecha') });
+    return ok({ ok: true, ...r });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * "Mi patrimonio" (issue #115): neto y evolución mensual de la persona
+ * logueada (según `usuarios.nombre`), pensada para que cada quien vea crecer
+ * lo suyo. Auth Google (equipo financiero, solo lectura); degrada al
+ * consolidado si el email no está asociado a una persona.
+ *   GET /api/pwa-mi-patrimonio?meses=&fecha=
+ */
+export async function pwaMiPatrimonioHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  try {
+    const r = await miPatrimonio({
+      email: auth.email,
+      meses: url.searchParams.get('meses') || undefined,
+      fecha: url.searchParams.get('fecha') || undefined,
+    });
     return ok({ ok: true, ...r });
   } catch (e) {
     return bad(e.message, 422);

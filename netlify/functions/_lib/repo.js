@@ -499,14 +499,19 @@ export async function queryLineasCuenta({ cuenta, desde, hasta, entidad_id, limi
       limit $${params.length}`, params);
 }
 
-/** Σdébito/Σcrédito por cuenta en un rango, con su naturaleza — Balance de Comprobación (T5). */
-export async function queryComprobacion({ desde, hasta, entidad_id } = {}, sqlArg) {
+/**
+ * Σdébito/Σcrédito por cuenta en un rango, con su naturaleza — Balance de
+ * Comprobación (T5). `soloSinEntidad` filtra los asientos sin dueño individual
+ * (bolsillo "Común", #115) — tiene prioridad sobre `entidad_id` si ambos llegan.
+ */
+export async function queryComprobacion({ desde, hasta, entidad_id, soloSinEntidad } = {}, sqlArg) {
   const sql = sqlArg || await getSql();
   const params = [];
   const cond = [];
   if (desde) { params.push(desde); cond.push(`a.fecha >= $${params.length}`); }
   if (hasta) { params.push(hasta); cond.push(`a.fecha <= $${params.length}`); }
-  if (entidad_id) { params.push(entidad_id); cond.push(`a.entidad_id = $${params.length}`); }
+  if (soloSinEntidad) { cond.push(`a.entidad_id is null`); }
+  else if (entidad_id) { params.push(entidad_id); cond.push(`a.entidad_id = $${params.length}`); }
   const where = cond.length ? `where ${cond.join(' and ')}` : '';
   return sql.query(
     `select p.codigo, p.nombre, p.clase, p.naturaleza,
@@ -1144,6 +1149,27 @@ export async function getUsuarioRolPorEmail(email, sqlArg) {
       [correo]
     );
     return rows[0] ? rows[0].rol : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Nombre (`usuarios.nombre`) del email, o null (mismo criterio de nunca-lanza
+ * que `getUsuarioRolPorEmail`) — usado por "Mi patrimonio" (#115) para saber
+ * a qué entidad (Luis/Carolina) corresponde la sesión.
+ */
+export async function getUsuarioNombrePorEmail(email, sqlArg) {
+  const correo = String(email || '').toLowerCase().trim();
+  if (!correo) return null;
+  try {
+    await ensureUsuariosSchema(sqlArg);
+    const sql = sqlArg || await getSql();
+    const rows = await sql.query(
+      'select nombre from usuarios where lower(email) = $1 and activo = true limit 1',
+      [correo]
+    );
+    return rows[0] ? rows[0].nombre : null;
   } catch (_) {
     return null;
   }
