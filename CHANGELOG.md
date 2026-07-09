@@ -10,7 +10,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar E] Metas financieras (emergencia/retiro/educación) +
-  pensión de Carolina** (issue #117, `auto-ok`, PR pendiente): nuevo módulo de
+  pensión de Carolina** (issue #117, `auto-ok`, PR #127): nuevo módulo de
   metas/objetivos con barra de progreso (tabla `metas`, DDL idempotente en
   runtime). Metas semilla creadas automáticamente la primera vez (Fondo de
   emergencia, Retiro, Educación de los hijos, Pensión/ahorro voluntario de
@@ -22,6 +22,34 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
   cuentas) y ver la lista con su avance. Escritura solo `owner`, lectura para
   el equipo. Aditivo puro, solo lectura sobre asientos existentes. `npm test`
   (308/308) + `npm run build` en verde → auto-merge. ✅
+- 🤖 **Transferencias entre monedas (USD↔COP), modelo pragmático de dos patas**
+  (issue #121, `auto-ok`): una transferencia ahora puede llevar `monto_destino`/
+  `moneda_destino` opcionales (lo que realmente llegó al destino), además de
+  `monto`/`moneda` de siempre. La contabilización (`_lib/contabilizar.js`,
+  `cuadreTransferencia`) usa el monto de la pata que ya está en COP para ambos
+  renglones del asiento (siempre cuadra) y deriva la tasa implícita
+  (`monto_destino_COP / monto_origen`), sin formalizar diferencia en cambio.
+  Pantalla PWA "Transferencia" con campos opcionales de monto/moneda destino y
+  vista previa de la tasa. Retrocompatible: transferencias de una sola moneda
+  siguen igual (`monto_destino`/`moneda_destino` quedan `null`). Aditivo (DDL
+  idempotente en runtime: `movimientos.monto_destino`/`moneda_destino`); no se
+  transforma nada existente. `npm test` (304/304) + `npm run build` en verde →
+  auto-merge. ✅
+
+## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar G] Cierre del mes — ritual de revisión de la pareja**
+  (issue #118, `auto-ok`, PR pendiente): nueva pantalla PWA **"🗓️ Cierre del
+  mes"** que en una sola vista consolida, por persona, el ingreso del mes, lo
+  aportado al fondo común vs. su cuota (#113), su patrimonio neto y variación
+  vs. el mes anterior (#115), más el bolsillo Común y el consolidado familiar
+  — solo lectura, sin recalcular nada (reusa `reporteAportesHogar` y
+  `patrimonioPorPersona`/`evolucionPatrimonio`). Metas (#117) se muestra si
+  ya está fusionado, y degrada con gracia si no. Nuevo endpoint
+  `GET/POST /api/pwa-cierre-mes` (GET = resumen; POST `enviar_resumen`
+  intenta, opcionalmente, que SilvIA le mande el resumen por WhatsApp vía
+  `AUTOBUILD_NOTIFY_URL` — sin configurar, degrada con un mensaje en vez de
+  fallar). Aditivo, solo lectura sobre datos existentes, sin esquema nuevo.
+  `npm test` (294/294) + `npm run build` en verde → auto-merge. ✅
 
 ## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar D] Préstamos entre personas integrados a la partida

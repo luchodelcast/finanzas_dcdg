@@ -39,6 +39,8 @@ import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
 import { reporteAportesHogar, registrarAporteHogar } from './aportes-hogar.js';
+import { cierreDelMes, armarResumenTexto } from './cierre-mes.js';
+import { notificarSilvia } from './silvia-notify.js';
 import {
   listPagosFijos, queryPagosEstadoMes, insertPagoFijo, updatePagoFijo,
   upsertPagoEstado, desmarcarPagoEstado,
@@ -690,6 +692,45 @@ export async function pwaMetasHandler(req) {
       entidad_id: body.entidad_id ? Number(body.entidad_id) : null, notas: body.notas,
     });
     return ok(r);
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * "Cierre del mes" (issue #118, Contab. familiar G). Auth Google (equipo
+ * financiero, solo lectura). Consolida ingresos/aportes (#113), patrimonio
+ * (#115) y metas (#117 si está) del periodo, con comparativo vs. el mes
+ * anterior — no recalcula nada, reusa lo que ya calculan esos módulos.
+ *   GET  /api/pwa-cierre-mes?periodo=&fecha= → el resumen.
+ *   POST /api/pwa-cierre-mes { accion: 'enviar_resumen', periodo?, fecha? }
+ *        → intenta mandarle el resumen a la pareja por WhatsApp (SilvIA);
+ *        opcional, degrada con gracia si no está configurado.
+ */
+export async function pwaCierreMesHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    try {
+      const r = await cierreDelMes({
+        periodo: url.searchParams.get('periodo') || undefined,
+        fecha: url.searchParams.get('fecha') || undefined,
+      });
+      return ok(r);
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+
+  const body = await parseBody(req);
+  if (body.accion !== 'enviar_resumen') return bad('acción no reconocida');
+  try {
+    const cierre = await cierreDelMes({ periodo: body.periodo || undefined, fecha: body.fecha || undefined });
+    const r = await notificarSilvia(armarResumenTexto(cierre));
+    return ok({ ok: true, ...r });
   } catch (e) {
     return bad(e.message, 422);
   }

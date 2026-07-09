@@ -20,7 +20,8 @@ function fakeDb({ cuentasMeta = [] } = {}) {
     if (t.startsWith('insert into movimientos')) {
       // cols: fecha,tipo,categoria,subcategoria,descripcion,monto,moneda,
       //       metodo_pago,quien_pago,tarjeta,cuenta_destino,notas,origen,idempotency_key,
-      //       estado_conciliacion,extracto_linea_id,tipo_gasto,tipo_gasto_persona,tipo_gasto_auto
+      //       estado_conciliacion,extracto_linea_id,tipo_gasto,tipo_gasto_persona,tipo_gasto_auto,
+      //       monto_destino,moneda_destino
       const key = params[13];
       if (movimientos.some((m) => m.idempotency_key === key)) return []; // ON CONFLICT DO NOTHING
       const row = {
@@ -29,6 +30,7 @@ function fakeDb({ cuentasMeta = [] } = {}) {
         metodo_pago: params[7], quien_pago: params[8], tarjeta: params[9],
         cuenta_destino: params[10], notas: params[11], origen: params[12], idempotency_key: key,
         tipo_gasto: params[16], tipo_gasto_persona: params[17], tipo_gasto_auto: params[18],
+        monto_destino: params[19], moneda_destino: params[20],
         creado_en: '2026-07-05T12:00:00Z', actualizado_en: null,
       };
       movimientos.push(row);
@@ -154,6 +156,77 @@ test('transferencia requiere cuenta de origen y destino', async () => {
   await assert.rejects(
     () => registrarMovimiento({ tipo: 'transferencia', monto: 100, cuenta_origen: 'Nequi Luis', fecha: '2026-07-06' }),
     /origen y de destino/,
+  );
+  setSqlForTests(null);
+});
+
+// ---------------------------------------------------------------------------
+// Transferencias entre monedas (#121): dos patas, USD↔COP, modelo pragmático.
+// ---------------------------------------------------------------------------
+test('transferencia USD→COP: guarda monto_destino/moneda_destino y calcula la tasa implícita', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+
+  const r = await registrarMovimiento({
+    tipo: 'transferencia', monto: 3899, moneda: 'USD', monto_destino: 12919299, moneda_destino: 'COP',
+    cuenta_origen: 'DollarApp', cuenta_destino: 'Bancolombia', fecha: '2026-07-09', quien_pago: 'Luis',
+  });
+  assert.equal(r.registrado, true);
+  assert.equal(r.monto_destino, 12919299);
+  assert.equal(r.moneda_destino, 'COP');
+  assert.ok(Math.abs(r.tasa_implicita - 12919299 / 3899) < 1e-9);
+  assert.match(r.mensaje, /tasa implícita/);
+
+  const fila = db._movimientos[0];
+  assert.equal(fila.monto, 3899);
+  assert.equal(fila.moneda, 'USD');
+  assert.equal(fila.monto_destino, 12919299);
+  assert.equal(fila.moneda_destino, 'COP');
+
+  setSqlForTests(null);
+});
+
+test('transferencia de una sola moneda: monto_destino/moneda_destino quedan null (retrocompatible)', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+
+  const r = await registrarMovimiento({
+    tipo: 'transferencia', monto: 100000, moneda: 'COP',
+    cuenta_origen: 'Nequi Luis', cuenta_destino: 'Bancolombia', fecha: '2026-07-09',
+  });
+  assert.equal(r.registrado, true);
+  assert.equal(r.monto_destino, null);
+  assert.equal(r.moneda_destino, null);
+  assert.equal(r.tasa_implicita, null);
+  assert.doesNotMatch(r.mensaje, /tasa implícita/);
+
+  setSqlForTests(null);
+});
+
+test('transferencia con moneda_destino igual a moneda: se trata como una sola moneda', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+
+  const r = await registrarMovimiento({
+    tipo: 'transferencia', monto: 4000, moneda: 'USD', monto_destino: 4000, moneda_destino: 'USD',
+    cuenta_origen: 'DollarApp', cuenta_destino: 'Mercury Delca2 (7730)', fecha: '2026-07-09',
+  });
+  assert.equal(r.registrado, true);
+  assert.equal(r.monto_destino, null);
+  assert.equal(r.moneda_destino, null);
+
+  setSqlForTests(null);
+});
+
+test('transferencia: monto_destino sin moneda_destino (o viceversa) es un error', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+  await assert.rejects(
+    () => registrarMovimiento({
+      tipo: 'transferencia', monto: 100, monto_destino: 400000,
+      cuenta_origen: 'DollarApp', cuenta_destino: 'Bancolombia', fecha: '2026-07-09',
+    }),
+    /monto_destino y moneda_destino/,
   );
   setSqlForTests(null);
 });

@@ -50,6 +50,29 @@ export function cuentaMedio(reglas, metodo, cuentasMeta) {
 
 const EMPTY_CUENTAS_META = new Map();
 
+/**
+ * Cuadre de una transferencia con dos patas potencialmente en monedas
+ * distintas (issue #121, p. ej. USD→COP: DolarApp envía USD, Bancolombia
+ * recibe COP). El libro contable va siempre en COP — modelo pragmático, NO
+ * contabilidad formal de diferencia en cambio:
+ *   - Si no hay `monto_destino`/`moneda_destino`, o coinciden con `moneda`:
+ *     transferencia de una sola moneda de siempre (retrocompatible).
+ *   - Si difieren: se usa el monto de la pata que YA está en COP para ambos
+ *     renglones del asiento (así siempre cuadra Σdébito = Σcrédito), y se
+ *     deriva la tasa implícita = monto_COP / monto_moneda_extranjera.
+ * @returns {{montoCop: number, tasa: number|null}}
+ */
+export function cuadreTransferencia({ monto, moneda, monto_destino, moneda_destino }) {
+  const m = Math.abs(Number(monto) || 0);
+  const mDestino = monto_destino != null ? Math.abs(Number(monto_destino) || 0) : null;
+  const mon = moneda || 'COP';
+  const monDestino = moneda_destino || mon;
+  if (!mDestino || monDestino === mon) return { montoCop: m, tasa: null };
+  if (monDestino === 'COP') return { montoCop: mDestino, tasa: mDestino / m };
+  if (mon === 'COP') return { montoCop: m, tasa: m / mDestino };
+  return { montoCop: m, tasa: null }; // ninguna pata en COP: fuera de alcance del modelo pragmático
+}
+
 /** Arma los renglones del asiento de un MOVIMIENTO (puro). `cuentasMeta` es opcional (#112). */
 export function buildLineasMovimiento(mov, reglas, cuentasMeta = EMPTY_CUENTAS_META) {
   const monto = Math.abs(Number(mov.monto) || 0);
@@ -58,9 +81,10 @@ export function buildLineasMovimiento(mov, reglas, cuentasMeta = EMPTY_CUENTAS_M
     const origen = cuentaMedio(reglas, mov.metodo_pago, cuentasMeta);
     const destino = cuentaMedio(reglas, mov.cuenta_destino, cuentasMeta);
     if (!origen || !destino) throw new Error('faltan cuentas de medio para la transferencia');
+    const { montoCop } = cuadreTransferencia(mov);
     return [
-      { cuenta: destino, debito: monto, credito: 0, movimiento_id: mov.id },
-      { cuenta: origen, debito: 0, credito: monto, movimiento_id: mov.id },
+      { cuenta: destino, debito: montoCop, credito: 0, movimiento_id: mov.id },
+      { cuenta: origen, debito: 0, credito: montoCop, movimiento_id: mov.id },
     ];
   }
   // gasto | pago | factura → débito gasto (por categoría) / crédito medio de pago.

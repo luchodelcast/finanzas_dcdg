@@ -109,6 +109,13 @@ export const materializarBackfill = (body) => request('/api/pwa-backfill', { met
 /** Reporte mensual de aportes IBC por persona (Fase 3.2, solo lectura). */
 export const getAportes = (params = {}) => request('/api/pwa-aportes', { params });
 
+/** "Cierre del mes" (issue #118): resumen consolidado para la cita financiera de la pareja. */
+export const getCierreMes = (params = {}) => request('/api/pwa-cierre-mes', { params });
+
+/** Intenta que SilvIA le mande el resumen del mes por WhatsApp (opcional, puede degradar). */
+export const enviarResumenCierreMes = (body = {}) =>
+  request('/api/pwa-cierre-mes', { method: 'POST', body: { accion: 'enviar_resumen', ...body } });
+
 /** Reporte mensual de aportes al fondo común del hogar (issue #113): por persona, cuota y % cumplido. */
 export const getAportesHogar = (params = {}) => request('/api/pwa-aportes-hogar', { params });
 
