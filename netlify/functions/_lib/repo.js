@@ -84,6 +84,73 @@ export async function updateMovimientoCuenta(id, { metodo_pago, tarjeta }, sqlAr
   return rows[0] || null;
 }
 
+// ---------------------------------------------------------------------------
+// Corrección de movimientos (anular / recategorizar) — aditivo, DDL idempotente.
+// ---------------------------------------------------------------------------
+let _correccionSchemaPromise = null;
+
+/** DDL idempotente: columnas para anular y versionar la contabilización. */
+export async function ensureCorreccionSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!_correccionSchemaPromise) {
+    _correccionSchemaPromise = (async () => {
+      await sql.query('alter table movimientos add column if not exists anulado boolean not null default false', []);
+      await sql.query('alter table movimientos add column if not exists anulado_en timestamptz', []);
+      await sql.query('alter table movimientos add column if not exists anulado_motivo text', []);
+      await sql.query('alter table movimientos add column if not exists contab_version int not null default 1', []);
+    })().catch((e) => { _correccionSchemaPromise = null; throw e; });
+  }
+  return _correccionSchemaPromise;
+}
+
+/** Para tests: olvida la memoización del DDL. */
+export function resetCorreccionSchemaParaTests() { _correccionSchemaPromise = null; }
+
+/** Asiento (con sus líneas) por su idempotency_key. Para poder reversarlo. */
+export async function getAsientoByKey(key, sqlArg) {
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `select a.id, a.fecha, a.descripcion, a.entidad_id,
+            coalesce(json_agg(json_build_object('cuenta', l.cuenta, 'debito', l.debito, 'credito', l.credito) order by l.id)
+                     filter (where l.id is not null), '[]') as lineas
+       from asientos a left join asiento_lineas l on l.asiento_id = a.id
+      where a.idempotency_key = $1
+      group by a.id
+      limit 1`, [key]);
+  return rows[0] || null;
+}
+
+/** Marca un movimiento como anulado (borrado suave — no destruye la fila). */
+export async function anularMovimiento(id, motivo, sqlArg) {
+  const sql = sqlArg || await getSql();
+  await ensureCorreccionSchema(sql);
+  const rows = await sql.query(
+    `update movimientos
+        set anulado = true, anulado_en = now(), anulado_motivo = $2, actualizado_en = now()
+      where id = $1
+      returning *`, [id, motivo || null]);
+  return rows[0] || null;
+}
+
+/** Actualiza los campos editables de un movimiento (recategorizar). */
+export async function updateMovimientoCampos(id, campos, sqlArg) {
+  const sql = sqlArg || await getSql();
+  await ensureCorreccionSchema(sql);
+  const rows = await sql.query(
+    `update movimientos
+        set tipo         = coalesce(nullif($2,''), tipo),
+            categoria    = coalesce($3, categoria),
+            subcategoria = coalesce($4, subcategoria),
+            descripcion  = coalesce(nullif($5,''), descripcion),
+            contab_version = coalesce($6, contab_version),
+            actualizado_en = now()
+      where id = $1
+      returning *`,
+    [id, campos.tipo || '', campos.categoria ?? null, campos.subcategoria ?? null,
+      campos.descripcion || '', campos.contab_version ?? null]);
+  return rows[0] || null;
+}
+
 /** Inserta un movimiento empresa↔familia (adelanto iWin / retiro Delca2). */
 export async function insertEmpresa(e, sqlArg) {
   const sql = sqlArg || await getSql();
@@ -112,10 +179,11 @@ export async function logEvento(tipo, origen, payload, sqlArg) {
 /** Totales y desglose por categoría en un rango. */
 export async function queryResumen({ desde, hasta, categoria, quien }, sqlArg) {
   const sql = sqlArg || await getSql();
+  await ensureCorreccionSchema(sql);
   const params = [desde, hasta];
-  // Excluye transferencias (no son gasto) y limita el total a COP (no se mezclan
-  // monedas). Los movimientos en USD se ven en la lista, no en el total de gasto.
-  let filtro = "fecha >= $1 and fecha <= $2 and coalesce(tipo,'gasto') <> 'transferencia' and coalesce(moneda,'COP') = 'COP'";
+  // Excluye transferencias (no son gasto), anulados, y limita el total a COP (no
+  // se mezclan monedas). Los movimientos en USD se ven en la lista, no en el total.
+  let filtro = "fecha >= $1 and fecha <= $2 and coalesce(tipo,'gasto') <> 'transferencia' and coalesce(moneda,'COP') = 'COP' and not coalesce(anulado,false)";
   if (categoria) { params.push(`%${categoria.toLowerCase()}%`); filtro += ` and lower(categoria) like $${params.length}`; }
   if (quien) { params.push(`%${quien.toLowerCase()}%`); filtro += ` and lower(coalesce(quien_pago,'')) like $${params.length}`; }
   const agg = await sql.query(
@@ -390,9 +458,11 @@ export async function entidadIdPorNombre(nombre, sqlArg) {
 /** Movimientos que todavía no tienen asiento (para recontabilizar en lote). */
 export async function movimientosSinAsiento({ limit = 500 } = {}, sqlArg) {
   const sql = sqlArg || await getSql();
+  await ensureCorreccionSchema(sql);
   return sql.query(
     `select id from movimientos m
       where not exists (select 1 from asiento_lineas l where l.movimiento_id = m.id)
+        and not coalesce(m.anulado,false)
       order by m.fecha, m.id
       limit $1`, [Math.min(Number(limit) || 500, 2000)]);
 }
@@ -985,8 +1055,9 @@ export async function getUsuarioRolPorEmail(email, sqlArg) {
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
 export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();
+  await ensureCorreccionSchema(sql);
   const params = [];
-  const cond = [];
+  const cond = ['not coalesce(anulado,false)'];
   if (desde) { params.push(desde); cond.push(`fecha >= $${params.length}`); }
   if (hasta) { params.push(hasta); cond.push(`fecha <= $${params.length}`); }
   if (categoria) { params.push(`%${categoria.toLowerCase()}%`); cond.push(`lower(categoria) like $${params.length}`); }
