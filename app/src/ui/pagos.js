@@ -17,6 +17,7 @@ let _wired = false;
 let _anio = null;
 let _mes = null;
 let _gestionAbierta = false;
+let _pagos = []; // último catálogo cargado (para prellenar el monto al marcar)
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -30,10 +31,17 @@ function filaPagoHTML(p) {
   const accion = p.estado === 'pagado'
     ? `<button class="btn btn-s" data-act="pgDesmarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Desmarcar</button>`
     : `<button class="btn btn-p" data-act="pgMarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Marcar pagado</button>`;
+  // En un pago ya marcado se muestra lo REALMENTE pagado (monto_pagado); si aún
+  // no se registró un valor real, se muestra el presupuesto. Cuando el real
+  // difiere del presupuesto se anota el presupuesto en pequeño como referencia.
+  const pagadoReal = p.estado === 'pagado' && p.monto_pagado != null ? Number(p.monto_pagado) : null;
+  const montoMostrar = pagadoReal != null ? pagadoReal : Number(p.monto) || 0;
+  const refPtto = pagadoReal != null && pagadoReal !== (Number(p.monto) || 0)
+    ? `<div style="font-size:11px;color:var(--gray-d)">ptto ${formatCOP(p.monto)}</div>` : '';
   return `<div class="row2" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray)">
     <div style="font-size:13px">${icono} ${esc(p.concepto)} <span style="color:var(--gray-d)">· vence día ${esc(p.dia_vencimiento)} · ${esc(p.asumido_por || 'Común')}</span></div>
     <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-weight:600">${formatCOP(p.monto)}</span>
+      <div style="text-align:right"><span style="font-weight:600">${formatCOP(montoMostrar)}</span>${refPtto}</div>
       ${accion}
     </div>
   </div>`;
@@ -86,6 +94,7 @@ async function cargar() {
     V('pg-periodo').textContent = `${String(_mes).padStart(2, '0')}/${_anio}`;
     V('pg-resumen').innerHTML = resumenHTML(r.resumen);
     const pagos = r.pagos || [];
+    _pagos = pagos;
     V('pg-dcdg').innerHTML = grupoHTML('DCDG', pagos.filter((p) => p.familia === 'DCDG'));
     V('pg-dcc').innerHTML = grupoHTML('DCC', pagos.filter((p) => p.familia === 'DCC'));
     if (!pagos.length) V('pg-dcdg').innerHTML = '<div class="empty">Sin pagos fijos activos</div>';
@@ -112,8 +121,19 @@ async function cargarGestion() {
 }
 
 async function marcar(id) {
+  // Preguntar el valor REAL pagado (el presupuesto varía cada mes). Se prellena
+  // con el presupuesto; el usuario lo ajusta a lo que de verdad pagó.
+  const pago = _pagos.find((p) => Number(p.id) === Number(id));
+  const ptto = pago ? Number(pago.monto) || 0 : 0;
+  const entrada = prompt(
+    `¿Cuánto pagaste realmente por "${pago ? pago.concepto : 'este pago'}"?\n\n`
+    + 'Escribe el valor en pesos (sin puntos ni $). El presupuesto va prellenado como referencia.',
+    String(ptto || ''));
+  if (entrada === null) return; // canceló
+  const limpio = String(entrada).replace(/[^\d]/g, '');
+  const monto_pagado = limpio === '' ? (ptto || null) : Number(limpio);
   try {
-    await marcarPagoFijo({ pago_fijo_id: Number(id), anio: _anio, mes: _mes });
+    await marcarPagoFijo({ pago_fijo_id: Number(id), anio: _anio, mes: _mes, monto_pagado });
     await cargar();
   } catch (e) {
     V('pg-msg').textContent = (e.status === 401 || e.status === 403)
