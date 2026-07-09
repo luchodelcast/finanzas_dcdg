@@ -26,11 +26,18 @@ function esc(s) {
 const ICONO_ESTADO = { pagado: '✅', pendiente: '⏳', vencido: '🔴' };
 const ASUMIDO_POR_OPCIONES = ['LADCC', 'CMDG', 'Común'];
 
-function filaPagoHTML(p) {
+const MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+  'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+function filaPagoHTML(p, { navPrev = false } = {}) {
   const icono = ICONO_ESTADO[p.estado] || '⏳';
-  const accion = p.estado === 'pagado'
-    ? `<button class="btn btn-s" data-act="pgDesmarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Desmarcar</button>`
-    : `<button class="btn btn-p" data-act="pgMarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Marcar pagado</button>`;
+  // En la sección "pendientes del mes pasado" el botón NO marca (marcaría el mes
+  // mostrado, no el correcto): lleva a ese mes para pagarlo con su periodo real.
+  const accion = navPrev
+    ? `<button class="btn btn-s" data-act="pgIrMesPrev" style="padding:4px 10px;font-size:12px">Ir a pagar →</button>`
+    : (p.estado === 'pagado'
+      ? `<button class="btn btn-s" data-act="pgDesmarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Desmarcar</button>`
+      : `<button class="btn btn-p" data-act="pgMarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Marcar pagado</button>`);
   // En un pago ya marcado se muestra lo REALMENTE pagado (monto_pagado); si aún
   // no se registró un valor real, se muestra el presupuesto. Cuando el real
   // difiere del presupuesto se anota el presupuesto en pequeño como referencia.
@@ -49,7 +56,7 @@ function filaPagoHTML(p) {
 
 function grupoHTML(titulo, pagos) {
   if (!pagos.length) return '';
-  return `<div style="margin-top:10px"><div style="font-weight:700;font-size:12px;color:var(--gray-d);margin-bottom:4px">${esc(titulo)}</div>${pagos.map(filaPagoHTML).join('')}</div>`;
+  return `<div style="margin-top:10px"><div style="font-weight:700;font-size:12px;color:var(--gray-d);margin-bottom:4px">${esc(titulo)}</div>${pagos.map((p) => filaPagoHTML(p)).join('')}</div>`;
 }
 
 function filaGestionHTML(p) {
@@ -91,7 +98,11 @@ async function cargar() {
   msg.textContent = '';
   try {
     const r = await getPagosDelMes({ anio: _anio, mes: _mes });
-    V('pg-periodo').textContent = `${String(_mes).padStart(2, '0')}/${_anio}`;
+    V('pg-periodo').textContent = `${MESES[_mes]} ${_anio}`;
+    // El botón "Hoy" solo aparece si estamos viendo un mes distinto al actual.
+    const hoy = new Date();
+    const btnHoy = document.querySelector('[data-act="pgMesHoy"]');
+    if (btnHoy) btnHoy.style.display = (_anio === hoy.getFullYear() && _mes === hoy.getMonth() + 1) ? 'none' : '';
     V('pg-resumen').innerHTML = resumenHTML(r.resumen);
     const pagos = r.pagos || [];
     _pagos = pagos;
@@ -101,7 +112,7 @@ async function cargar() {
 
     const pendientes = r.pendientes_mes_anterior || [];
     V('pg-anteriores-card').style.display = pendientes.length ? '' : 'none';
-    V('pg-anteriores').innerHTML = pendientes.map(filaPagoHTML).join('');
+    V('pg-anteriores').innerHTML = pendientes.map((p) => filaPagoHTML(p, { navPrev: true })).join('');
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
       ? 'Inicia sesión con Google (equipo financiero) para ver los pagos del mes.'
@@ -251,6 +262,26 @@ function toggleGestion() {
   if (_gestionAbierta) cargarGestion();
 }
 
+/** Avanza/retrocede el mes mostrado (con rollover de año) y recarga. */
+async function cambiarMes(delta) {
+  let m = _mes + delta;
+  let a = _anio;
+  if (m < 1) { m = 12; a -= 1; } else if (m > 12) { m = 1; a += 1; }
+  _mes = m; _anio = a;
+  V('pg-msg').textContent = '';
+  await cargar();
+  if (_gestionAbierta) cargarGestion();
+}
+
+async function irHoy() {
+  const hoy = new Date();
+  _anio = hoy.getFullYear();
+  _mes = hoy.getMonth() + 1;
+  V('pg-msg').textContent = '';
+  await cargar();
+  if (_gestionAbierta) cargarGestion();
+}
+
 /** Llamado por main.js al navegar a la pantalla de Pagos del mes. */
 export async function renderPagos() {
   const hoy = new Date();
@@ -269,6 +300,9 @@ export async function renderPagos() {
       else if (act === 'pgToggleActivo') toggleActivo(id, activo);
       else if (act === 'pgCrear') crear();
       else if (act === 'pgToggleGestion') toggleGestion();
+      else if (act === 'pgMesPrev' || act === 'pgIrMesPrev') cambiarMes(-1);
+      else if (act === 'pgMesNext') cambiarMes(1);
+      else if (act === 'pgMesHoy') irHoy();
     });
   }
 }
