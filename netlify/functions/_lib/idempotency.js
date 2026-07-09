@@ -43,3 +43,17 @@ export function deriveIngresoKey(i = {}) {
   const base = `ing|${i.entidad_id}|${fecha}|${monto}|${concepto}|${i.cedula || ''}`;
   return createHash('sha256').update(base).digest('hex').slice(0, 40);
 }
+
+/**
+ * Llave de idempotencia de un APORTE al fondo común del hogar (issue #113).
+ * @param {{ entidad_id, fecha, monto, metodo_pago?, idempotency_key? }} a
+ * @returns {string}
+ */
+export function deriveAporteHogarKey(a = {}) {
+  if (a.idempotency_key) return String(a.idempotency_key).slice(0, 80);
+  const fecha = String(a.fecha || '').slice(0, 10);
+  const monto = Math.round(Number(a.monto) || 0);
+  const metodo = normalize(a.metodo_pago).slice(0, 16);
+  const base = `aporte|${a.entidad_id}|${fecha}|${monto}|${metodo}`;
+  return createHash('sha256').update(base).digest('hex').slice(0, 40);
+}

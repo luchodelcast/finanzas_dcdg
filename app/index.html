@@ -638,6 +638,37 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
+<!-- ── FONDO COMÚN DEL HOGAR (Contab. familiar A, issue #113) ── -->
+<div class="scr" id="scr-aportes-hogar">
+  <div class="card">
+    <div class="card-ttl">Registrar aporte al fondo</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Quién aporta</label><select id="ah-n-entidad"></select></div>
+      <div class="fld"><label>Monto</label><input type="number" id="ah-n-monto" placeholder="0" inputmode="numeric"></div>
+    </div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Fecha</label><input type="date" id="ah-n-fecha"></div>
+      <div class="fld"><label>Cuenta de origen</label><select id="ah-n-metodo"></select></div>
+    </div>
+    <div class="fld"><label>Notas (opcional)</label><input type="text" id="ah-n-notas" placeholder="Ej: aporte de julio"></div>
+    <div id="ah-n-msg" style="font-size:12px;margin-top:6px;font-weight:600"></div>
+    <button class="btn btn-p" data-act="ahRegistrar" style="margin-top:8px">＋ Registrar aporte</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Reporte del mes</div>
+    <div style="font-size:12px;color:var(--gray-d);margin-bottom:6px">
+      La cuota sugerida reparte lo ya aportado por la familia este mes en proporción al ingreso de cada quien.
+    </div>
+    <div id="ah-msg" style="font-size:12px;margin-bottom:8px;font-weight:600"></div>
+    <div id="ah-reporte"><div class="empty">Cargando…</div></div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Aportes de este mes</div>
+    <div id="ah-lista"></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
 <!-- ── SOLICITUDES DE MEJORAS (Nocturno 7/7, issue #78) ── -->
 <div class="scr" id="scr-solicitudes">
   <div class="card">
@@ -987,6 +1018,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <div class="mas-group">
     <div class="mas-group-ttl">Familia</div>
     <button class="mas-item" data-go="prestamos"><div class="mas-ico">🤝</div><div class="mas-txt"><strong>Préstamos</strong><span>Luis ↔ Carolina</span></div></button>
+    <button class="mas-item" data-go="aportes-hogar"><div class="mas-ico">🏡</div><div class="mas-txt"><strong>Fondo común</strong><span>Aportes al hogar y cuota</span></div></button>
     <button class="mas-item" data-go="aportes"><div class="mas-ico">🧮</div><div class="mas-txt"><strong>Aportes IBC</strong><span>Seguridad social por persona</span></div></button>
     <button class="mas-item" data-go="solicitudes"><div class="mas-ico">💡</div><div class="mas-txt"><strong>Pedir una mejora</strong><span>Sugerencias para la app</span></div></button>
   </div>

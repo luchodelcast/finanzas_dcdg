@@ -19,7 +19,7 @@ import {
   insertMovimiento, getExtractoLinea, marcarLineaMaterializada,
   listCuentasMeta, upsertCuentaMeta,
 } from './repo.js';
-import { deriveIngresoKey } from './idempotency.js';
+import { deriveIngresoKey, deriveAporteHogarKey } from './idempotency.js';
 import { registrarCuenta, listCuentas } from './cuentas.js';
 import { clasificar } from './classify.js';
 import { resolvePwaUser, verifyGoogleIdToken } from './google-auth.js';
@@ -36,6 +36,7 @@ import { estadoResultados, balanceGeneral } from './estados.js';
 import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
+import { reporteAportesHogar, registrarAporteHogar } from './aportes-hogar.js';
 import {
   listPagosFijos, queryPagosEstadoMes, insertPagoFijo, updatePagoFijo,
   upsertPagoEstado, desmarcarPagoEstado,
@@ -996,6 +997,47 @@ export async function pwaAportesHandler(req) {
   const g = (k) => url.searchParams.get(k) || body[k];
   try {
     return ok(await reporteAportes({ periodo: g('periodo') }));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Fondo común del hogar (issue #113, Contab. familiar A, `auto-ok`). Auth Google.
+ *   GET  /api/pwa-aportes-hogar?periodo= → reporte del mes: quién aportó cuánto,
+ *        su cuota proporcional (según ingreso) y % cumplido (lectura, equipo).
+ *   POST /api/pwa-aportes-hogar { entidad_id, fecha, monto, moneda?, metodo_pago?, notas? }
+ *        → registra un aporte y lo contabiliza. SOLO owners.
+ */
+export async function pwaAportesHogarHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    try {
+      return ok(await reporteAportesHogar({ periodo: url.searchParams.get('periodo') }));
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar aportes al fondo común.', 403);
+
+  const body = await parseBody(req);
+  const entidad_id = Number(body.entidad_id);
+  if (!entidad_id) return bad('entidad requerida');
+  const monto = Number(body.monto);
+  if (!(monto > 0)) return bad('monto inválido');
+  const fecha = String(body.fecha || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+  try {
+    const idempotency_key = deriveAporteHogarKey({ entidad_id, fecha, monto, metodo_pago: body.metodo_pago, idempotency_key: body.idempotency_key });
+    const r = await registrarAporteHogar({
+      entidad_id, fecha, monto, moneda: body.moneda, metodo_pago: body.metodo_pago, notas: body.notas, idempotency_key,
+    });
+    return ok(r);
   } catch (e) {
     return bad(e.message, 422);
   }
