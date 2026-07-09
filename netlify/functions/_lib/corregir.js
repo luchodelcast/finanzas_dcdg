@@ -64,7 +64,7 @@ export async function recategorizarMovimiento(id, campos, sqlArg) {
   const nver = ver + 1;
   const row = await updateMovimientoCampos(id, {
     tipo: campos.tipo, categoria: campos.categoria, subcategoria: campos.subcategoria,
-    descripcion: campos.descripcion, contab_version: nver,
+    descripcion: campos.descripcion, fecha: iso(campos.fecha), contab_version: nver,
   }, sqlArg);
   // Re-contabiliza con la nueva versión (best-effort, igual que la captura: si el
   // nuevo tipo/categoría no mapea a una regla, queda actualizado sin asiento).

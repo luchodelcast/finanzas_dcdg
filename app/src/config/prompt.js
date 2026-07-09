@@ -43,7 +43,7 @@ TARJETAS DÉBITO: Si ves los últimos 4 dígitos de una tarjeta en el comprobant
 TRANSFERENCIAS propias (entre cuentas LADCC/CMDG): marcar como Personal LADCC o Personal CMDG según quién paga.
 Pagos explícitamente de Carolina: cc = CMDG.
 
-FECHA: si no ves fecha, usa hoy ${hoy}.
+FECHA: en Colombia las fechas se escriben DD/MM/AAAA (día primero). Ej: "09/07/2026" = 9 de julio de 2026 (NO 7 de septiembre). "01/12/2026" = 1 de diciembre. Devuelve SIEMPRE "fecha" en formato ISO AAAA-MM-DD. Si no ves fecha, usa hoy ${hoy}.
 MONEDA: $ sin símbolo = COP. $ con "USD" o "dólares" = USD.
 BAJO UMBRAL: si monto < 10000 COP, bajo_umbral = true.
 CONFIANZA: "alta" si la regla es exacta, "media" si infieres por contexto, "baja" si no puedes determinar.

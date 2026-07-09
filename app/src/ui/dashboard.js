@@ -179,12 +179,16 @@ async function load() {
 
 /** Anular o recategorizar un movimiento (solo owners). MVP con prompt/confirm. */
 async function corregir(id) {
-  const r = (prompt('Corregir movimiento:\n\n• Escribe "anular" para anularlo (se reversa su asiento contable).\n• O escribe una nueva CATEGORÍA para recategorizarlo.') || '').trim();
+  const r = (prompt('Corregir movimiento:\n\n• Escribe "anular" para anularlo (se reversa su asiento contable).\n• Escribe "fecha AAAA-MM-DD" para corregir la fecha (ej: fecha 2026-07-09).\n• O escribe una nueva CATEGORÍA para recategorizarlo.') || '').trim();
   if (!r) return;
   try {
     if (r.toLowerCase() === 'anular') {
       if (!confirm('¿Anular este movimiento? Se reversa su asiento; la fila no se borra (queda como anulada).')) return;
       await anularMovimiento(Number(id));
+    } else if (/^fecha\s+/i.test(r)) {
+      const f = r.replace(/^fecha\s+/i, '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) { alert('Fecha inválida. Usa el formato AAAA-MM-DD, ej: 2026-07-09.'); return; }
+      await recategorizarMovimiento({ id: Number(id), fecha: f });
     } else {
       await recategorizarMovimiento({ id: Number(id), categoria: r });
     }

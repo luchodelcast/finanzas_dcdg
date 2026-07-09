@@ -9,6 +9,16 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09
+- **Fechas colombianas (DD/MM) y corrección de fecha de un movimiento**: un
+  recibo de agua pagado el **9 de julio** (`09/07/2026`) quedó registrado como
+  **7 de septiembre** (`2026-09-07`) porque el clasificador leía la fecha como
+  MM/DD (formato de EE. UU.) en vez de DD/MM (Colombia); por eso no aparecía en
+  el periodo. El prompt (`config/prompt.js`) ahora instruye explícitamente que
+  las fechas de recibos colombianos son **DD/MM/AAAA** y deben devolverse en ISO.
+  Además, el "Corregir" del panel ahora permite **corregir la fecha** de un
+  movimiento (escribiendo `fecha AAAA-MM-DD`): el backend
+  (`repo.updateMovimientoCampos` + `corregir.recategorizarMovimiento`) actualiza
+  la fecha y re-contabiliza el asiento con la fecha correcta. ✅
 - **Taxonomía de categorías completa y alineada (Excel maestro)**: el
   desplegable del formulario (`config/categories.js`) no tenía **Servicios
   Públicos** (ni Vivienda, Seguros/Medicina Prepagada, Créditos y Tarjetas), así
