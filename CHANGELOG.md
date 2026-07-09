@@ -8,6 +8,22 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar 0] Dueño/bolsillo por cuenta (`cuentas_meta`)** (issue
+  #112, `auto-ok`, PR #122): la contabilización automática agrupaba cada
+  cuenta a una cuenta PUC solo por palabra clave del nombre
+  (`efectivo`/`crédito`/`tc`), así que no distinguía el efectivo de Luis de la
+  tarjeta de Carolina, y una tarjeta sin esas palabras (p. ej. "Serfinanza")
+  se contabilizaba mal (agrupada en `1110`). Ahora una tabla nueva
+  `cuentas_meta` (dueño/bolsillo/cuenta PUC explícita por cuenta, DDL
+  idempotente en runtime, sin `.sql` manual) le da prioridad a la cuenta PUC
+  explícita cuando existe, y cae a la heurística de siempre cuando no —
+  llave que habilita el resto de la épica de contabilidad familiar (#111,
+  #113–#118). UI mínima en "Saldos iniciales" para fijar los metadatos de
+  cada cuenta (solo Luis/Carolina). Aditivo puro (candado de `AUTOBUILD.md`
+  respetado igual). `npm test` (251/251) + `npm run build` en verde →
+  auto-merge. ✅
+
 ## 2026-07-09
 - **Corregir movimientos: anular y recategorizar** (botón "Corregir" en el
   Dashboard, solo Luis/Carolina): hasta ahora la captura y SilvIA solo sabían
