@@ -20,13 +20,16 @@ import { normalize } from '../../../app/src/config/rules.js';
 export async function insertMovimiento(m, sqlArg) {
   const sql = sqlArg || await getSql();
   await ensureTipoGastoSchema(sql);
+  await ensureTransferenciaMonedaSchema(sql);
   const cols = ['fecha', 'tipo', 'categoria', 'subcategoria', 'descripcion', 'monto', 'moneda',
     'metodo_pago', 'quien_pago', 'tarjeta', 'cuenta_destino', 'notas', 'origen', 'idempotency_key',
-    'estado_conciliacion', 'extracto_linea_id', 'tipo_gasto', 'tipo_gasto_persona', 'tipo_gasto_auto'];
+    'estado_conciliacion', 'extracto_linea_id', 'tipo_gasto', 'tipo_gasto_persona', 'tipo_gasto_auto',
+    'monto_destino', 'moneda_destino'];
   const vals = [m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto, m.moneda || 'COP',
     m.metodo_pago, m.quien_pago, m.tarjeta, m.cuenta_destino || null, m.notas, m.origen, m.idempotency_key,
     m.estado_conciliacion || 'provisional', m.extracto_linea_id || null,
-    m.tipo_gasto || 'hogar', m.tipo_gasto_persona || null, m.tipo_gasto_auto === undefined ? true : !!m.tipo_gasto_auto];
+    m.tipo_gasto || 'hogar', m.tipo_gasto_persona || null, m.tipo_gasto_auto === undefined ? true : !!m.tipo_gasto_auto,
+    m.monto_destino || null, m.moneda_destino || null];
   const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
   const ins = await sql.query(
     `insert into movimientos (${cols.join(', ')}) values (${ph})
@@ -132,6 +135,29 @@ export async function ensureTipoGastoSchema(sqlArg) {
 
 /** Para tests: olvida la memoización del DDL. */
 export function resetTipoGastoSchemaParaTests() { _tipoGastoSchemaPromise = null; }
+
+// ---------------------------------------------------------------------------
+// Transferencias entre monedas (issue #121, `auto-ok`) — aditivo, DDL
+// idempotente en runtime, mismo patrón que ensureTipoGastoSchema. Una
+// transferencia puede llevar la segunda pata (lo que realmente llegó al
+// destino) cuando origen y destino están en monedas distintas (USD↔COP).
+// ---------------------------------------------------------------------------
+let _transferenciaMonedaSchemaPromise = null;
+
+/** DDL idempotente: columnas para la pata de destino de una transferencia cross-currency. */
+export async function ensureTransferenciaMonedaSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!_transferenciaMonedaSchemaPromise) {
+    _transferenciaMonedaSchemaPromise = (async () => {
+      await sql.query('alter table movimientos add column if not exists monto_destino numeric(14,2)', []);
+      await sql.query('alter table movimientos add column if not exists moneda_destino text', []);
+    })().catch((e) => { _transferenciaMonedaSchemaPromise = null; throw e; });
+  }
+  return _transferenciaMonedaSchemaPromise;
+}
+
+/** Para tests: olvida la memoización del DDL. */
+export function resetTransferenciaMonedaSchemaParaTests() { _transferenciaMonedaSchemaPromise = null; }
 
 /** Asiento (con sus líneas) por su idempotency_key. Para poder reversarlo. */
 export async function getAsientoByKey(key, sqlArg) {

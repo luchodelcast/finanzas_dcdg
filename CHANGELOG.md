@@ -9,6 +9,21 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **Transferencias entre monedas (USD↔COP), modelo pragmático de dos patas**
+  (issue #121, `auto-ok`): una transferencia ahora puede llevar `monto_destino`/
+  `moneda_destino` opcionales (lo que realmente llegó al destino), además de
+  `monto`/`moneda` de siempre. La contabilización (`_lib/contabilizar.js`,
+  `cuadreTransferencia`) usa el monto de la pata que ya está en COP para ambos
+  renglones del asiento (siempre cuadra) y deriva la tasa implícita
+  (`monto_destino_COP / monto_origen`), sin formalizar diferencia en cambio.
+  Pantalla PWA "Transferencia" con campos opcionales de monto/moneda destino y
+  vista previa de la tasa. Retrocompatible: transferencias de una sola moneda
+  siguen igual (`monto_destino`/`moneda_destino` quedan `null`). Aditivo (DDL
+  idempotente en runtime: `movimientos.monto_destino`/`moneda_destino`); no se
+  transforma nada existente. `npm test` (304/304) + `npm run build` en verde →
+  auto-merge. ✅
+
+## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar G] Cierre del mes — ritual de revisión de la pareja**
   (issue #118, `auto-ok`, PR pendiente): nueva pantalla PWA **"🗓️ Cierre del
   mes"** que en una sola vista consolida, por persona, el ingreso del mes, lo

@@ -717,6 +717,24 @@ function initTransfer() {
   fillTransferAccts();
   V('tr-fecha').value = today();
   V('tr-msg').textContent = '';
+  V('tr-monto-destino').value = '';
+  V('tr-moneda-destino').value = '';
+  V('tr-tasa').textContent = '';
+}
+
+/** Vista previa de la tasa implícita cuando la moneda destino difiere de la de origen (#121). */
+function actualizarTasaTransfer() {
+  const tasaEl = V('tr-tasa');
+  const monto = parseFloat(V('tr-monto').value) || 0;
+  const moneda = V('tr-moneda').value;
+  const montoDestino = parseFloat(V('tr-monto-destino').value) || 0;
+  const monedaDestino = V('tr-moneda-destino').value;
+  if (!monedaDestino || monedaDestino === moneda || !(monto > 0) || !(montoDestino > 0)) {
+    tasaEl.textContent = '';
+    return;
+  }
+  const tasa = monedaDestino === 'COP' ? montoDestino / monto : monto / montoDestino;
+  tasaEl.textContent = `Tasa implícita: ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 4 })}`;
 }
 
 async function registrarTransfer() {
@@ -728,10 +746,17 @@ async function registrarTransfer() {
   const cDestino = V('tr-destino').value;
   const desc = V('tr-desc').value.trim();
   const quien = V('tr-who').value;
+  const montoDestino = parseFloat(V('tr-monto-destino').value) || 0;
+  const monedaDestino = V('tr-moneda-destino').value;
   const msg = V('tr-msg');
   if (!(monto > 0)) { msg.textContent = 'Ingresa un monto válido.'; msg.style.color = 'var(--red)'; return; }
   if (!cOrigen || !cDestino || cOrigen === cDestino) {
     msg.textContent = 'Elige cuentas de origen y destino distintas.'; msg.style.color = 'var(--red)'; return;
+  }
+  // Dos patas en monedas distintas (#121): solo se envían si de verdad difieren.
+  const dosPatas = monedaDestino && monedaDestino !== moneda;
+  if (dosPatas && !(montoDestino > 0)) {
+    msg.textContent = 'Ingresa el monto recibido en destino.'; msg.style.color = 'var(--red)'; return;
   }
   go('proc');
   V('proc-msg').textContent = 'Registrando transferencia…';
@@ -739,12 +764,15 @@ async function registrarTransfer() {
     await apiRegistrar({
       tipo: 'transferencia', fecha, monto, moneda,
       cuenta_origen: cOrigen, cuenta_destino: cDestino, descripcion: desc, quien_pago: quien,
+      ...(dosPatas ? { monto_destino: montoDestino, moneda_destino: monedaDestino } : {}),
     });
     const fmt = moneda === 'USD' ? 'USD ' + monto.toLocaleString('en-US') : formatCOP(monto);
     addHistory({ fecha, monto, cat: 'Transferencia', sub: '', desc: desc || `${cOrigen} → ${cDestino}`, quien, ts: new Date().toISOString() });
     renderHomeH();
     V('ok-amt').textContent = fmt;
-    V('ok-det').textContent = `Transferencia · ${cOrigen} → ${cDestino}`;
+    V('ok-det').textContent = dosPatas
+      ? `Transferencia · ${cOrigen} → ${cDestino} (${monedaDestino} ${montoDestino.toLocaleString('es-CO')})`
+      : `Transferencia · ${cOrigen} → ${cDestino}`;
     go('ok');
   } catch (e) {
     if (esErrorAuth(e)) return;
@@ -793,6 +821,14 @@ function wireEvents() {
       if (el) el.addEventListener('change', actualizarCET);
     });
   V('cet-tipo-dest').addEventListener('change', onCetTipoDest);
+
+  // Transferencia entre monedas (#121): vista previa de la tasa implícita.
+  ['tr-monto', 'tr-moneda', 'tr-monto-destino', 'tr-moneda-destino'].forEach((id) => {
+    const el = V(id);
+    if (!el) return;
+    el.addEventListener('input', actualizarTasaTransfer);
+    el.addEventListener('change', actualizarTasaTransfer);
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────

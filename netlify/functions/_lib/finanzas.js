@@ -24,7 +24,7 @@ import {
   listCuentasMeta,
 } from './repo.js';
 import { mirrorMovimiento, mirrorEmpresa } from './sheet-mirror.js';
-import { indexarCuentasMeta } from './contabilizar.js';
+import { indexarCuentasMeta, cuadreTransferencia } from './contabilizar.js';
 import { inferirTipoGasto } from './tipo-gasto.js';
 import { deriveIdempotencyKey } from './idempotency.js';
 import { clasificar } from './classify.js';
@@ -214,6 +214,11 @@ export async function registrarMovimiento(mov = {}) {
  * clasifica, no corre reglas iWin/Delca2, NO se espeja al Sheet de gastos y NO
  * cuenta en los totales de gasto (el resumen la excluye). Guarda cuenta origen,
  * cuenta destino, moneda e idempotencia.
+ *
+ * Dos patas en monedas distintas (issue #121, modelo pragmático USD↔COP):
+ * `monto_destino`/`moneda_destino` opcionales — lo que realmente llegó al
+ * destino, cuando difiere de `monto`/`moneda` (origen). Retrocompatible: si
+ * no vienen, o coinciden con la moneda de origen, se comporta como siempre.
  */
 async function registrarTransferencia(mov) {
   const monto = mov.monto;
@@ -226,6 +231,16 @@ async function registrarTransferencia(mov) {
   if (!cuentaOrigen || !cuentaDestino) {
     throw new Error('la transferencia requiere cuenta de origen y de destino');
   }
+
+  let montoDestino = mov.monto_destino != null && mov.monto_destino !== '' ? Number(mov.monto_destino) : null;
+  let monedaDestino = mov.moneda_destino ? (String(mov.moneda_destino).toUpperCase() === 'USD' ? 'USD' : 'COP') : null;
+  if (!(montoDestino > 0)) montoDestino = null;
+  if (monedaDestino === moneda) { monedaDestino = null; montoDestino = null; } // misma moneda: nada nuevo que guardar
+  if ((montoDestino && !monedaDestino) || (!montoDestino && monedaDestino)) {
+    throw new Error('monto_destino y moneda_destino de la transferencia deben venir juntos, o ninguno');
+  }
+  const { tasa } = cuadreTransferencia({ monto, moneda, monto_destino: montoDestino, moneda_destino: monedaDestino });
+
   const descripcion = String(mov.descripcion || '').trim()
     || `Transferencia ${cuentaOrigen} → ${cuentaDestino}`;
 
@@ -242,6 +257,7 @@ async function registrarTransferencia(mov) {
     fecha, tipo: 'transferencia', categoria: 'Transferencia', subcategoria: '',
     descripcion, monto, moneda, metodo_pago: cuentaOrigen, quien_pago: titular,
     tarjeta: '', cuenta_destino: cuentaDestino, notas, origen,
+    monto_destino: montoDestino, moneda_destino: monedaDestino,
     idempotency_key: idempotencyKey,
   });
 
@@ -249,16 +265,20 @@ async function registrarTransferencia(mov) {
     return {
       ok: true, registrado: false, ya_existia: true, id: row && row.id, tipo: 'transferencia',
       fecha, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
+      monto_destino: row && row.monto_destino, moneda_destino: row && row.moneda_destino,
       mensaje: `Esa transferencia ya estaba registrada (no la dupliqué).`,
     };
   }
   await logEvento('alta', origen, { id: row.id, tipo: 'transferencia', monto, moneda });
 
+  const detalleDestino = montoDestino ? ` → ${fmtMonto(montoDestino, monedaDestino)}` : '';
+  const detalleTasa = tasa ? ` (tasa implícita ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 4 })})` : '';
   return {
     ok: true, registrado: true, id: row.id, tipo: 'transferencia',
     fecha, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
+    monto_destino: montoDestino, moneda_destino: monedaDestino, tasa_implicita: tasa,
     cuenta_origen: cuentaOrigen, cuenta_destino: cuentaDestino, quien_pago: titular,
-    mensaje: `Transferencia registrada ✅ ${fmtMonto(monto, moneda)} · ${cuentaOrigen} → ${cuentaDestino}.`,
+    mensaje: `Transferencia registrada ✅ ${fmtMonto(monto, moneda)}${detalleDestino} · ${cuentaOrigen} → ${cuentaDestino}${detalleTasa}.`,
   };
 }
 

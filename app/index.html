@@ -479,6 +479,11 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
     <div class="fld"><label>Monto</label><input type="number" class="big-amt" id="tr-monto" placeholder="0" inputmode="numeric"></div>
     <div class="fld"><label>Cuenta origen</label><select id="tr-origen"></select></div>
     <div class="fld"><label>Cuenta destino</label><select id="tr-destino"></select></div>
+    <div class="row2">
+      <div class="fld"><label>Monto recibido en destino (si cambia de moneda)</label><input type="number" id="tr-monto-destino" placeholder="Igual que origen" inputmode="numeric"></div>
+      <div class="fld"><label>Moneda destino</label><select id="tr-moneda-destino"><option value="">(misma)</option><option value="COP">COP</option><option value="USD">USD</option></select></div>
+    </div>
+    <div id="tr-tasa" style="font-size:12px;margin-top:-4px;margin-bottom:8px;color:var(--muted,#888)"></div>
     <div class="fld"><label>Concepto (opcional)</label><input type="text" id="tr-desc" placeholder="Ej: paso de Delca2 a DollarApp"></div>
     <div class="fld"><label>¿Quién la hizo?</label><select id="tr-who"><option value="Luis">Luis</option><option value="Carolina">Carolina</option></select></div>
     <div id="tr-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
