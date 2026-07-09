@@ -16,6 +16,13 @@ test('periodRangeAnterior: mes pasado → dos meses atrás completo', () => {
   assert.equal(r.hasta, '2026-05-31');
 });
 
+test('periodRange: año → cubre todo el año calendario (incluye meses futuros)', () => {
+  const hoy = new Date(2026, 6, 9); // 2026-07-09
+  const r = periodRange('anio', hoy);
+  assert.equal(r.desde, '2026-01-01');
+  assert.equal(r.hasta, '2026-12-31'); // hasta fin de año, no solo hoy → registros futuros mal fechados quedan visibles
+});
+
 test('periodRangeAnterior: año → mismo tramo del año anterior', () => {
   const hoy = new Date(2026, 6, 15); // 2026-07-15
   const r = periodRangeAnterior('anio', hoy);
