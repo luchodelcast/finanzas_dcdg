@@ -9,6 +9,7 @@
 import { getResumen, getMovimientos, anularMovimiento, recategorizarMovimiento } from '../services/finanzas.js';
 import { currentUser } from '../services/auth.js';
 import { formatCOP, formatMoneda } from '../utils/formatters.js';
+import { CATEGORIAS } from '../config/categories.js';
 
 const V = (id) => document.getElementById(id);
 const esOwner = () => (currentUser() || {}).rol === 'owner';
@@ -183,18 +184,22 @@ async function load() {
 
 /** Anular o recategorizar un movimiento (solo owners). MVP con prompt/confirm. */
 async function corregir(id) {
-  const r = (prompt('Corregir movimiento:\n\n• Escribe "anular" para anularlo (se reversa su asiento contable).\n• Escribe "fecha AAAA-MM-DD" para corregir la fecha (ej: fecha 2026-07-09).\n• O escribe una nueva CATEGORÍA para recategorizarlo.') || '').trim();
+  const r = (prompt('Corregir movimiento:\n\n• Escribe "anular" para anularlo (se reversa su asiento contable).\n• Escribe una FECHA (AAAA-MM-DD, ej: 2026-07-09) para corregir la fecha.\n• Escribe una CATEGORÍA válida para recategorizarlo.') || '').trim();
   if (!r) return;
+  const fechaMatch = r.replace(/^fecha\s+/i, '').trim();
   try {
     if (r.toLowerCase() === 'anular') {
       if (!confirm('¿Anular este movimiento? Se reversa su asiento; la fila no se borra (queda como anulada).')) return;
       await anularMovimiento(Number(id));
-    } else if (/^fecha\s+/i.test(r)) {
-      const f = r.replace(/^fecha\s+/i, '').trim();
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) { alert('Fecha inválida. Usa el formato AAAA-MM-DD, ej: 2026-07-09.'); return; }
-      await recategorizarMovimiento({ id: Number(id), fecha: f });
-    } else {
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(fechaMatch)) {
+      // Fecha suelta (con o sin el prefijo "fecha "). Se detecta por el formato
+      // AAAA-MM-DD para que escribir solo la fecha NO se tome como categoría.
+      await recategorizarMovimiento({ id: Number(id), fecha: fechaMatch });
+    } else if (CATEGORIAS.includes(r)) {
       await recategorizarMovimiento({ id: Number(id), categoria: r });
+    } else {
+      alert(`"${r}" no es una categoría válida.\n\nCategorías válidas:\n${CATEGORIAS.join(', ')}\n\n(O escribe "anular", o una fecha AAAA-MM-DD.)`);
+      return;
     }
     load();
   } catch (e) {

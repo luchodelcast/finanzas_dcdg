@@ -9,6 +9,8 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09
+- **"Corregir" reconoce fechas sueltas y valida la categoría (evita el footgun)**: escribir solo `2026-07-09` en el diálogo de Corregir (sin el prefijo `fecha `) lo tomaba como **categoría nueva** — un recibo terminó con la categoría literal "2026-07-09". Ahora el diálogo detecta el formato AAAA-MM-DD y lo trata como corrección de **fecha** (con o sin prefijo), y si el texto no es una categoría válida lo **rechaza** mostrando la lista, en vez de guardar una categoría basura. Solo `dashboard.js`. ✅
+- **Pagos → "Gestionar pagos fijos": etiquetas claras y sin overflow en móvil**: las dos columnas de números no tenían rótulo (no se sabía que la segunda era el **día de vencimiento**) y los campos/botones se salían de la vista en pantallas angostas. Ahora cada campo va etiquetado (**Monto ($)** / **Día de vencimiento**) y la fila envuelve (flex-wrap) para caber en móvil. Solo `pagos.js` + `index.html`. ✅
 - **"Año" cubre todo el año calendario (registros futuros mal fechados dejan de ser invisibles)**: todos los periodos del Panel terminaban en HOY, así que un movimiento fechado por error en un mes futuro (p. ej. el recibo del agua leído como 2026-09-07 en vez de 2026-07-09) **no aparecía en ningún periodo** — ni "Este mes", ni "Mes pasado", ni "Año" (que iba 1 ene → hoy) — y por lo tanto no se podía ni ver ni corregir. Ahora "Año" va del **1 de enero al 31 de diciembre**, de modo que esos registros quedan visibles y se pueden **Corregir → `fecha`** o anular. Solo `dashboard.js` (frontend). ✅
 - **Fechas colombianas (DD/MM) y corrección de fecha de un movimiento**: un
   recibo de agua pagado el **9 de julio** (`09/07/2026`) quedó registrado como

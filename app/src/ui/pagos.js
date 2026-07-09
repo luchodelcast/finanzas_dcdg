@@ -44,13 +44,17 @@ function grupoHTML(titulo, pagos) {
 }
 
 function filaGestionHTML(p) {
-  return `<div class="row2" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray)${p.activo ? '' : ';opacity:.5'}">
-    <div style="font-size:13px">${esc(p.concepto)} <span style="color:var(--gray-d)">(${esc(p.familia)})</span></div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <input type="number" class="pg-e-monto" data-id="${p.id}" value="${p.monto}" style="width:90px;text-align:right" inputmode="numeric">
-      <input type="number" class="pg-e-dia" data-id="${p.id}" value="${p.dia_vencimiento}" style="width:50px;text-align:right" min="1" max="31">
-      <button class="btn btn-p" data-act="pgGuardarEdicion" data-id="${p.id}" style="padding:4px 8px;font-size:12px">Guardar</button>
-      <button class="btn btn-s" data-act="pgToggleActivo" data-id="${p.id}" data-activo="${p.activo}" style="padding:4px 8px;font-size:12px">${p.activo ? 'Desactivar' : 'Activar'}</button>
+  // Bloque vertical con los campos etiquetados (Monto / Día de vencimiento) y una
+  // fila que envuelve (flex-wrap) para que en móvil nada se salga de la vista.
+  return `<div style="padding:10px 0;border-bottom:1px solid var(--gray)${p.activo ? '' : ';opacity:.5'}">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">${esc(p.concepto)} <span style="color:var(--gray-d);font-weight:400">(${esc(p.familia)})</span></div>
+    <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px">
+      <label style="font-size:11px;color:var(--gray-d);display:flex;flex-direction:column;gap:2px">Monto ($)
+        <input type="number" class="pg-e-monto" data-id="${p.id}" value="${p.monto}" style="width:120px;text-align:right" inputmode="numeric"></label>
+      <label style="font-size:11px;color:var(--gray-d);display:flex;flex-direction:column;gap:2px">Día de vencimiento
+        <input type="number" class="pg-e-dia" data-id="${p.id}" value="${p.dia_vencimiento}" style="width:80px;text-align:right" min="1" max="31"></label>
+      <button class="btn btn-p" data-act="pgGuardarEdicion" data-id="${p.id}" style="padding:7px 12px;font-size:12px">Guardar</button>
+      <button class="btn btn-s" data-act="pgToggleActivo" data-id="${p.id}" data-activo="${p.activo}" style="padding:7px 12px;font-size:12px">${p.activo ? 'Desactivar' : 'Activar'}</button>
     </div>
   </div>`;
 }
