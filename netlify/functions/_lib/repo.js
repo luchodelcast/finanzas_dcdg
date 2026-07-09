@@ -926,6 +926,11 @@ async function aplicarPagosFijosSchema(sqlArg) {
     )
   `, []);
   await sql.query('create unique index if not exists pagos_fijos_concepto_familia_uk on pagos_fijos (concepto, familia)', []);
+  // Columnas para casar automáticamente un movimiento con su pago fijo
+  // (categoria/subcategoria) y para saber quién asume el costo (asumido_por,
+  // LADCC/CMDG — del Excel maestro). Idempotente.
+  await sql.query('alter table pagos_fijos add column if not exists subcategoria text', []);
+  await sql.query('alter table pagos_fijos add column if not exists asumido_por text', []);
   await sql.query(`
     create table if not exists pagos_estado (
       id serial primary key,
@@ -980,10 +985,11 @@ export async function insertPagoFijo(p, sqlArg) {
   await ensurePagosFijosSchema(sqlArg);
   const sql = sqlArg || await getSql();
   const rows = await sql.query(
-    `insert into pagos_fijos (concepto, monto, dia_vencimiento, familia, categoria, moneda)
-     values ($1, $2, $3, $4, $5, $6)
+    `insert into pagos_fijos (concepto, monto, dia_vencimiento, familia, categoria, subcategoria, asumido_por, moneda)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)
      returning *`,
-    [p.concepto, Number(p.monto) || 0, Number(p.dia_vencimiento) || 1, p.familia || 'DCDG', p.categoria || null, p.moneda || 'COP']
+    [p.concepto, Number(p.monto) || 0, Number(p.dia_vencimiento) || 1, p.familia || 'DCDG',
+      p.categoria || null, p.subcategoria || null, p.asumido_por || null, p.moneda || 'COP']
   );
   return rows[0];
 }
@@ -998,12 +1004,15 @@ export async function updatePagoFijo(id, patch, sqlArg) {
         monto = coalesce($3, monto),
         dia_vencimiento = coalesce($4, dia_vencimiento),
         categoria = coalesce($5, categoria),
-        activo = coalesce($6, activo)
+        activo = coalesce($6, activo),
+        subcategoria = coalesce($7, subcategoria),
+        asumido_por = coalesce($8, asumido_por)
       where id = $1
       returning *`,
     [id, patch.concepto ?? null, patch.monto != null ? Number(patch.monto) : null,
       patch.dia_vencimiento != null ? Number(patch.dia_vencimiento) : null,
-      patch.categoria ?? null, patch.activo != null ? !!patch.activo : null]
+      patch.categoria ?? null, patch.activo != null ? !!patch.activo : null,
+      patch.subcategoria ?? null, patch.asumido_por ?? null]
   );
   return rows[0] || null;
 }
@@ -1022,6 +1031,46 @@ export async function upsertPagoEstado({ pago_fijo_id, anio, mes, fecha_pago, mo
     [pago_fijo_id, Number(anio), Number(mes), fecha_pago || null, monto_pagado != null ? Number(monto_pagado) : null, movimiento_id || null]
   );
   return rows[0];
+}
+
+/**
+ * Auto-vincula un movimiento con el pago fijo que le corresponde: busca un pago
+ * fijo activo que case por (categoria, subcategoria) del mes del movimiento y,
+ * si ese pago aún no tiene estado ese mes, lo marca **pagado** con el monto real.
+ * Best-effort e idempotente: no-op si no hay match, si ya está marcado, o si el
+ * movimiento no es COP. Devuelve el pago fijo vinculado (o null).
+ */
+export async function autovincularPagoFijo({ movimiento_id, categoria, subcategoria, fecha, monto, moneda }, sqlArg) {
+  if (!categoria || (moneda && moneda !== 'COP')) return null;
+  const d = String(fecha || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  const anio = Number(d.slice(0, 4));
+  const mes = Number(d.slice(5, 7));
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  // Pago fijo activo cuya categoria casa; si el pago tiene subcategoria, debe
+  // coincidir también. Preferimos el que casa por subcategoria exacta.
+  const rows = await sql.query(
+    `select * from pagos_fijos
+       where activo = true and categoria = $1
+         and (subcategoria is null or subcategoria = $2)
+       order by (subcategoria is not distinct from $2) desc, dia_vencimiento
+       limit 1`,
+    [categoria, subcategoria || null]
+  );
+  const pf = rows[0];
+  if (!pf) return null;
+  // Si ya hay estado del mes (pagado manual, etc.), NO lo tocamos.
+  const est = await sql.query(
+    'select 1 from pagos_estado where pago_fijo_id = $1 and anio = $2 and mes = $3',
+    [pf.id, anio, mes]
+  );
+  if (est.length) return null;
+  await upsertPagoEstado(
+    { pago_fijo_id: pf.id, anio, mes, fecha_pago: d, monto_pagado: monto, movimiento_id },
+    sqlArg
+  );
+  return pf;
 }
 
 /** Desmarca un pago (vuelve a pendiente): borra la fila de `pagos_estado` del mes. */

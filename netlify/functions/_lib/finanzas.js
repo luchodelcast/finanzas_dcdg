@@ -22,6 +22,7 @@ import {
   logEvento,
   queryResumen,
   listCuentasMeta,
+  autovincularPagoFijo,
 } from './repo.js';
 import { mirrorMovimiento, mirrorEmpresa } from './sheet-mirror.js';
 import { indexarCuentasMeta, cuadreTransferencia } from './contabilizar.js';
@@ -191,6 +192,15 @@ export async function registrarMovimiento(mov = {}) {
   const emp = await registrarEmpresas(evalMov, { descripcion, titular, monto, fecha, origen, movimiento_id: movId });
   await logEvento('alta', origen, { id: movId, tipo, monto, categoria });
 
+  // Auto-vínculo con pagos fijos (#136): si este gasto casa con un pago fijo del
+  // mes (por categoria/subcategoria), lo marca pagado con el monto real, así el
+  // usuario no tiene que "Marcar pagado" a mano. Best-effort: no bloquea el alta.
+  let pagoFijoVinculado = null;
+  try {
+    const pf = await autovincularPagoFijo({ movimiento_id: movId, categoria, subcategoria, fecha, monto, moneda });
+    if (pf) { pagoFijoVinculado = pf.concepto; await logEvento('pago_fijo_vinculado', origen, { movimiento_id: movId, pago_fijo_id: pf.id, concepto: pf.concepto }); }
+  } catch (_) { /* el auto-vínculo nunca tumba el registro */ }
+
   // Espejo al Sheet (best-effort). Fila A-L como el layout histórico.
   mirrorMovimiento([
     fecha, mesDeISO(fecha), categoria, subcategoria, descripcion, monto,
@@ -205,7 +215,8 @@ export async function registrarMovimiento(mov = {}) {
     metodo_pago: metodo, quien_pago: titular, tarjeta,
     tipo_gasto: tipoGasto.tipo_gasto, tipo_gasto_persona: tipoGasto.tipo_gasto_persona,
     adelanto_empresas: emp.adelanto, retiro_delca2: emp.retiroDelca2,
-    mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${fmtMonto(monto, moneda)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
+    pago_fijo_vinculado: pagoFijoVinculado,
+    mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${fmtMonto(monto, moneda)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}${pagoFijoVinculado ? ` · pago fijo "${pagoFijoVinculado}" marcado como pagado` : ''}.`,
   };
 }
 

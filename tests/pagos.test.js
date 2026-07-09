@@ -5,7 +5,61 @@ import { setSqlForTests } from '../netlify/functions/_lib/db.js';
 import {
   ensurePagosFijosSchema, resetPagosFijosSchemaParaTests, listPagosFijos,
   queryPagosEstadoMes, insertPagoFijo, updatePagoFijo, upsertPagoEstado, desmarcarPagoEstado,
+  autovincularPagoFijo,
 } from '../netlify/functions/_lib/repo.js';
+
+// ---------------------------------------------------------------------------
+// autovincularPagoFijo — casa un movimiento con su pago fijo y lo marca pagado.
+// ---------------------------------------------------------------------------
+function fakeSqlPagoFijo({ pf, estadoExistente = [] }) {
+  const calls = [];
+  const db = {
+    query: async (text, params = []) => {
+      const t = text.replace(/\s+/g, ' ').trim().toLowerCase();
+      calls.push({ t: t.slice(0, 40), params });
+      if (t.startsWith('create table') || t.startsWith('create unique index') || t.startsWith('alter table')) return [];
+      if (t.startsWith('insert into pagos_fijos')) return [];
+      if (t.startsWith('select * from pagos_fijos')) return pf ? [pf] : [];
+      if (t.startsWith('select 1 from pagos_estado')) return estadoExistente;
+      if (t.startsWith('insert into pagos_estado')) return [{ id: 1, pago_fijo_id: params[0], anio: params[1], mes: params[2], estado: 'pagado', monto_pagado: params[5], movimiento_id: params[6] }];
+      return [];
+    },
+  };
+  return { db, calls };
+}
+
+test('autovincularPagoFijo: casa por categoria/subcategoria y marca pagado con el monto real', async () => {
+  resetPagosFijosSchemaParaTests();
+  const pf = { id: 7, concepto: 'Acueducto Apto', categoria: 'Servicios Públicos', subcategoria: 'Agua', dia_vencimiento: 16, activo: true };
+  const { db } = fakeSqlPagoFijo({ pf });
+  setSqlForTests(db);
+  const r = await autovincularPagoFijo({ movimiento_id: 99, categoria: 'Servicios Públicos', subcategoria: 'Agua', fecha: '2026-07-09', monto: 1459896, moneda: 'COP' });
+  assert.equal(r.concepto, 'Acueducto Apto');
+  setSqlForTests(null);
+  resetPagosFijosSchemaParaTests();
+});
+
+test('autovincularPagoFijo: no toca un pago fijo que ya tiene estado ese mes', async () => {
+  resetPagosFijosSchemaParaTests();
+  const pf = { id: 7, concepto: 'Acueducto Apto', categoria: 'Servicios Públicos', subcategoria: 'Agua', activo: true };
+  const { db, calls } = fakeSqlPagoFijo({ pf, estadoExistente: [{ x: 1 }] });
+  setSqlForTests(db);
+  const r = await autovincularPagoFijo({ movimiento_id: 99, categoria: 'Servicios Públicos', subcategoria: 'Agua', fecha: '2026-07-09', monto: 1459896, moneda: 'COP' });
+  assert.equal(r, null);
+  assert.ok(!calls.some((c) => c.t.startsWith('insert into pagos_estado')));
+  setSqlForTests(null);
+  resetPagosFijosSchemaParaTests();
+});
+
+test('autovincularPagoFijo: no-op si el movimiento es USD o sin categoria', async () => {
+  resetPagosFijosSchemaParaTests();
+  const { db } = fakeSqlPagoFijo({ pf: null });
+  setSqlForTests(db);
+  assert.equal(await autovincularPagoFijo({ categoria: 'Servicios Públicos', fecha: '2026-07-09', monto: 100, moneda: 'USD' }), null);
+  assert.equal(await autovincularPagoFijo({ categoria: '', fecha: '2026-07-09', monto: 100, moneda: 'COP' }), null);
+  setSqlForTests(null);
+  resetPagosFijosSchemaParaTests();
+});
 
 // ---------------------------------------------------------------------------
 // mesAnterior — pura.
