@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  indexarReglas, indexarCuentasMeta, buildLineasMovimiento, buildLineasIngreso,
+  indexarReglas, indexarCuentasMeta, buildLineasMovimiento, buildLineasIngreso, cuadreTransferencia,
 } from '../netlify/functions/_lib/contabilizar.js';
 import { validarAsiento } from '../netlify/functions/_lib/asientos.js';
 
@@ -38,6 +38,57 @@ test('transferencia → débito destino / crédito origen', () => {
   assert.equal(l[0].cuenta, '1105'); // destino (efectivo) al débito
   assert.equal(l[1].cuenta, '1110'); // origen (Nequi → default banco) al crédito
   assert.equal(validarAsiento(l, CUENTAS).ok, true);
+});
+
+// ---------------------------------------------------------------------------
+// Transferencias entre monedas (issue #121, USD↔COP, modelo pragmático): el
+// asiento va en COP usando el monto de la pata que ya está en COP para ambos
+// renglones, así siempre cuadra aunque monto/monto_destino nominalmente difieran.
+// ---------------------------------------------------------------------------
+test('transferencia USD→COP: ambos renglones usan el monto en COP (monto_destino) y cuadra', () => {
+  const l = buildLineasMovimiento({
+    id: 11, tipo: 'transferencia', metodo_pago: 'Nequi', cuenta_destino: 'Efectivo',
+    monto: 3899, moneda: 'USD', monto_destino: 12919299, moneda_destino: 'COP',
+  }, REGLAS);
+  assert.equal(l[0].cuenta, '1105'); // destino (efectivo) al débito
+  assert.equal(l[0].debito, 12919299);
+  assert.equal(l[1].cuenta, '1110'); // origen al crédito
+  assert.equal(l[1].credito, 12919299);
+  assert.equal(validarAsiento(l, CUENTAS).ok, true);
+});
+
+test('transferencia COP→USD (dirección inversa): ambos renglones usan el monto en COP (monto)', () => {
+  const l = buildLineasMovimiento({
+    id: 12, tipo: 'transferencia', metodo_pago: 'Nequi', cuenta_destino: 'Efectivo',
+    monto: 400000, moneda: 'COP', monto_destino: 100, moneda_destino: 'USD',
+  }, REGLAS);
+  assert.equal(l[0].debito, 400000);
+  assert.equal(l[1].credito, 400000);
+  assert.equal(validarAsiento(l, CUENTAS).ok, true);
+});
+
+test('transferencia de una sola moneda (sin monto_destino): comportamiento preservado', () => {
+  const l = buildLineasMovimiento({ id: 13, tipo: 'transferencia', metodo_pago: 'Nequi', cuenta_destino: 'Efectivo', monto: 100000 }, REGLAS);
+  assert.equal(l[0].debito, 100000);
+  assert.equal(l[1].credito, 100000);
+});
+
+test('cuadreTransferencia: tasa implícita = monto_destino_COP / monto_origen', () => {
+  const r = cuadreTransferencia({ monto: 3899, moneda: 'USD', monto_destino: 12919299, moneda_destino: 'COP' });
+  assert.equal(r.montoCop, 12919299);
+  assert.ok(Math.abs(r.tasa - 12919299 / 3899) < 1e-9);
+});
+
+test('cuadreTransferencia: misma moneda en ambas patas → tasa null, montoCop = monto', () => {
+  const r = cuadreTransferencia({ monto: 4000, moneda: 'USD', monto_destino: 4000, moneda_destino: 'USD' });
+  assert.equal(r.montoCop, 4000);
+  assert.equal(r.tasa, null);
+});
+
+test('cuadreTransferencia: sin monto_destino → tasa null, montoCop = monto (retrocompatible)', () => {
+  const r = cuadreTransferencia({ monto: 100000, moneda: 'COP' });
+  assert.equal(r.montoCop, 100000);
+  assert.equal(r.tasa, null);
 });
 
 test('ingreso → débito banco / crédito cuenta de ingreso (cédula)', () => {
