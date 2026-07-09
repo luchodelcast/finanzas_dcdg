@@ -9,6 +9,22 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar D] Préstamos entre personas integrados a la partida
+  doble** (issue #116, `auto-ok`, PR pendiente): un préstamo real Luis↔Carolina
+  ahora genera su asiento de partida doble usando las cuentas inter-personas
+  del PUC (`1315` CxC a socios / `2340` CxP a socios) — débito/crédito según
+  quién presta, sin tocar el tracker `prestamos` existente. Marcar/desmarcar un
+  préstamo como saldado ajusta el asiento (reverso o reapertura, versionado con
+  `contab_version` para que alternar el estado siga cuadrando). Nuevo flujo
+  **"pagar con mi plata algo del otro"** (`POST /api/pwa-prestamos {accion:
+  'pagar_deuda_otro'}` + tarjeta nueva en la pantalla 🤝 Préstamos): en un solo
+  toque registra el pago (atribuido al deudor) y el préstamo correspondiente,
+  ambos contabilizados e idempotentes ante reintento. Aditivo (DDL idempotente:
+  `contab_version`/`idempotency_key` en `prestamos`); no se transforma el
+  histórico existente. `npm test` (289/289) + `npm run build` en verde →
+  auto-merge. ✅
+
+## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar C] Patrimonio individual: balance por persona + "Mi
   patrimonio"** (issue #115, `auto-ok`, PR pendiente): el Balance General (T7)
   ya se puede ver por persona reusando el `dueño` de cada cuenta (`cuentas_meta`,

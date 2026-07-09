@@ -1009,6 +1009,12 @@ export async function desmarcarPagoEstado({ pago_fijo_id, anio, mes }, sqlArg) {
 // Préstamos entre Luis y Carolina (issue #77, Nocturno 6/7, `auto-ok`). Esquema
 // nuevo vía DDL idempotente en runtime (sin `.sql` manual) — mismo patrón que
 // ensurePagosFijosSchema. Ver AUTOBUILD.md § modo auto-ok.
+//
+// `contab_version` e `idempotency_key` (issue #116, Contab. familiar D) se
+// agregan vía ALTER TABLE ADD COLUMN IF NOT EXISTS — mismo patrón que
+// ensureCorreccionSchema sobre `movimientos` — para versionar el reverso
+// contable al marcar/desmarcar saldado y poder deduplicar el flujo "pagar
+// deuda del otro".
 // ---------------------------------------------------------------------------
 let _prestamosSchemaPromise = null;
 
@@ -1037,6 +1043,9 @@ async function aplicarPrestamosSchema(sqlArg) {
       creado_en timestamptz not null default now()
     )
   `, []);
+  await sql.query('alter table prestamos add column if not exists contab_version int not null default 1', []);
+  await sql.query('alter table prestamos add column if not exists idempotency_key text', []);
+  await sql.query('create unique index if not exists prestamos_idempotency_key_uidx on prestamos (idempotency_key) where idempotency_key is not null', []);
 }
 
 /** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
@@ -1056,8 +1065,21 @@ export async function listPrestamos({ saldado } = {}, sqlArg) {
 
 const PERSONAS_VALIDAS = ['Luis', 'Carolina'];
 
-/** Registra un préstamo (o un abono, que es sencillamente uno en sentido inverso). */
-export async function insertPrestamo({ fecha, de, para, monto, concepto, moneda, notas }, sqlArg) {
+/** Un préstamo por id (para contabilizarlo). */
+export async function getPrestamo(id, sqlArg) {
+  await ensurePrestamosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from prestamos where id = $1 limit 1', [Number(id)]);
+  return rows[0] || null;
+}
+
+/**
+ * Registra un préstamo (o un abono, que es sencillamente uno en sentido inverso).
+ * `idempotency_key` es opcional (issue #116: la usa el flujo "pagar deuda del
+ * otro" para no duplicar en un reintento); sin ella, cada llamada crea una fila
+ * nueva, igual que siempre.
+ */
+export async function insertPrestamo({ fecha, de, para, monto, concepto, moneda, notas, idempotency_key }, sqlArg) {
   if (!PERSONAS_VALIDAS.includes(de) || !PERSONAS_VALIDAS.includes(para)) {
     throw new Error('"de" y "para" deben ser "Luis" o "Carolina".');
   }
@@ -1066,20 +1088,45 @@ export async function insertPrestamo({ fecha, de, para, monto, concepto, moneda,
   if (!(montoNum > 0)) throw new Error('El monto del préstamo debe ser mayor a 0.');
   await ensurePrestamosSchema(sqlArg);
   const sql = sqlArg || await getSql();
-  const rows = await sql.query(
-    `insert into prestamos (fecha, de, para, monto, concepto, moneda, notas)
-     values ($1, $2, $3, $4, $5, $6, $7)
+  if (!idempotency_key) {
+    const rows = await sql.query(
+      `insert into prestamos (fecha, de, para, monto, concepto, moneda, notas)
+       values ($1, $2, $3, $4, $5, $6, $7)
+       returning *`,
+      [fecha, de, para, montoNum, concepto || null, moneda || 'COP', notas || null]
+    );
+    return rows[0];
+  }
+  const ins = await sql.query(
+    `insert into prestamos (fecha, de, para, monto, concepto, moneda, notas, idempotency_key)
+     values ($1, $2, $3, $4, $5, $6, $7, $8)
+     on conflict (idempotency_key) do nothing
      returning *`,
-    [fecha, de, para, montoNum, concepto || null, moneda || 'COP', notas || null]
+    [fecha, de, para, montoNum, concepto || null, moneda || 'COP', notas || null, idempotency_key]
   );
-  return rows[0];
+  if (ins.length) return ins[0];
+  const prev = await sql.query('select * from prestamos where idempotency_key = $1 limit 1', [idempotency_key]);
+  return prev[0] || null;
 }
 
-/** Marca (o desmarca) un préstamo como saldado — sale del cálculo del neto. */
+/**
+ * Marca (o desmarca) un préstamo como saldado — sale del cálculo del neto.
+ * Sin cambio real (ya estaba en ese estado) devuelve la fila tal cual, sin
+ * tocar `contab_version`; en una transición real, la incrementa (issue #116:
+ * el llamador la usa para versionar el asiento de reverso/reapertura).
+ */
 export async function marcarPrestamoSaldado(id, saldado = true, sqlArg) {
   await ensurePrestamosSchema(sqlArg);
   const sql = sqlArg || await getSql();
-  const rows = await sql.query('update prestamos set saldado = $2 where id = $1 returning *', [Number(id), !!saldado]);
+  const target = !!saldado;
+  const prevRows = await sql.query('select * from prestamos where id = $1 limit 1', [Number(id)]);
+  const prev = prevRows[0];
+  if (!prev) return null;
+  if (!!prev.saldado === target) return prev; // sin transición: nada que actualizar
+  const rows = await sql.query(
+    'update prestamos set saldado = $2, contab_version = contab_version + 1 where id = $1 returning *',
+    [Number(id), target]
+  );
   return rows[0] || null;
 }
 

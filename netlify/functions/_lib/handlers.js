@@ -43,8 +43,10 @@ import {
   upsertPagoEstado, desmarcarPagoEstado,
 } from './repo.js';
 import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes } from './pagos.js';
-import { listPrestamos, insertPrestamo, marcarPrestamoSaldado } from './repo.js';
-import { calcularSaldoPrestamos } from './prestamos.js';
+import { listPrestamos } from './repo.js';
+import {
+  calcularSaldoPrestamos, registrarPrestamoConAsiento, marcarSaldadoConAsiento, registrarPagoDeOtro,
+} from './prestamos.js';
 import { crearSolicitudMejora, listarSolicitudesAbiertas } from './backlog.js';
 import { anularMovimientoCompleto, recategorizarMovimiento } from './corregir.js';
 import { hoyISO } from '../../../app/src/utils/formatters.js';
@@ -1201,9 +1203,10 @@ export async function pwaPagosHandler(req) {
 }
 
 /**
- * Préstamos entre Luis y Carolina (issue #77, Nocturno 6/7). Auth Google.
+ * Préstamos entre Luis y Carolina (issue #77, Nocturno 6/7; partida doble e
+ * issue #116, Contab. familiar D). Auth Google.
  *   GET  /api/pwa-prestamos → lista + saldo neto por moneda (lectura, equipo).
- *   POST /api/pwa-prestamos { accion: 'crear' | 'marcar_saldado', ... } → SOLO owners.
+ *   POST /api/pwa-prestamos { accion: 'crear' | 'marcar_saldado' | 'pagar_deuda_otro', ... } → SOLO owners.
  */
 export async function pwaPrestamosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
@@ -1226,7 +1229,7 @@ export async function pwaPrestamosHandler(req) {
   const accion = String(body.accion || 'crear');
   try {
     if (accion === 'crear') {
-      const p = await insertPrestamo({
+      const p = await registrarPrestamoConAsiento({
         fecha: String(body.fecha || '').slice(0, 10) || hoyISO(),
         de: body.de, para: body.para, monto: body.monto,
         concepto: body.concepto, moneda: body.moneda, notas: body.notas,
@@ -1236,11 +1239,19 @@ export async function pwaPrestamosHandler(req) {
     if (accion === 'marcar_saldado') {
       const id = Number(body.id);
       if (!id) return bad('id requerido');
-      const p = await marcarPrestamoSaldado(id, body.saldado !== false);
+      const p = await marcarSaldadoConAsiento(id, body.saldado !== false);
       if (!p) return bad('Préstamo no encontrado', 404);
       return ok({ ok: true, prestamo: p });
     }
-    return bad('accion inválida (crear | marcar_saldado)');
+    if (accion === 'pagar_deuda_otro') {
+      const r = await registrarPagoDeOtro({
+        fecha: body.fecha, pagador: body.pagador, deudor: body.deudor, monto: body.monto,
+        categoria: body.categoria, subcategoria: body.subcategoria, metodo_pago: body.metodo_pago,
+        concepto: body.concepto, moneda: body.moneda, notas: body.notas,
+      });
+      return ok(r);
+    }
+    return bad('accion inválida (crear | marcar_saldado | pagar_deuda_otro)');
   } catch (e) {
     return bad(e.message, 422);
   }

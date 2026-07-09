@@ -57,3 +57,24 @@ export function deriveAporteHogarKey(a = {}) {
   const base = `aporte|${a.entidad_id}|${fecha}|${monto}|${metodo}`;
   return createHash('sha256').update(base).digest('hex').slice(0, 40);
 }
+
+/**
+ * Llave de idempotencia del flujo "pagar deuda del otro" (issue #116, Contab.
+ * familiar D). Deriva DOS llaves distintas (una para el movimiento del pago,
+ * otra para el préstamo que genera) a partir de los mismos datos, para que un
+ * reintento de la misma operación no duplique ni el pago ni el préstamo.
+ * @param {{ pagador, deudor, fecha, monto, concepto?, idempotency_key? }} p
+ * @returns {{ movimiento: string, prestamo: string }}
+ */
+export function derivePagoDeOtroKeys(p = {}) {
+  const fecha = String(p.fecha || '').slice(0, 10);
+  const monto = Math.round(Number(p.monto) || 0);
+  const concepto = normalize(p.concepto).slice(0, 16);
+  const base = p.idempotency_key
+    ? String(p.idempotency_key).slice(0, 60)
+    : `${p.pagador}|${p.deudor}|${fecha}|${monto}|${concepto}`;
+  return {
+    movimiento: createHash('sha256').update(`pagootro:mov|${base}`).digest('hex').slice(0, 40),
+    prestamo: createHash('sha256').update(`pagootro:prestamo|${base}`).digest('hex').slice(0, 40),
+  };
+}
