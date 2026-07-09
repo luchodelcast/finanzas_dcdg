@@ -43,6 +43,7 @@ import { armarPagosDelMes, resumenPagos, mesAnterior, estaVigenteEnMes } from '.
 import { listPrestamos, insertPrestamo, marcarPrestamoSaldado } from './repo.js';
 import { calcularSaldoPrestamos } from './prestamos.js';
 import { crearSolicitudMejora, listarSolicitudesAbiertas } from './backlog.js';
+import { anularMovimientoCompleto, recategorizarMovimiento } from './corregir.js';
 import { hoyISO } from '../../../app/src/utils/formatters.js';
 
 const CONFIG_GITHUB_RE = /Configura GITHUB_TOKEN_FINANZAS/;
@@ -277,6 +278,36 @@ export async function pwaCuentasHandler(req) {
     return ok({ ok: true, cuentas, n: cuentas.length });
   } catch (e) {
     return bad(e.message, 422);
+  }
+}
+
+/**
+ * POST /api/pwa-movimiento — Corregir un movimiento ya registrado. SOLO owners.
+ *   { accion: 'anular', id, motivo? }
+ *   { accion: 'recategorizar', id, categoria?, subcategoria?, tipo?, descripcion? }
+ * Anular hace borrado suave + reverso contable; recategorizar reversa y recontabiliza.
+ */
+export async function pwaCorregirMovimientoHandler(req) {
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden corregir movimientos.', 403);
+  const body = await parseBody(req);
+  const id = Number(body.id);
+  if (!id) return bad('Falta el id del movimiento.');
+  try {
+    if (body.accion === 'anular') {
+      return ok(await anularMovimientoCompleto(id, body.motivo));
+    }
+    if (body.accion === 'recategorizar') {
+      return ok(await recategorizarMovimiento(id, {
+        tipo: body.tipo, categoria: body.categoria, subcategoria: body.subcategoria, descripcion: body.descripcion,
+      }));
+    }
+    return bad('accion inválida (anular | recategorizar)');
+  } catch (e) {
+    return bad(e.message, e.status || 422);
   }
 }
 

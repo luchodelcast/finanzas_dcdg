@@ -72,6 +72,14 @@ export const getCatalogos = () => request('/api/pwa-catalogos');
 /** Cuentas/tarjetas activas del catálogo `⚙️ CUENTAS` (leídas en el backend). */
 export const getCuentas = () => request('/api/pwa-cuentas');
 
+/** Corrección de movimientos (solo owners): anular (con reverso contable). */
+export const anularMovimiento = (id, motivo) =>
+  request('/api/pwa-movimiento', { method: 'POST', body: { accion: 'anular', id, motivo } });
+
+/** Corrección de movimientos (solo owners): recategorizar y recontabilizar. */
+export const recategorizarMovimiento = (body) =>
+  request('/api/pwa-movimiento', { method: 'POST', body: { accion: 'recategorizar', ...body } });
+
 /** Lista de ingresos. */
 export const getIngresos = (params = {}) => request('/api/pwa-ingreso', { params });
 

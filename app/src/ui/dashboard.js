@@ -6,10 +6,12 @@
  * Sin librerías externas (barras con divs, tematizables claro/oscuro).
  */
 
-import { getResumen, getMovimientos } from '../services/finanzas.js';
+import { getResumen, getMovimientos, anularMovimiento, recategorizarMovimiento } from '../services/finanzas.js';
+import { currentUser } from '../services/auth.js';
 import { formatCOP } from '../utils/formatters.js';
 
 const V = (id) => document.getElementById(id);
+const esOwner = () => (currentUser() || {}).rol === 'owner';
 
 // Paleta para las categorías (se cicla). Usa los tonos de la marca DCDG.
 const PALETTE = ['#2E5FA3', '#0F6E56', '#F0A500', '#534AB7', '#C0392B', '#1A7A4A', '#5DCAA5', '#854F0B'];
@@ -107,12 +109,15 @@ function comerciosHTML(top) {
     </div>`).join('');
 }
 
-function movsHTML(movs) {
+function movsHTML(movs, owner) {
   if (!movs || !movs.length) return '<div class="empty">Sin movimientos en este periodo</div>';
   return movs.map((m) => {
     const fecha = String(m.fecha || '').slice(0, 10);
+    const fix = owner
+      ? `<button class="sec-link mov-fix" data-mov-id="${esc(m.id)}" style="margin-top:4px">Corregir</button>`
+      : '';
     return `<div class="h-item">
-      <div><div class="h-name">${esc(m.descripcion)}</div><div class="h-meta">${esc(m.categoria || '—')}${m.subcategoria ? ' · ' + esc(m.subcategoria) : ''} · ${esc(fecha)}</div></div>
+      <div><div class="h-name">${esc(m.descripcion)}</div><div class="h-meta">${esc(m.categoria || '—')}${m.subcategoria ? ' · ' + esc(m.subcategoria) : ''} · ${esc(fecha)}</div>${fix}</div>
       <div><div class="h-amt">${formatCOP(Number(m.monto) || 0)}</div><div class="h-who">${esc(m.quien_pago || '')}${m.metodo_pago ? ' · ' + esc(m.metodo_pago) : ''}</div></div>
     </div>`;
   }).join('');
@@ -153,7 +158,7 @@ async function load() {
       </div>
       <div class="card">
         <div class="card-ttl">Movimientos del periodo</div>
-        ${movsHTML(movsRes.movimientos)}
+        ${movsHTML(movsRes.movimientos, esOwner())}
       </div>`;
   } catch (e) {
     const msg = (e.status === 401 || e.status === 403)
@@ -161,6 +166,25 @@ async function load() {
       : (e.message || 'No se pudo cargar el dashboard.');
     V('dash-body').innerHTML = `<div class="card"><div class="empty" style="color:var(--red)">${esc(msg)}</div>
       <button class="btn btn-s" data-act="dashReload" style="margin-top:12px">Reintentar</button></div>`;
+  }
+}
+
+/** Anular o recategorizar un movimiento (solo owners). MVP con prompt/confirm. */
+async function corregir(id) {
+  const r = (prompt('Corregir movimiento:\n\n• Escribe "anular" para anularlo (se reversa su asiento contable).\n• O escribe una nueva CATEGORÍA para recategorizarlo.') || '').trim();
+  if (!r) return;
+  try {
+    if (r.toLowerCase() === 'anular') {
+      if (!confirm('¿Anular este movimiento? Se reversa su asiento; la fila no se borra (queda como anulada).')) return;
+      await anularMovimiento(Number(id));
+    } else {
+      await recategorizarMovimiento({ id: Number(id), categoria: r });
+    }
+    load();
+  } catch (e) {
+    alert((e.status === 401 || e.status === 403)
+      ? 'Solo Luis o Carolina pueden corregir movimientos.'
+      : ('Error: ' + (e.message || 'no se pudo corregir')));
   }
 }
 
@@ -179,6 +203,8 @@ export function renderDashboard() {
         load();
         return;
       }
+      const fx = e.target.closest('.mov-fix');
+      if (fx) { corregir(fx.dataset.movId); return; }
       if (e.target.closest('[data-act="dashReload"]')) load();
     });
   }

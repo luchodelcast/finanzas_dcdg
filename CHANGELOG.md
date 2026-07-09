@@ -8,6 +8,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-09
+- **Corregir movimientos: anular y recategorizar** (botón "Corregir" en el
+  Dashboard, solo Luis/Carolina): hasta ahora la captura y SilvIA solo sabían
+  *agregar* — si algo quedaba mal (p. ej. una transferencia registrada como
+  "Gasto Bancario"), no había forma de arreglarlo en la app. Ahora un owner puede
+  **anular** un movimiento (borrado suave — no destruye la fila — con su
+  **reverso contable**: un asiento espejo que neutraliza el original, auditable) o
+  **recategorizarlo** (reversa y vuelve a contabilizar). Los movimientos anulados
+  salen del dashboard, del resumen y de la recontabilización. Nuevo endpoint
+  `POST /api/pwa-movimiento` (owner) + `_lib/corregir.js`; columnas `anulado`/
+  `contab_version` vía DDL idempotente en runtime (sin `.sql` manual). En sesión
+  (no autobuild) por tocar datos financieros. ✅
+
 ## 2026-07-09 (autobuild, corrida sin item elegible)
 - Siguiendo `AUTOBUILD.md`, esta corrida sincronizó `main` (ya traía el
   rediseño de UI del PR #109, fusionado directo por Luis) y revisó el
