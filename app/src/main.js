@@ -48,10 +48,25 @@ let curIsIwin = false;
 let _accts = []; // cuentas cargadas (para los selects de transferencia)
 
 // ── Navegación ────────────────────────────────────────────
+// Qué pestaña de la tab bar se resalta para cada pantalla.
+function tabFor(s) {
+  if (s === 'home') return 'home';
+  if (['registrar', 'text', 'cet', 'conf', 'proc', 'ok'].includes(s)) return 'registrar';
+  if (s === 'dash') return 'dash';
+  if (s === 'pagos') return 'pagos';
+  return 'mas';
+}
+function setActiveTab(s) {
+  const t = tabFor(s);
+  document.querySelectorAll('.tab').forEach((el) => el.classList.toggle('on', el.dataset.go === t));
+}
+
 function go(s) {
   document.querySelectorAll('.scr').forEach((x) => x.classList.remove('on'));
   const el = V('scr-' + s);
   if (el) el.classList.add('on');
+  setActiveTab(s);
+  window.scrollTo(0, 0);
   if (s === 'settings') {
     const cfg = getConfig();
     V('cfg-ak').value = cfg.anthropicApiKey || '';
@@ -126,6 +141,9 @@ function resetAll() {
 function setConn(on) {
   V('conn-dot').className = 'conn-dot' + (on ? ' on' : '');
   V('conn-lbl').textContent = on ? 'Conectado' : 'Sin conectar';
+  // Muestra/oculta la tab bar inferior según haya sesión (oculta en login/setup).
+  const app = document.getElementById('app');
+  if (app) app.classList.toggle('authed', !!on);
 }
 
 /** Si hay sesión válida, refleja el estado y carga cuentas; si no, muestra el login. */
