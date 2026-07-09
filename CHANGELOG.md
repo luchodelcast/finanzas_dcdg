@@ -9,6 +9,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **[Contab. familiar C] Patrimonio individual: balance por persona + "Mi
+  patrimonio"** (issue #115, `auto-ok`, PR pendiente): el Balance General (T7)
+  ya se puede ver por persona reusando el `dueño` de cada cuenta (`cuentas_meta`,
+  #112) — nuevo endpoint `GET /api/pwa-patrimonio?fecha=` con Luis, Carolina, el
+  bolsillo **Común** (asientos sin dueño individual) y el consolidado. Nueva
+  pantalla PWA **"Mi patrimonio"**: `GET /api/pwa-mi-patrimonio?meses=&fecha=`
+  resuelve la persona de la sesión (vía `usuarios.nombre`) y muestra su neto
+  (activo − pasivo) y una serie mensual simple; si el email no está asociado a
+  una persona, degrada con gracia al consolidado familiar. Solo lectura sobre
+  asientos existentes, sin esquema nuevo. `npm test` (273/273) + `npm run
+  build` en verde → auto-merge. ✅
+
+## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar B] Clasificar gasto compartido (hogar) vs. personal**
   (issue #114, `auto-ok`, PR pendiente): al capturar un egreso, cada movimiento
   ahora lleva un marcador `hogar` (compartido) o `personal de <persona>`. Por

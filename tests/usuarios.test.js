@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setSqlForTests } from '../netlify/functions/_lib/db.js';
 import {
-  ensureUsuariosSchema, resetUsuariosSchemaParaTests, getUsuarioRolPorEmail,
+  ensureUsuariosSchema, resetUsuariosSchemaParaTests, getUsuarioRolPorEmail, getUsuarioNombrePorEmail,
 } from '../netlify/functions/_lib/repo.js';
 
 // ---------------------------------------------------------------------------
@@ -28,6 +28,11 @@ function fakeDb(seedRows = []) {
       const [email] = params;
       const row = usuarios.find((u) => u.email === email && u.activo);
       return row ? [{ rol: row.rol }] : [];
+    }
+    if (t.startsWith('select nombre from usuarios')) {
+      const [email] = params;
+      const row = usuarios.find((u) => u.email === email && u.activo);
+      return row ? [{ nombre: row.nombre }] : [];
     }
     return [];
   }
@@ -92,4 +97,27 @@ test('getUsuarioRolPorEmail: null (no lanza) si la DB no responde', async () => 
 test('getUsuarioRolPorEmail: null si el email es vacío', async () => {
   const rol = await getUsuarioRolPorEmail('');
   assert.equal(rol, null);
+});
+
+// ---------------------------------------------------------------------------
+// getUsuarioNombrePorEmail (issue #115, "Mi patrimonio") — mismo criterio de
+// nunca-lanzar que getUsuarioRolPorEmail.
+// ---------------------------------------------------------------------------
+test('getUsuarioNombrePorEmail: devuelve el nombre sembrado de Luis/Carolina, sin importar mayúsculas', async () => {
+  resetUsuariosSchemaParaTests();
+  setSqlForTests(fakeDb());
+  assert.equal(await getUsuarioNombrePorEmail('LUIS@iwin.im'), 'Luis');
+  assert.equal(await getUsuarioNombrePorEmail('carodz2@gmail.com'), 'Carolina');
+  setSqlForTests(null);
+  resetUsuariosSchemaParaTests();
+});
+
+test('getUsuarioNombrePorEmail: null si el email no tiene fila o la DB no responde', async () => {
+  resetUsuariosSchemaParaTests();
+  setSqlForTests(fakeDb());
+  assert.equal(await getUsuarioNombrePorEmail('nadie@iwin.im'), null);
+  setSqlForTests({ query: async () => { throw new Error('sin conexión'); } });
+  assert.equal(await getUsuarioNombrePorEmail('luis@iwin.im'), null);
+  setSqlForTests(null);
+  resetUsuariosSchemaParaTests();
 });

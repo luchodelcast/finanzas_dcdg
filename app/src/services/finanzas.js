@@ -145,6 +145,12 @@ export const getEstadoResultados = (params = {}) => request('/api/pwa-estado-res
 /** Balance General a una fecha (T7, solo lectura). Opcional fecha/entidad_id. */
 export const getBalanceGeneral = (params = {}) => request('/api/pwa-balance-general', { params });
 
+/** Patrimonio por persona (Luis/Carolina/Común/consolidado, issue #115). Opcional fecha. */
+export const getPatrimonioPersonas = (params = {}) => request('/api/pwa-patrimonio', { params });
+
+/** "Mi patrimonio": neto + evolución mensual de la persona logueada (issue #115). Opcional meses/fecha. */
+export const getMiPatrimonio = (params = {}) => request('/api/pwa-mi-patrimonio', { params });
+
 /** Pagos del mes (issue #73): catálogo + estado de un (anio, mes), y pendientes del mes anterior. */
 export const getPagosDelMes = (params = {}) => request('/api/pwa-pagos', { params });
 
