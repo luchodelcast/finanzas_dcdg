@@ -9,6 +9,31 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🔎 **Cola de `autobuild` revisada de nuevo, sin item elegible para construir
+  directo**: #40/#41/#92/#98 siguen con PR borrador esperando revisión
+  (#58/#55/#96/#103), #51/#52 siguen divididos en sub-issues fusionados o en
+  espera, y #100/#130 siguen como `propuesta` sin decisión de Luis. Con la cola
+  de trabajo directo vacía y sin repetir #100/#130, releí
+  `docs/conciliacion.md` y confirmé en el código que dos de sus cuatro
+  pendientes de "Siguiente" ya están construidos (creación guiada = backfill
+  #72/PR #79; soporte de PDF del extracto = `_lib/extracto-pdf.js`, el doc
+  quedó desactualizado) — el cuadre de saldos ya es #100. Quedaba sin issue el
+  **reporte de discrepancias**: el motor de cruce (#39) nunca surge los
+  movimientos/ingresos capturados que siguen `provisional` sin haber sido
+  candidato de NINGUNA línea del extracto (ni siquiera `ambiguo`) — el tercer
+  caso que el propio doc describe ("capturado sin línea... o un error → se
+  revisa"), hoy invisible para el usuario. Propuse **issue #145** (función
+  pura + solo lectura, expuesta en `/api/pwa-conciliacion` y en la pantalla 🔗
+  Conciliación). Queda como `propuesta` esperando el OK de Luis; no se
+  construyó nada esta corrida. `AUTOBUILD_NOTIFY_URL` no estaba configurado en
+  el entorno de esta corrida, así que el aviso de WhatsApp no salió — este
+  registro es la red de seguridad. 🔎 Propuesta #145 por aprobar: reporte de
+  discrepancias de conciliación (capturado que el extracto no corrobora) —
+  ayuda a detectar duplicados/errores de captura antes de cerrar el mes. Dime
+  "aprueba la 145" o revísala en
+  https://github.com/luchodelcast/finanzas_dcdg/issues/145.
+
+## 2026-07-09 (autobuild)
 - 🤖 **Presupuesto mensual por categoría + ejecutado y variación** (issue #135,
   `auto-ok`, PR #138): nueva pantalla **📊 Presupuesto** (Más → Presupuesto)
   con el reporte PTTO · Ejecutado · Variación de cada categoría del mes —
