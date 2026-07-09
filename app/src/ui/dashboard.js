@@ -30,8 +30,12 @@ export function periodRange(key, hoy = new Date()) {
     return { desde: iso(ini), hasta: iso(fin), label: 'Mes pasado' };
   }
   if (key === 'anio') {
+    // Todo el año calendario (1 ene – 31 dic), NO solo hasta hoy: así un
+    // movimiento mal fechado en un mes futuro (p. ej. un recibo leído como
+    // septiembre por error) sigue siendo visible y se puede corregir/anular.
     const ini = new Date(hoy.getFullYear(), 0, 1);
-    return { desde: iso(ini), hasta: iso(hoy), label: String(hoy.getFullYear()) };
+    const fin = new Date(hoy.getFullYear(), 11, 31);
+    return { desde: iso(ini), hasta: iso(fin), label: String(hoy.getFullYear()) };
   }
   // mes en curso (default)
   const ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1);

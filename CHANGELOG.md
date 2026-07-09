@@ -9,6 +9,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09
+- **"Año" cubre todo el año calendario (registros futuros mal fechados dejan de ser invisibles)**: todos los periodos del Panel terminaban en HOY, así que un movimiento fechado por error en un mes futuro (p. ej. el recibo del agua leído como 2026-09-07 en vez de 2026-07-09) **no aparecía en ningún periodo** — ni "Este mes", ni "Mes pasado", ni "Año" (que iba 1 ene → hoy) — y por lo tanto no se podía ni ver ni corregir. Ahora "Año" va del **1 de enero al 31 de diciembre**, de modo que esos registros quedan visibles y se pueden **Corregir → `fecha`** o anular. Solo `dashboard.js` (frontend). ✅
 - **Fechas colombianas (DD/MM) y corrección de fecha de un movimiento**: un
   recibo de agua pagado el **9 de julio** (`09/07/2026`) quedó registrado como
   **7 de septiembre** (`2026-09-07`) porque el clasificador leía la fecha como
