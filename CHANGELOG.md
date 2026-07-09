@@ -10,7 +10,7 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-09 (autobuild)
 - 🤖 **[Contab. familiar D] Préstamos entre personas integrados a la partida
-  doble** (issue #116, `auto-ok`, PR pendiente): un préstamo real Luis↔Carolina
+  doble** (issue #116, `auto-ok`, PR #126): un préstamo real Luis↔Carolina
   ahora genera su asiento de partida doble usando las cuentas inter-personas
   del PUC (`1315` CxC a socios / `2340` CxP a socios) — débito/crédito según
   quién presta, sin tocar el tracker `prestamos` existente. Marcar/desmarcar un
