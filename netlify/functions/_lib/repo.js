@@ -196,11 +196,12 @@ export async function updateMovimientoCampos(id, campos, sqlArg) {
             subcategoria = coalesce($4, subcategoria),
             descripcion  = coalesce(nullif($5,''), descripcion),
             contab_version = coalesce($6, contab_version),
+            fecha        = coalesce(nullif($7,'')::date, fecha),
             actualizado_en = now()
       where id = $1
       returning *`,
     [id, campos.tipo || '', campos.categoria ?? null, campos.subcategoria ?? null,
-      campos.descripcion || '', campos.contab_version ?? null]);
+      campos.descripcion || '', campos.contab_version ?? null, campos.fecha || '']);
   return rows[0] || null;
 }
 

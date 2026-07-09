@@ -310,7 +310,8 @@ export async function pwaCorregirMovimientoHandler(req) {
     }
     if (body.accion === 'recategorizar') {
       return ok(await recategorizarMovimiento(id, {
-        tipo: body.tipo, categoria: body.categoria, subcategoria: body.subcategoria, descripcion: body.descripcion,
+        tipo: body.tipo, categoria: body.categoria, subcategoria: body.subcategoria,
+        descripcion: body.descripcion, fecha: body.fecha,
       }));
     }
     return bad('accion inválida (anular | recategorizar)');
