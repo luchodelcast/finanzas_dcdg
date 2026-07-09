@@ -472,18 +472,30 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
 <div class="scr" id="scr-transfer">
   <div class="card">
     <div class="card-ttl">Transferencia entre cuentas</div>
-    <div class="row2">
-      <div class="fld"><label>Fecha</label><input type="date" id="tr-fecha"></div>
-      <div class="fld"><label>Moneda</label><select id="tr-moneda"><option value="COP">COP</option><option value="USD">USD</option></select></div>
+    <div class="seg" id="tr-modo-seg">
+      <button type="button" class="seg-btn on" id="tr-modo-simple">Misma moneda</button>
+      <button type="button" class="seg-btn" id="tr-modo-monedas">Entre monedas</button>
     </div>
-    <div class="fld"><label>Monto</label><input type="number" class="big-amt" id="tr-monto" placeholder="0" inputmode="numeric"></div>
+    <div class="fld" style="margin-top:10px"><label>Fecha</label><input type="date" id="tr-fecha"></div>
+    <input type="hidden" id="tr-moneda" value="COP">
+    <input type="hidden" id="tr-moneda-destino" value="">
+
+    <div class="card-ttl" style="margin-top:14px;font-size:13px;color:var(--muted,#888)">↗️ Salió de</div>
     <div class="fld"><label>Cuenta origen</label><select id="tr-origen"></select></div>
-    <div class="fld"><label>Cuenta destino</label><select id="tr-destino"></select></div>
     <div class="row2">
-      <div class="fld"><label>Monto recibido en destino (si cambia de moneda)</label><input type="number" id="tr-monto-destino" placeholder="Igual que origen" inputmode="numeric"></div>
-      <div class="fld"><label>Moneda destino</label><select id="tr-moneda-destino"><option value="">(misma)</option><option value="COP">COP</option><option value="USD">USD</option></select></div>
+      <div class="fld"><label>Monto</label><input type="number" class="big-amt" id="tr-monto" placeholder="0" inputmode="numeric"></div>
+      <div class="fld"><label>Moneda</label><input type="text" id="tr-moneda-view" disabled></div>
     </div>
-    <div id="tr-tasa" style="font-size:12px;margin-top:-4px;margin-bottom:8px;color:var(--muted,#888)"></div>
+
+    <div class="card-ttl" style="margin-top:14px;font-size:13px;color:var(--muted,#888)">↘️ Entró en</div>
+    <div class="fld"><label>Cuenta destino</label><select id="tr-destino"></select></div>
+    <div class="row2" id="tr-destino-monedas-row" style="display:none">
+      <div class="fld"><label>Monto recibido</label><input type="number" id="tr-monto-destino" placeholder="0" inputmode="numeric"></div>
+      <div class="fld"><label>Moneda</label><input type="text" id="tr-moneda-destino-view" disabled></div>
+    </div>
+
+    <div id="tr-tasa" style="font-size:14px;font-weight:700;margin:2px 0 10px;color:var(--primary)"></div>
+
     <div class="fld"><label>Concepto (opcional)</label><input type="text" id="tr-desc" placeholder="Ej: paso de Delca2 a DollarApp"></div>
     <div class="fld"><label>¿Quién la hizo?</label><select id="tr-who"><option value="Luis">Luis</option><option value="Carolina">Carolina</option></select></div>
     <div id="tr-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
