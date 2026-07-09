@@ -803,6 +803,26 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
+<!-- ── CIERRE DEL MES (issue #118, Contab. familiar G, solo lectura) ── -->
+<div class="scr" id="scr-cierre-mes">
+  <div class="card">
+    <div class="card-ttl">🗓️ Cierre del mes</div>
+    <div class="fld"><label>Periodo (AAAA-MM, opcional)</label><input type="text" id="cm-periodo" placeholder="mes actual"></div>
+    <button class="btn btn-p" data-act="cmActualizar" style="margin-top:8px">Actualizar →</button>
+    <div id="cm-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+  </div>
+  <div id="cm-body"></div>
+  <div id="cm-comun-body"></div>
+  <div id="cm-metas-msg" style="font-size:12px;margin-top:8px;color:var(--muted)"></div>
+  <div class="card" style="margin-top:8px">
+    <div class="card-ttl">📲 Resumen por WhatsApp</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Opcional — le pide a SilvIA que le mande este resumen a la pareja.</div>
+    <button class="btn btn-s" data-act="cmEnviar">Enviar resumen</button>
+    <div id="cm-enviar-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
 <!-- ── EXPORTS CONTABLES EN CSV (T12a, issue #91, solo lectura) ── -->
 <div class="scr" id="scr-exports">
   <div id="exp-msg" style="font-size:12px;font-weight:600;margin-bottom:4px"></div>
@@ -1069,6 +1089,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
     <button class="mas-item" data-go="mayor"><div class="mas-ico">📒</div><div class="mas-txt"><strong>Libro Mayor</strong><span>Mayor y comprobación</span></div></button>
     <button class="mas-item" data-go="estados"><div class="mas-ico">📈</div><div class="mas-txt"><strong>Estados financieros</strong><span>Resultados y balance general</span></div></button>
     <button class="mas-item" data-go="patrimonio"><div class="mas-ico">🪙</div><div class="mas-txt"><strong>Mi patrimonio</strong><span>Neto por persona y evolución</span></div></button>
+    <button class="mas-item" data-go="cierre-mes"><div class="mas-ico">🗓️</div><div class="mas-txt"><strong>Cierre del mes</strong><span>Ritual de revisión de la pareja</span></div></button>
     <button class="mas-item" data-go="exports"><div class="mas-ico">📥</div><div class="mas-txt"><strong>Exportar CSV</strong><span>Reportes contables</span></div></button>
   </div>
   <div class="mas-group">
