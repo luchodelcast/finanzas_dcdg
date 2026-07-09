@@ -8,6 +8,19 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-09 (autobuild)
+- 🤖 **Presupuesto mensual por categoría + ejecutado y variación** (issue #135,
+  `auto-ok`, PR #138): nueva pantalla **📊 Presupuesto** (Más → Presupuesto)
+  con el reporte PTTO · Ejecutado · Variación de cada categoría del mes —
+  barra + indicador verde/rojo (dentro/sobre presupuesto) — y un formulario
+  para fijar el presupuesto de una categoría (solo owners; lectura para el
+  equipo). Tabla nueva `presupuestos` (categoría/año/mes/monto), DDL
+  idempotente en runtime (`ensurePresupuestosSchema`, mismo patrón que
+  Metas #117). El "ejecutado" reusa el mismo agregado por categoría que ya
+  usa el Dashboard (`queryResumen`) — sin consulta nueva ahí, solo se cruza
+  contra el PTTO. Aditivo puro, no toca datos existentes. `npm test`
+  (337/337) + `npm run build` en verde → auto-merge. ✅
+
 ## 2026-07-09
 - **"Corregir" reconoce fechas sueltas y valida la categoría (evita el footgun)**: escribir solo `2026-07-09` en el diálogo de Corregir (sin el prefijo `fecha `) lo tomaba como **categoría nueva** — un recibo terminó con la categoría literal "2026-07-09". Ahora el diálogo detecta el formato AAAA-MM-DD y lo trata como corrección de **fecha** (con o sin prefijo), y si el texto no es una categoría válida lo **rechaza** mostrando la lista, en vez de guardar una categoría basura. Solo `dashboard.js`. ✅
 - **Pagos → "Gestionar pagos fijos": etiquetas claras y sin overflow en móvil**: las dos columnas de números no tenían rótulo (no se sabía que la segunda era el **día de vencimiento**) y los campos/botones se salían de la vista en pantallas angostas. Ahora cada campo va etiquetado (**Monto ($)** / **Día de vencimiento**) y la fila envuelve (flex-wrap) para caber en móvil. Solo `pagos.js` + `index.html`. ✅
