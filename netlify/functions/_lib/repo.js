@@ -886,19 +886,46 @@ export async function marcarLineaMaterializada({ linea_id, tipo, id }, sqlArg) {
 // esperar la MISMA corrida del DDL/seed en vez de dispararla varias veces.
 let _pagosFijosSchemaPromise = null;
 
+// Catálogo canónico de pagos fijos, tomado 1:1 del Excel maestro (pestaña
+// "Pagos Fijos", columna MONTO PTTO), issue #136. Cada uno trae:
+//  - monto real (para que el presupuesto del mes deje de ser $0),
+//  - dia_vencimiento / familia (DCDG/DCC) reales,
+//  - categoria + subcategoria de la taxonomía DCDG → habilitan el auto-vínculo
+//    movimiento→pago fijo (#141): al registrar el gasto se marca solo,
+//  - asumido_por (LADCC/CMDG) → insumo del fondo común / aportes al hogar (#113).
 const PAGOS_FIJOS_SEED = [
-  { concepto: 'Arriendo', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Vivienda' },
-  { concepto: 'Administración', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Vivienda' },
-  { concepto: 'Internet Apto', dia_vencimiento: 10, familia: 'DCDG', categoria: 'Servicios' },
-  { concepto: 'Claro (celular)', dia_vencimiento: 15, familia: 'DCDG', categoria: 'Servicios' },
-  { concepto: 'Tigo (celular)', dia_vencimiento: 15, familia: 'DCDG', categoria: 'Servicios' },
-  { concepto: 'Agua', dia_vencimiento: 12, familia: 'DCDG', categoria: 'Servicios' },
-  { concepto: 'Energía', dia_vencimiento: 18, familia: 'DCDG', categoria: 'Servicios' },
-  { concepto: 'Gas natural', dia_vencimiento: 20, familia: 'DCDG', categoria: 'Servicios' },
-  { concepto: 'Colegio Alemán', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Educación' },
-  { concepto: 'Extracurriculares', dia_vencimiento: 5, familia: 'DCDG', categoria: 'Educación' },
-  { concepto: 'Seguro vehículo', dia_vencimiento: 8, familia: 'DCC', categoria: 'Transporte' },
-  { concepto: 'Cuota crédito vehículo', dia_vencimiento: 8, familia: 'DCC', categoria: 'Transporte' },
+  { concepto: 'Gas Apto', monto: 200000, dia_vencimiento: 3, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Gas', asumido_por: 'CMDG' },
+  { concepto: 'Medicina Prepagada Caro', monto: 580650, dia_vencimiento: 3, familia: 'DCDG', categoria: 'Seguros y Medicina Prepagada', subcategoria: 'Medicina Prepagada', asumido_por: 'LADCC' },
+  { concepto: 'Medicina Prepagada Luhijo-Luciano', monto: 573300, dia_vencimiento: 3, familia: 'DCDG', categoria: 'Seguros y Medicina Prepagada', subcategoria: 'Medicina Prepagada', asumido_por: 'LADCC' },
+  { concepto: 'Medicina prepagada Ladcc-Adcm', monto: 2348073, dia_vencimiento: 3, familia: 'DCC', categoria: 'Seguros y Medicina Prepagada', subcategoria: 'Medicina Prepagada', asumido_por: 'LADCC' },
+  { concepto: 'TC Colpatria ****2889', monto: 250000, dia_vencimiento: 5, familia: 'DCDG', categoria: 'Créditos y Tarjetas', subcategoria: 'Pago tarjeta de crédito', asumido_por: 'LADCC' },
+  { concepto: 'TC Colpatria ****3802', monto: 250000, dia_vencimiento: 5, familia: 'DCDG', categoria: 'Créditos y Tarjetas', subcategoria: 'Pago tarjeta de crédito', asumido_por: 'LADCC' },
+  { concepto: 'Claro Luis', monto: 59363, dia_vencimiento: 6, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Telefonía', asumido_por: 'LADCC' },
+  { concepto: 'Tigo Luis', monto: 45001, dia_vencimiento: 8, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Telefonía', asumido_por: 'LADCC' },
+  { concepto: 'Arriendo Apto', monto: 6205876, dia_vencimiento: 10, familia: 'DCDG', categoria: 'Vivienda', subcategoria: 'Arriendo', asumido_por: 'LADCC' },
+  { concepto: 'Medicina prepagada MCS', monto: 1405000, dia_vencimiento: 10, familia: 'DCC', categoria: 'Seguros y Medicina Prepagada', subcategoria: 'Medicina Prepagada', asumido_por: 'LADCC' },
+  { concepto: 'Plan Complementario Sanitas', monto: 299502, dia_vencimiento: 15, familia: 'DCDG', categoria: 'Seguros y Medicina Prepagada', subcategoria: 'Plan Complementario', asumido_por: 'LADCC' },
+  { concepto: 'Crédito Bcol 7388 (4549)', monto: 889887, dia_vencimiento: 15, familia: 'DCDG', categoria: 'Créditos y Tarjetas', subcategoria: 'Pago crédito bancario', asumido_por: 'LADCC' },
+  { concepto: 'Crédito Bcol 1048 (Ahinoa 5688)', monto: 416246, dia_vencimiento: 15, familia: 'DCDG', categoria: 'Créditos y Tarjetas', subcategoria: 'Pago crédito bancario', asumido_por: 'CMDG' },
+  { concepto: 'Acueducto Apto', monto: 679297, dia_vencimiento: 16, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Agua', asumido_por: 'LADCC' },
+  { concepto: 'TC Serfinanza 6014', monto: 1500000, dia_vencimiento: 17, familia: 'DCDG', categoria: 'Créditos y Tarjetas', subcategoria: 'Pago tarjeta de crédito', asumido_por: 'LADCC' },
+  { concepto: 'Tigo Carolina', monto: 72820, dia_vencimiento: 19, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Telefonía', asumido_por: 'CMDG' },
+  { concepto: 'Internet Apto', monto: 104000, dia_vencimiento: 22, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Internet', asumido_por: 'LADCC' },
+  { concepto: 'Electricaribe - Energía Apto', monto: 1200000, dia_vencimiento: 26, familia: 'DCDG', categoria: 'Servicios Públicos', subcategoria: 'Energía', asumido_por: 'LADCC' },
+  { concepto: 'Colegio Alemán - LUCIANO', monto: 2772615, dia_vencimiento: 27, familia: 'DCDG', categoria: 'Educación', subcategoria: 'Colegio', asumido_por: 'LADCC' },
+  { concepto: 'Colegio Alemán - LUHIJO', monto: 2877399, dia_vencimiento: 27, familia: 'DCDG', categoria: 'Educación', subcategoria: 'Colegio', asumido_por: 'LADCC' },
+  { concepto: 'Escuela de Fútbol', monto: 330000, dia_vencimiento: 30, familia: 'DCDG', categoria: 'Educación', subcategoria: 'Extracurriculares', asumido_por: 'LADCC' },
+  { concepto: 'Merienda y almuerzos colegio Luciano', monto: 1000000, dia_vencimiento: 30, familia: 'DCDG', categoria: 'Gastos Luhijo - Luciano', subcategoria: 'Meriendas y Almuerzos Colegio', asumido_por: 'LADCC' },
+];
+
+// Los 12 pagos "placeholder" con monto 0 que sembró #73 (nombres genéricos que
+// no calzan 1:1 con el Excel). Al aplicar la siembra canónica se **retiran**
+// (activo=false) los que sigan sin usar (monto 0), sin borrarlos. "Internet
+// Apto" NO está aquí: es un concepto canónico, así que se actualiza en su lugar.
+const PAGOS_FIJOS_PLACEHOLDERS_LEGACY = [
+  'Arriendo', 'Administración', 'Claro (celular)', 'Tigo (celular)', 'Agua',
+  'Energía', 'Gas natural', 'Colegio Alemán', 'Extracurriculares',
+  'Seguro vehículo', 'Cuota crédito vehículo',
 ];
 
 /** Crea (si no existen) `pagos_fijos`/`pagos_estado` y siembra el catálogo conocido. Memoizado. */
@@ -945,13 +972,31 @@ async function aplicarPagosFijosSchema(sqlArg) {
       unique (pago_fijo_id, anio, mes)
     )
   `, []);
-  for (const p of PAGOS_FIJOS_SEED) {
+  // Siembra canónica del Excel (#136), UNA sola vez. Centinela: si ya existe
+  // "Acueducto Apto" es que ya se sembró → no re-aplicar, para no pisar las
+  // ediciones que un owner haga luego en "Gestionar pagos fijos".
+  const yaSembrado = await sql.query(
+    "select 1 from pagos_fijos where concepto = 'Acueducto Apto' and familia = 'DCDG' limit 1", []);
+  if (!yaSembrado.length) {
+    // Retira (activo=false, no borra) los placeholders genéricos de #73 que
+    // nunca se usaron (monto 0). Si un owner ya les había puesto monto, se
+    // respetan (no se tocan).
     await sql.query(
-      `insert into pagos_fijos (concepto, monto, dia_vencimiento, familia, categoria)
-       values ($1, 0, $2, $3, $4)
-       on conflict (concepto, familia) do nothing`,
-      [p.concepto, p.dia_vencimiento, p.familia, p.categoria]
+      'update pagos_fijos set activo = false where monto = 0 and concepto = any($1)',
+      [PAGOS_FIJOS_PLACEHOLDERS_LEGACY]
     );
+    // Inserta/actualiza los 22 canónicos con sus datos reales.
+    for (const p of PAGOS_FIJOS_SEED) {
+      await sql.query(
+        `insert into pagos_fijos (concepto, monto, dia_vencimiento, familia, categoria, subcategoria, asumido_por, activo)
+         values ($1, $2, $3, $4, $5, $6, $7, true)
+         on conflict (concepto, familia) do update set
+           monto = excluded.monto, dia_vencimiento = excluded.dia_vencimiento,
+           categoria = excluded.categoria, subcategoria = excluded.subcategoria,
+           asumido_por = excluded.asumido_por, activo = true`,
+        [p.concepto, p.monto, p.dia_vencimiento, p.familia, p.categoria, p.subcategoria, p.asumido_por]
+      );
+    }
   }
 }
 

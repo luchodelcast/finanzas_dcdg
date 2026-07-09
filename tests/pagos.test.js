@@ -246,6 +246,61 @@ test('ensurePagosFijosSchema: llamadas concurrentes (Promise.all) corren el DDL 
   resetPagosFijosSchemaParaTests();
 });
 
+// Fake enfocado en la siembra canónica (#136): modela el centinela, el retiro
+// de placeholders y el upsert de los 22.
+function fakeSeedDb(preexisting = []) {
+  const rows = preexisting.map((r, i) => ({ id: i + 1, activo: true, monto: 0, familia: 'DCDG', ...r }));
+  let nextId = rows.length + 1;
+  const query = async (text, params = []) => {
+    const t = text.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (t.startsWith('create table') || t.startsWith('create unique index') || t.startsWith('alter table')) return [];
+    if (t.startsWith("select 1 from pagos_fijos where concepto = 'acueducto apto'")) {
+      return rows.some((r) => r.concepto === 'Acueducto Apto') ? [{ x: 1 }] : [];
+    }
+    if (t.startsWith('update pagos_fijos set activo = false where monto = 0 and concepto = any')) {
+      for (const r of rows) if (Number(r.monto) === 0 && params[0].includes(r.concepto)) r.activo = false;
+      return [];
+    }
+    if (t.startsWith('insert into pagos_fijos') && t.includes('on conflict (concepto, familia) do update')) {
+      const [concepto, monto, dia, familia, categoria, subcategoria, asumido] = params;
+      const r = rows.find((x) => x.concepto === concepto && x.familia === familia);
+      if (r) Object.assign(r, { monto, dia_vencimiento: dia, categoria, subcategoria, asumido_por: asumido, activo: true });
+      else rows.push({ id: nextId++, concepto, monto, dia_vencimiento: dia, familia, categoria, subcategoria, asumido_por: asumido, activo: true });
+      return [];
+    }
+    return [];
+  };
+  return { query, rows };
+}
+
+test('siembra canónica: carga los 22 con subcategoría, retira placeholders y no re-siembra', async () => {
+  resetPagosFijosSchemaParaTests();
+  const db = fakeSeedDb([
+    { concepto: 'Agua', familia: 'DCDG', monto: 0 },        // placeholder → se retira
+    { concepto: 'Internet Apto', familia: 'DCDG', monto: 0 }, // canónico → se actualiza en su lugar
+  ]);
+  setSqlForTests(db);
+
+  await ensurePagosFijosSchema();
+  const acueducto = db.rows.find((r) => r.concepto === 'Acueducto Apto');
+  assert.equal(acueducto.subcategoria, 'Agua');
+  assert.equal(Number(acueducto.monto), 679297);
+  assert.equal(db.rows.find((r) => r.concepto === 'Agua').activo, false); // placeholder retirado
+  const internet = db.rows.filter((r) => r.concepto === 'Internet Apto');
+  assert.equal(internet.length, 1);                    // no se duplica
+  assert.equal(internet[0].activo, true);
+  assert.equal(Number(internet[0].monto), 104000);     // actualizado con el monto real
+
+  // Centinela presente → re-aplicar no vuelve a sembrar (respeta ediciones).
+  resetPagosFijosSchemaParaTests();
+  const antes = db.rows.length;
+  await ensurePagosFijosSchema();
+  assert.equal(db.rows.length, antes);
+
+  setSqlForTests(null);
+  resetPagosFijosSchemaParaTests();
+});
+
 test('listPagosFijos / insertPagoFijo / updatePagoFijo: catálogo editable', async () => {
   resetPagosFijosSchemaParaTests();
   const db = fakeDb();

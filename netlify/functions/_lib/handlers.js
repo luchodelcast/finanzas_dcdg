@@ -1234,12 +1234,14 @@ export async function pwaAportesHogarHandler(req) {
  * POST { accion: 'marcar', pago_fijo_id, fecha_pago?, monto_pagado?, anio?, mes? }
  *   → marca un pago fijo como pagado en ese mes (upsert en `pagos_estado`).
  * POST { accion: 'desmarcar', pago_fijo_id, anio?, mes? } → vuelve a pendiente.
- * POST { accion: 'crear', concepto, monto?, dia_vencimiento?, familia?, categoria?, moneda? }
+ * POST { accion: 'crear', concepto, monto?, dia_vencimiento?, familia?, categoria?, moneda?, asumido_por? }
  *   → agrega un pago fijo nuevo al catálogo.
- * POST { accion: 'editar', id, concepto?, monto?, dia_vencimiento?, categoria?, activo? }
+ * POST { accion: 'editar', id, concepto?, monto?, dia_vencimiento?, categoria?, activo?, asumido_por? }
  *   → edita/(des)activa un pago fijo existente.
  * Toda escritura es SOLO owners (Luis/Carolina); lectura para el equipo.
  */
+const ASUMIDO_POR_VALIDOS = ['LADCC', 'CMDG', 'Común'];
+
 export async function pwaPagosHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
@@ -1312,8 +1314,11 @@ export async function pwaPagosHandler(req) {
       if (!concepto) return bad('concepto requerido');
       const familia = body.familia === 'DCC' ? 'DCC' : 'DCDG';
       const dia_vencimiento = Math.min(Math.max(Number(body.dia_vencimiento) || 1, 1), 31);
+      if (body.asumido_por != null && !ASUMIDO_POR_VALIDOS.includes(body.asumido_por)) {
+        return bad(`asumido_por inválido (${ASUMIDO_POR_VALIDOS.join(' | ')})`);
+      }
       try {
-        const r = await insertPagoFijo({ concepto, monto: body.monto, dia_vencimiento, familia, categoria: body.categoria, moneda: body.moneda });
+        const r = await insertPagoFijo({ concepto, monto: body.monto, dia_vencimiento, familia, categoria: body.categoria, moneda: body.moneda, asumido_por: body.asumido_por });
         return ok({ ok: true, pago_fijo: r });
       } catch (e) {
         if (/duplicate key|unique constraint/i.test(e.message)) {
@@ -1325,6 +1330,9 @@ export async function pwaPagosHandler(req) {
     if (accion === 'editar') {
       const id = Number(body.id);
       if (!id) return bad('id requerido');
+      if (body.asumido_por != null && !ASUMIDO_POR_VALIDOS.includes(body.asumido_por)) {
+        return bad(`asumido_por inválido (${ASUMIDO_POR_VALIDOS.join(' | ')})`);
+      }
       const patch = { ...body };
       if (patch.dia_vencimiento != null) patch.dia_vencimiento = Math.min(Math.max(Number(patch.dia_vencimiento) || 1, 1), 31);
       const r = await updatePagoFijo(id, patch);

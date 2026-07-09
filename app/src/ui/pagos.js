@@ -23,6 +23,7 @@ function esc(s) {
 }
 
 const ICONO_ESTADO = { pagado: '✅', pendiente: '⏳', vencido: '🔴' };
+const ASUMIDO_POR_OPCIONES = ['LADCC', 'CMDG', 'Común'];
 
 function filaPagoHTML(p) {
   const icono = ICONO_ESTADO[p.estado] || '⏳';
@@ -30,7 +31,7 @@ function filaPagoHTML(p) {
     ? `<button class="btn btn-s" data-act="pgDesmarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Desmarcar</button>`
     : `<button class="btn btn-p" data-act="pgMarcar" data-id="${p.id}" style="padding:4px 10px;font-size:12px">Marcar pagado</button>`;
   return `<div class="row2" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray)">
-    <div style="font-size:13px">${icono} ${esc(p.concepto)} <span style="color:var(--gray-d)">· vence día ${esc(p.dia_vencimiento)}</span></div>
+    <div style="font-size:13px">${icono} ${esc(p.concepto)} <span style="color:var(--gray-d)">· vence día ${esc(p.dia_vencimiento)} · ${esc(p.asumido_por || 'Común')}</span></div>
     <div style="display:flex;align-items:center;gap:8px">
       <span style="font-weight:600">${formatCOP(p.monto)}</span>
       ${accion}
@@ -46,6 +47,9 @@ function grupoHTML(titulo, pagos) {
 function filaGestionHTML(p) {
   // Bloque vertical con los campos etiquetados (Monto / Día de vencimiento) y una
   // fila que envuelve (flex-wrap) para que en móvil nada se salga de la vista.
+  const asumido = p.asumido_por || 'Común';
+  const opcionesAsumido = ASUMIDO_POR_OPCIONES
+    .map((o) => `<option value="${o}"${o === asumido ? ' selected' : ''}>${o}</option>`).join('');
   return `<div style="padding:10px 0;border-bottom:1px solid var(--gray)${p.activo ? '' : ';opacity:.5'}">
     <div style="font-size:13px;font-weight:600;margin-bottom:6px">${esc(p.concepto)} <span style="color:var(--gray-d);font-weight:400">(${esc(p.familia)})</span></div>
     <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px">
@@ -53,6 +57,8 @@ function filaGestionHTML(p) {
         <input type="number" class="pg-e-monto" data-id="${p.id}" value="${p.monto}" style="width:120px;text-align:right" inputmode="numeric"></label>
       <label style="font-size:11px;color:var(--gray-d);display:flex;flex-direction:column;gap:2px">Día de vencimiento
         <input type="number" class="pg-e-dia" data-id="${p.id}" value="${p.dia_vencimiento}" style="width:80px;text-align:right" min="1" max="31"></label>
+      <label style="font-size:11px;color:var(--gray-d);display:flex;flex-direction:column;gap:2px">Asumido por
+        <select class="pg-e-asumido" data-id="${p.id}">${opcionesAsumido}</select></label>
       <button class="btn btn-p" data-act="pgGuardarEdicion" data-id="${p.id}" style="padding:7px 12px;font-size:12px">Guardar</button>
       <button class="btn btn-s" data-act="pgToggleActivo" data-id="${p.id}" data-activo="${p.activo}" style="padding:7px 12px;font-size:12px">${p.activo ? 'Desactivar' : 'Activar'}</button>
     </div>
@@ -60,8 +66,16 @@ function filaGestionHTML(p) {
 }
 
 function resumenHTML(r) {
-  return `Presupuestado ${formatCOP(r.total_presupuestado)} · Pagado ${formatCOP(r.total_pagado)}`
+  const linea1 = `Presupuestado ${formatCOP(r.total_presupuestado)} · Pagado ${formatCOP(r.total_pagado)}`
     + ` · Pendiente ${formatCOP(r.total_pendiente)}${r.n_vencidos ? ` (${r.n_vencidos} vencido${r.n_vencidos === 1 ? '' : 's'})` : ''}`;
+  const porAsumido = r.por_asumido || {};
+  const desglose = ASUMIDO_POR_OPCIONES
+    .filter((o) => porAsumido[o] && porAsumido[o].total_presupuestado > 0)
+    .map((o) => `${esc(o)} ${formatCOP(porAsumido[o].total_presupuestado)}`)
+    .join(' · ');
+  return desglose
+    ? `${linea1}<div style="color:var(--gray-d);margin-top:2px">Por quién asume: ${desglose}</div>`
+    : linea1;
 }
 
 async function cargar() {
@@ -70,7 +84,7 @@ async function cargar() {
   try {
     const r = await getPagosDelMes({ anio: _anio, mes: _mes });
     V('pg-periodo').textContent = `${String(_mes).padStart(2, '0')}/${_anio}`;
-    V('pg-resumen').textContent = resumenHTML(r.resumen);
+    V('pg-resumen').innerHTML = resumenHTML(r.resumen);
     const pagos = r.pagos || [];
     V('pg-dcdg').innerHTML = grupoHTML('DCDG', pagos.filter((p) => p.familia === 'DCDG'));
     V('pg-dcc').innerHTML = grupoHTML('DCC', pagos.filter((p) => p.familia === 'DCC'));
@@ -127,10 +141,11 @@ async function guardarEdicion(id) {
   // el monto/día de vencimiento reales en vez de dejarlos como estaban.
   const montoVal = document.querySelector(`.pg-e-monto[data-id="${id}"]`)?.value;
   const diaVal = document.querySelector(`.pg-e-dia[data-id="${id}"]`)?.value;
+  const asumido_por = document.querySelector(`.pg-e-asumido[data-id="${id}"]`)?.value || null;
   const monto = montoVal === '' || montoVal == null ? null : Number(montoVal);
   const dia_vencimiento = diaVal === '' || diaVal == null ? null : Number(diaVal);
   try {
-    await editarPagoFijo({ id: Number(id), monto, dia_vencimiento });
+    await editarPagoFijo({ id: Number(id), monto, dia_vencimiento, asumido_por });
     await Promise.all([cargarGestion(), cargar()]);
   } catch (e) {
     V('pg-lista-gestion').insertAdjacentHTML('afterbegin', `<div style="color:var(--red);font-size:12px">Error: ${esc(e.message)}</div>`);
@@ -155,6 +170,7 @@ async function crear() {
     dia_vencimiento: Number(V('pg-n-dia').value) || 1,
     familia: V('pg-n-familia').value || 'DCDG',
     categoria: V('pg-n-categoria').value.trim() || null,
+    asumido_por: V('pg-n-asumido').value || 'Común',
   };
   try {
     await crearPagoFijo(body);

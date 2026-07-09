@@ -61,20 +61,37 @@ export function armarPagosDelMes(pagosFijos, estados, anio, mes, hoyISO) {
   });
 }
 
-/** Totales del mes: pagado vs. pendiente (incluye vencidos), por familia. */
+/** Renglón de totales vacío, reusado para el total general y cada grupo de `por_asumido`. */
+function totalesVacios() {
+  return { total_presupuestado: 0, total_pagado: 0, total_pendiente: 0, n_pagados: 0, n_pendientes: 0, n_vencidos: 0 };
+}
+
+function acumular(out, p) {
+  const monto = Number(p.monto) || 0;
+  out.total_presupuestado += monto;
+  if (p.estado === 'pagado') {
+    out.n_pagados++;
+    out.total_pagado += Number(p.monto_pagado ?? monto) || 0;
+  } else {
+    out.total_pendiente += monto;
+    if (p.estado === 'vencido') out.n_vencidos++;
+    else out.n_pendientes++;
+  }
+}
+
+/**
+ * Totales del mes: pagado vs. pendiente (incluye vencidos), por familia, y
+ * desglosados por quién asume (`asumido_por`: LADCC/CMDG/Común, issue #136)
+ * en `por_asumido`. Un pago sin `asumido_por` (dato viejo) cuenta como 'Común'.
+ */
 export function resumenPagos(pagos) {
-  const out = { total_presupuestado: 0, total_pagado: 0, total_pendiente: 0, n_pagados: 0, n_pendientes: 0, n_vencidos: 0 };
+  const out = totalesVacios();
+  out.por_asumido = {};
   for (const p of pagos) {
-    const monto = Number(p.monto) || 0;
-    out.total_presupuestado += monto;
-    if (p.estado === 'pagado') {
-      out.n_pagados++;
-      out.total_pagado += Number(p.monto_pagado ?? monto) || 0;
-    } else {
-      out.total_pendiente += monto;
-      if (p.estado === 'vencido') out.n_vencidos++;
-      else out.n_pendientes++;
-    }
+    acumular(out, p);
+    const quien = p.asumido_por || 'Común';
+    if (!out.por_asumido[quien]) out.por_asumido[quien] = totalesVacios();
+    acumular(out.por_asumido[quien], p);
   }
   return out;
 }
