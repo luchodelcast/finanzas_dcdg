@@ -23,6 +23,7 @@ import {
 import { procesarRecibo } from './utils/imageProcessor.js';
 import { procesarReciboPDF } from './utils/pdfProcessor.js';
 import { formatCOP, hoyISO } from './utils/formatters.js';
+import { monedaDeCuenta, tasaTransferencia } from './utils/transferencia-monedas.js';
 import { loadHistory, addHistory, getHistory, clearHistory } from './services/history.js';
 import { renderDashboard } from './ui/dashboard.js';
 import { renderHome } from './ui/home.js';
@@ -50,6 +51,7 @@ const fmtDate = (d) => d.toLocaleDateString('es-CO', { weekday: 'short', day: 'n
 let curImg = null; // { base64, mediaType, prev }
 let curIsIwin = false;
 let _accts = []; // cuentas cargadas (para los selects de transferencia)
+let _trModo = 'simple'; // 'simple' | 'monedas' — modo del flujo de Transferencia (#132)
 
 // ── Navegación ────────────────────────────────────────────
 // Qué pestaña de la tab bar se resalta para cada pantalla.
@@ -696,7 +698,7 @@ async function registrarCET() {
 
 // ── Transferencia entre cuentas ───────────────────────────
 function fillTransferAccts() {
-  const nombres = (_accts && _accts.length ? _accts : CUENTAS_FALLBACK).map((a) => a.name).filter(Boolean);
+  const nombres = cuentasParaTransfer().map((a) => a.name).filter(Boolean);
   ['tr-origen', 'tr-destino'].forEach((id) => {
     const sel = V(id);
     if (!sel) return;
@@ -713,6 +715,38 @@ function fillTransferAccts() {
   if (V('tr-destino') && V('tr-origen') && V('tr-destino').value === V('tr-origen').value && V('tr-destino').options.length > 1) {
     V('tr-destino').selectedIndex = 1;
   }
+  actualizarMonedasTransfer();
+}
+
+function cuentasParaTransfer() {
+  return _accts && _accts.length ? _accts : CUENTAS_FALLBACK;
+}
+
+/** Detecta la moneda de las cuentas origen/destino elegidas y actualiza los badges de solo lectura (#132). */
+function actualizarMonedasTransfer() {
+  const cuentas = cuentasParaTransfer();
+  const monedaOrigen = monedaDeCuenta(V('tr-origen').value, cuentas);
+  V('tr-moneda').value = monedaOrigen;
+  V('tr-moneda-view').value = monedaOrigen;
+  if (_trModo === 'monedas') {
+    const monedaDestino = monedaDeCuenta(V('tr-destino').value, cuentas);
+    V('tr-moneda-destino').value = monedaDestino;
+    V('tr-moneda-destino-view').value = monedaDestino;
+  } else {
+    V('tr-moneda-destino').value = '';
+    V('tr-moneda-destino-view').value = '';
+  }
+}
+
+/** Cambia entre el flujo simple (misma moneda) y la sección dedicada "Entre monedas" (#132). */
+function setTrModo(modo) {
+  _trModo = modo;
+  V('tr-modo-simple').classList.toggle('on', modo === 'simple');
+  V('tr-modo-monedas').classList.toggle('on', modo === 'monedas');
+  V('tr-destino-monedas-row').style.display = modo === 'monedas' ? '' : 'none';
+  if (modo === 'simple') V('tr-monto-destino').value = '';
+  actualizarMonedasTransfer();
+  actualizarTasaTransfer();
 }
 
 function initTransfer() {
@@ -720,23 +754,25 @@ function initTransfer() {
   V('tr-fecha').value = today();
   V('tr-msg').textContent = '';
   V('tr-monto-destino').value = '';
-  V('tr-moneda-destino').value = '';
-  V('tr-tasa').textContent = '';
+  setTrModo('simple');
 }
 
-/** Vista previa de la tasa implícita cuando la moneda destino difiere de la de origen (#121). */
+/** Tasa aplicada de la transferencia entre monedas, mostrada de forma prominente (#132). */
 function actualizarTasaTransfer() {
   const tasaEl = V('tr-tasa');
+  if (_trModo !== 'monedas') { tasaEl.textContent = ''; return; }
   const monto = parseFloat(V('tr-monto').value) || 0;
   const moneda = V('tr-moneda').value;
   const montoDestino = parseFloat(V('tr-monto-destino').value) || 0;
   const monedaDestino = V('tr-moneda-destino').value;
-  if (!monedaDestino || monedaDestino === moneda || !(monto > 0) || !(montoDestino > 0)) {
-    tasaEl.textContent = '';
+  const r = tasaTransferencia({ monto, moneda, montoDestino, monedaDestino });
+  if (!r) {
+    tasaEl.textContent = moneda !== 'COP' && monedaDestino && monedaDestino !== 'COP' && monedaDestino !== moneda
+      ? 'Tasa no disponible (ninguna cuenta está en COP).'
+      : '';
     return;
   }
-  const tasa = monedaDestino === 'COP' ? montoDestino / monto : monto / montoDestino;
-  tasaEl.textContent = `Tasa implícita: ${tasa.toLocaleString('es-CO', { maximumFractionDigits: 4 })}`;
+  tasaEl.textContent = `Tasa: ${r.tasa.toLocaleString('es-CO', { maximumFractionDigits: 2 })} COP/${r.monedaExtranjera}`;
 }
 
 async function registrarTransfer() {
@@ -748,17 +784,17 @@ async function registrarTransfer() {
   const cDestino = V('tr-destino').value;
   const desc = V('tr-desc').value.trim();
   const quien = V('tr-who').value;
-  const montoDestino = parseFloat(V('tr-monto-destino').value) || 0;
-  const monedaDestino = V('tr-moneda-destino').value;
+  const montoDestino = _trModo === 'monedas' ? (parseFloat(V('tr-monto-destino').value) || 0) : 0;
+  const monedaDestino = _trModo === 'monedas' ? V('tr-moneda-destino').value : '';
   const msg = V('tr-msg');
   if (!(monto > 0)) { msg.textContent = 'Ingresa un monto válido.'; msg.style.color = 'var(--red)'; return; }
   if (!cOrigen || !cDestino || cOrigen === cDestino) {
     msg.textContent = 'Elige cuentas de origen y destino distintas.'; msg.style.color = 'var(--red)'; return;
   }
-  // Dos patas en monedas distintas (#121): solo se envían si de verdad difieren.
+  // Dos patas en monedas distintas: solo se envían si de verdad difieren (#121/#132).
   const dosPatas = monedaDestino && monedaDestino !== moneda;
-  if (dosPatas && !(montoDestino > 0)) {
-    msg.textContent = 'Ingresa el monto recibido en destino.'; msg.style.color = 'var(--red)'; return;
+  if (_trModo === 'monedas' && dosPatas && !(montoDestino > 0)) {
+    msg.textContent = 'Ingresa el monto que entró en la cuenta destino.'; msg.style.color = 'var(--red)'; return;
   }
   go('proc');
   V('proc-msg').textContent = 'Registrando transferencia…';
@@ -824,13 +860,23 @@ function wireEvents() {
     });
   V('cet-tipo-dest').addEventListener('change', onCetTipoDest);
 
-  // Transferencia entre monedas (#121): vista previa de la tasa implícita.
-  ['tr-monto', 'tr-moneda', 'tr-monto-destino', 'tr-moneda-destino'].forEach((id) => {
+  // Transferencia entre monedas (#121/#132): vista previa de la tasa aplicada.
+  ['tr-monto', 'tr-monto-destino'].forEach((id) => {
     const el = V(id);
     if (!el) return;
     el.addEventListener('input', actualizarTasaTransfer);
     el.addEventListener('change', actualizarTasaTransfer);
   });
+  ['tr-origen', 'tr-destino'].forEach((id) => {
+    const el = V(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      actualizarMonedasTransfer();
+      actualizarTasaTransfer();
+    });
+  });
+  V('tr-modo-simple').addEventListener('click', () => setTrModo('simple'));
+  V('tr-modo-monedas').addEventListener('click', () => setTrModo('monedas'));
 }
 
 // ── Init ──────────────────────────────────────────────────

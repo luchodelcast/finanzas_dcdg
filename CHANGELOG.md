@@ -9,6 +9,22 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🤖 **Sección dedicada "Transferencia entre monedas"** (issue #132,
+  `prioridad-alta` + `auto-ok`, PR #TBD): la pantalla 🔁 Transferencia gana un
+  selector "Misma moneda" / "Entre monedas". En modo "Entre monedas" se
+  muestran dos bloques explícitos — **Salió de** (cuenta origen, monto,
+  moneda auto-detectada) y **Entró en** (cuenta destino, monto recibido,
+  moneda auto-detectada) — más la **tasa aplicada** de forma prominente (p.
+  ej. "Tasa: 3.313,49 COP/USD"), en vez de los campos `monto_destino`/
+  `moneda_destino` que antes quedaban como opcionales sueltos en el flujo
+  general. La moneda de cada cuenta se detecta sola a partir del catálogo
+  (`⚙️ CUENTAS` o el fallback), sin que el usuario tenga que elegirla a mano.
+  Reusa el backend existente sin tocarlo (`registrarMovimiento` transferencia
+  + `cuadreTransferencia` de #121/#129); la transferencia de una sola moneda
+  sigue funcionando igual que antes. Nuevo módulo puro
+  `app/src/utils/transferencia-monedas.js` (detección de moneda por cuenta +
+  cálculo de tasa) con tests. `npm test` (331/331) + `npm run build` en verde
+  → auto-merge (aditivo, sin candado). ✅
 - 🔎 **Cola de `autobuild` revisada, sin item elegible para construir directo**:
   #40/#41/#92/#98 ya tienen PR borrador esperando revisión (#58/#55/#96/#103),
   #51/#52 están divididos en sub-issues ya fusionados o en espera, y la épica

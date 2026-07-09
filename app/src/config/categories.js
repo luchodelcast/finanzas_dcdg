@@ -35,14 +35,14 @@ export function subcategorias(categoria) {
  * Portado de `CUENTAS_FALLBACK` del monolito.
  */
 export const CUENTAS_FALLBACK = [
-  { name: 'Débito Bancolombia', tipoEspecial: 'Normal' },
-  { name: 'TC Colpatria', tipoEspecial: 'Normal' },
-  { name: 'TC Serfinanza 6014', tipoEspecial: 'Normal' },
-  { name: 'Nequi', tipoEspecial: 'Normal' },
-  { name: 'TC iWin (Superlikers)', tipoEspecial: 'iWin-Adelanto' },
-  { name: 'Mercury USD', tipoEspecial: 'USD-Internacional' },
-  { name: 'DollarApp', tipoEspecial: 'USD-Internacional' },
-  { name: 'Efectivo', tipoEspecial: 'Normal' },
+  { name: 'Débito Bancolombia', tipoEspecial: 'Normal', moneda: 'COP' },
+  { name: 'TC Colpatria', tipoEspecial: 'Normal', moneda: 'COP' },
+  { name: 'TC Serfinanza 6014', tipoEspecial: 'Normal', moneda: 'COP' },
+  { name: 'Nequi', tipoEspecial: 'Normal', moneda: 'COP' },
+  { name: 'TC iWin (Superlikers)', tipoEspecial: 'iWin-Adelanto', moneda: 'COP' },
+  { name: 'Mercury USD', tipoEspecial: 'USD-Internacional', moneda: 'USD' },
+  { name: 'DollarApp', tipoEspecial: 'USD-Internacional', moneda: 'USD' },
+  { name: 'Efectivo', tipoEspecial: 'Normal', moneda: 'COP' },
 ];
 
 /** Cuentas origen para el CET (últimos 4 → etiqueta). */
