@@ -7,16 +7,23 @@
  * contabilidad de partida doble.
  */
 
-import { getPlanCuentas, guardarApertura, getApertura, getCatalogos, crearCuentaPlan } from '../services/finanzas.js';
+import {
+  getPlanCuentas, guardarApertura, getApertura, getCatalogos, crearCuentaPlan,
+  getCuentasMeta, guardarCuentaMeta,
+} from '../services/finanzas.js';
 import { formatCOP } from '../utils/formatters.js';
 
 const V = (id) => document.getElementById(id);
 const FECHA_APERTURA = '2026-07-01';
 
+const DUENOS = [['comun', 'Común'], ['luis', 'Luis'], ['carolina', 'Carolina']];
+const BOLSILLOS = [['comun', 'Común'], ['gasto_individual', 'Gasto individual'], ['patrimonio_individual', 'Patrimonio individual']];
+
 let _wired = false;
 let _activos = [];
 let _pasivos = [];
 let _agregarAbierta = false;
+let _cuentasMeta = [];
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -120,6 +127,58 @@ async function agregarCuenta() {
   }
 }
 
+function opcionesHTML(pares, valorActual) {
+  return pares.map(([v, label]) => `<option value="${v}"${v === valorActual ? ' selected' : ''}>${esc(label)}</option>`).join('');
+}
+
+function filaCuentaMetaHTML(c) {
+  const meta = c.meta || {};
+  const puc = meta.cuenta_puc || '';
+  const opcionesPuc = ['<option value="">(heurística por nombre)</option>']
+    .concat(_activos.concat(_pasivos).map((p) => `<option value="${esc(p.codigo)}"${p.codigo === puc ? ' selected' : ''}>${esc(p.codigo)} · ${esc(p.nombre)}</option>`))
+    .join('');
+  return `<div class="cm-row" data-nombre="${esc(c.nombre)}" style="border-bottom:1px solid var(--line);padding:8px 0">
+    <div style="font-size:13px;font-weight:600">${esc(c.nombre)}</div>
+    <div class="row2" style="gap:8px;margin-top:4px">
+      <div class="fld"><label>Dueño</label><select class="cm-dueno">${opcionesHTML(DUENOS, meta.dueno || 'comun')}</select></div>
+      <div class="fld"><label>Bolsillo</label><select class="cm-bolsillo">${opcionesHTML(BOLSILLOS, meta.bolsillo || 'comun')}</select></div>
+    </div>
+    <div class="fld" style="margin-top:4px"><label>Cuenta PUC (opcional)</label><select class="cm-puc">${opcionesPuc}</select></div>
+    <button class="btn btn-s" data-act="cmGuardar" style="margin-top:6px">✓ Guardar</button>
+    <span class="cm-msg" style="font-size:12px;margin-left:8px;font-weight:600"></span>
+  </div>`;
+}
+
+async function cargarCuentasMeta() {
+  try {
+    const r = await getCuentasMeta();
+    _cuentasMeta = r.cuentas || [];
+    V('ap-cuentas-meta').innerHTML = _cuentasMeta.map(filaCuentaMetaHTML).join('') || '<div class="empty">Sin cuentas en el catálogo</div>';
+  } catch (e) {
+    V('ap-cuentas-meta').innerHTML = `<div class="empty">No se pudo cargar: ${esc(e.message)}</div>`;
+  }
+}
+
+async function guardarFilaCuentaMeta(fila) {
+  const nombre = fila.dataset.nombre;
+  const msg = fila.querySelector('.cm-msg');
+  msg.textContent = 'Guardando…'; msg.style.color = 'var(--gray-d)';
+  try {
+    await guardarCuentaMeta({
+      nombre,
+      dueno: fila.querySelector('.cm-dueno').value,
+      bolsillo: fila.querySelector('.cm-bolsillo').value,
+      cuenta_puc: fila.querySelector('.cm-puc').value || null,
+    });
+    msg.textContent = 'Guardado ✅'; msg.style.color = 'var(--green)';
+  } catch (e) {
+    msg.textContent = (e.status === 401 || e.status === 403)
+      ? (e.message || 'Solo Luis o Carolina pueden editar los metadatos de una cuenta.')
+      : 'Error: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
 /** Llamado por main.js al navegar a la pantalla de saldos iniciales. */
 export async function renderApertura() {
   if (!_activos.length && !_pasivos.length) {
@@ -128,6 +187,7 @@ export async function renderApertura() {
       const ents = (cat.entidades || []).filter((e) => e.tipo === 'persona');
       V('ap-entidad').innerHTML = '<option value="">Familia (sin entidad)</option>'
         + ents.map((e) => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('');
+      await cargarCuentasMeta();
     } catch (e) {
       V('ap-msg').textContent = 'No se pudo cargar el plan de cuentas: ' + e.message;
       V('ap-msg').style.color = 'var(--red)';
@@ -142,6 +202,7 @@ export async function renderApertura() {
       if (e.target.closest('[data-act="saveApertura"]')) guardar();
       else if (e.target.closest('[data-act="apToggleAgregar"]')) toggleAgregar();
       else if (e.target.closest('[data-act="apAgregarCuenta"]')) agregarCuenta();
+      else if (e.target.closest('[data-act="cmGuardar"]')) guardarFilaCuentaMeta(e.target.closest('.cm-row'));
     });
   }
   recalcular();

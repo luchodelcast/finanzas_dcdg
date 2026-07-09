@@ -115,6 +115,12 @@ export const getPlanCuentas = (params = {}) => request('/api/pwa-plan-cuentas', 
 /** Agrega una cuenta nueva de Activo o Pasivo al plan de cuentas (solo owners). */
 export const crearCuentaPlan = (body) => request('/api/pwa-plan-cuentas', { method: 'POST', body });
 
+/** Cuentas del catálogo con sus metadatos de dueño/bolsillo/cuenta PUC (issue #112). */
+export const getCuentasMeta = () => request('/api/pwa-cuentas-meta');
+
+/** Fija los metadatos (dueño/bolsillo/cuenta_puc) de una cuenta. Solo owners. */
+export const guardarCuentaMeta = (body) => request('/api/pwa-cuentas-meta', { method: 'POST', body });
+
 /** Apertura existente de una entidad (o null). */
 export const getApertura = (params = {}) => request('/api/pwa-apertura', { params });
 

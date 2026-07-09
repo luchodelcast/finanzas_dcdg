@@ -290,6 +290,75 @@ export function resetPlanCuentasSchemaParaTests() {
   _planCuentasExtraPromise = null;
 }
 
+// ---------------------------------------------------------------------------
+// Metadatos de cuentas (issue #112, `auto-ok`): quién es el dueño de cada
+// cuenta del catálogo `⚙️ CUENTAS` y a qué bolsillo pertenece, para que la
+// contabilización deje de agrupar por palabra clave del nombre y pueda
+// distinguir "el efectivo de Luis" de "la tarjeta de Carolina". Aditivo, DDL
+// idempotente en runtime — mismo patrón que ensurePlanCuentasSchema. Memoizado.
+// ---------------------------------------------------------------------------
+let _cuentasMetaSchemaPromise = null;
+
+export const DUENOS_CUENTA = ['luis', 'carolina', 'comun'];
+export const BOLSILLOS_CUENTA = ['comun', 'gasto_individual', 'patrimonio_individual'];
+
+/** Crea (si no existe) `cuentas_meta`. Memoizado. */
+export async function ensureCuentasMetaSchema(sqlArg) {
+  if (!_cuentasMetaSchemaPromise) {
+    _cuentasMetaSchemaPromise = (async () => {
+      const sql = sqlArg || await getSql();
+      await ensurePlanCuentasSchema(sql); // cuenta_puc referencia plan_cuentas
+      await sql.query(`
+        create table if not exists cuentas_meta (
+          id             bigint generated always as identity primary key,
+          nombre         text not null unique,
+          dueno          text not null default 'comun',
+          bolsillo       text not null default 'comun',
+          cuenta_puc     text references plan_cuentas (codigo),
+          creado_en      timestamptz not null default now(),
+          actualizado_en timestamptz not null default now()
+        )
+      `, []);
+    })().catch((e) => { _cuentasMetaSchemaPromise = null; throw e; });
+  }
+  return _cuentasMetaSchemaPromise;
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetCuentasMetaSchemaParaTests() {
+  _cuentasMetaSchemaPromise = null;
+}
+
+/** Metadatos de todas las cuentas con fila propia (las que no tienen fila usan el fallback por heurística). */
+export async function listCuentasMeta(sqlArg) {
+  await ensureCuentasMetaSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  return sql.query('select nombre, dueno, bolsillo, cuenta_puc from cuentas_meta order by nombre', []);
+}
+
+/** Crea/actualiza los metadatos de una cuenta (gestión, solo owners). */
+export async function upsertCuentaMeta({ nombre, dueno, bolsillo, cuenta_puc } = {}, sqlArg) {
+  const nombreLimpio = String(nombre || '').trim();
+  if (!nombreLimpio) throw new Error('Falta el nombre de la cuenta.');
+  const d = String(dueno || 'comun').trim().toLowerCase();
+  const b = String(bolsillo || 'comun').trim().toLowerCase();
+  if (!DUENOS_CUENTA.includes(d)) throw new Error(`dueno inválido (usa ${DUENOS_CUENTA.join('|')}).`);
+  if (!BOLSILLOS_CUENTA.includes(b)) throw new Error(`bolsillo inválido (usa ${BOLSILLOS_CUENTA.join('|')}).`);
+  const puc = cuenta_puc ? String(cuenta_puc).trim() : null;
+  await ensureCuentasMetaSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `insert into cuentas_meta (nombre, dueno, bolsillo, cuenta_puc)
+     values ($1, $2, $3, $4)
+     on conflict (nombre) do update
+       set dueno = excluded.dueno, bolsillo = excluded.bolsillo, cuenta_puc = excluded.cuenta_puc,
+           actualizado_en = now()
+     returning nombre, dueno, bolsillo, cuenta_puc`,
+    [nombreLimpio, d, b, puc]
+  );
+  return rows[0];
+}
+
 /** Naturaleza contable esperada por clase (1 Activo … 6 Costos). Débito: activo/gasto/costo. */
 export function naturalezaDeClase(clase) {
   return [1, 5, 6].includes(Number(clase)) ? 'debito' : 'credito';
