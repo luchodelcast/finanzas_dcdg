@@ -21,8 +21,11 @@ import {
   insertEmpresa,
   logEvento,
   queryResumen,
+  listCuentasMeta,
 } from './repo.js';
 import { mirrorMovimiento, mirrorEmpresa } from './sheet-mirror.js';
+import { indexarCuentasMeta } from './contabilizar.js';
+import { inferirTipoGasto } from './tipo-gasto.js';
 import { deriveIdempotencyKey } from './idempotency.js';
 import { clasificar } from './classify.js';
 import { evaluarMovimiento } from '../../../app/src/config/iwin.js';
@@ -157,10 +160,22 @@ export async function registrarMovimiento(mov = {}) {
   const notasBase = ETIQUETA_TIPO[tipo].replace('SilvIA', origen);
   const notas = [notasBase, mov.notas].filter(Boolean).join(' — ');
 
+  // Hogar (compartido) vs. personal de alguien (#114): por defecto se infiere
+  // del bolsillo de la cuenta usada (`cuentas_meta`, #112); best-effort, cae a
+  // "hogar" si la consulta falla. Un override explícito del llamador manda.
+  let cuentasMeta = new Map();
+  try { cuentasMeta = indexarCuentasMeta(await listCuentasMeta()); } catch (_) { /* cae a hogar */ }
+  const tipoGasto = inferirTipoGasto({
+    metodoPago: metodo, quienPago: titular, cuentasMeta,
+    tipoGastoOverride: mov.tipo_gasto, personaOverride: mov.tipo_gasto_persona,
+  });
+
   const { inserted, row } = await insertMovimiento({
     fecha, tipo, categoria, subcategoria, descripcion, monto, moneda,
     metodo_pago: metodo, quien_pago: titular, tarjeta, notas, origen,
     idempotency_key: idempotencyKey,
+    tipo_gasto: tipoGasto.tipo_gasto, tipo_gasto_persona: tipoGasto.tipo_gasto_persona,
+    tipo_gasto_auto: tipoGasto.tipo_gasto_auto,
   });
 
   // Reintento exacto (misma llave) → ya estaba; no duplicamos ni re-espejamos.
@@ -188,6 +203,7 @@ export async function registrarMovimiento(mov = {}) {
     id: movId,
     tipo, fecha, categoria, subcategoria, monto, moneda, monto_fmt: fmtMonto(monto, moneda),
     metodo_pago: metodo, quien_pago: titular, tarjeta,
+    tipo_gasto: tipoGasto.tipo_gasto, tipo_gasto_persona: tipoGasto.tipo_gasto_persona,
     adelanto_empresas: emp.adelanto, retiro_delca2: emp.retiroDelca2,
     mensaje: `Anotado ✅ ${categoria}${subcategoria ? '/' + subcategoria : ''} ${fmtMonto(monto, moneda)}${metodo ? ', ' + metodo : ''}${emp.retiroDelca2 ? ' · retiro Delca2 registrado' : ''}${emp.adelanto ? ' · adelanto iWin registrado' : ''}.`,
   };

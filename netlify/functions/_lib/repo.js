@@ -19,12 +19,14 @@ import { normalize } from '../../../app/src/config/rules.js';
  */
 export async function insertMovimiento(m, sqlArg) {
   const sql = sqlArg || await getSql();
+  await ensureTipoGastoSchema(sql);
   const cols = ['fecha', 'tipo', 'categoria', 'subcategoria', 'descripcion', 'monto', 'moneda',
     'metodo_pago', 'quien_pago', 'tarjeta', 'cuenta_destino', 'notas', 'origen', 'idempotency_key',
-    'estado_conciliacion', 'extracto_linea_id'];
+    'estado_conciliacion', 'extracto_linea_id', 'tipo_gasto', 'tipo_gasto_persona', 'tipo_gasto_auto'];
   const vals = [m.fecha, m.tipo, m.categoria, m.subcategoria, m.descripcion, m.monto, m.moneda || 'COP',
     m.metodo_pago, m.quien_pago, m.tarjeta, m.cuenta_destino || null, m.notas, m.origen, m.idempotency_key,
-    m.estado_conciliacion || 'provisional', m.extracto_linea_id || null];
+    m.estado_conciliacion || 'provisional', m.extracto_linea_id || null,
+    m.tipo_gasto || 'hogar', m.tipo_gasto_persona || null, m.tipo_gasto_auto === undefined ? true : !!m.tipo_gasto_auto];
   const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
   const ins = await sql.query(
     `insert into movimientos (${cols.join(', ')}) values (${ph})
@@ -105,6 +107,31 @@ export async function ensureCorreccionSchema(sqlArg) {
 
 /** Para tests: olvida la memoización del DDL. */
 export function resetCorreccionSchemaParaTests() { _correccionSchemaPromise = null; }
+
+// ---------------------------------------------------------------------------
+// Clasificar gasto hogar vs. personal (issue #114, Contab. familiar B,
+// `auto-ok`) — aditivo, DDL idempotente en runtime, mismo patrón que
+// ensureCorreccionSchema.
+// ---------------------------------------------------------------------------
+let _tipoGastoSchemaPromise = null;
+
+export const TIPOS_GASTO = ['hogar', 'personal'];
+
+/** DDL idempotente: columnas para marcar un movimiento hogar/personal. */
+export async function ensureTipoGastoSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  if (!_tipoGastoSchemaPromise) {
+    _tipoGastoSchemaPromise = (async () => {
+      await sql.query("alter table movimientos add column if not exists tipo_gasto text not null default 'hogar'", []);
+      await sql.query('alter table movimientos add column if not exists tipo_gasto_persona text', []);
+      await sql.query('alter table movimientos add column if not exists tipo_gasto_auto boolean not null default true', []);
+    })().catch((e) => { _tipoGastoSchemaPromise = null; throw e; });
+  }
+  return _tipoGastoSchemaPromise;
+}
+
+/** Para tests: olvida la memoización del DDL. */
+export function resetTipoGastoSchemaParaTests() { _tipoGastoSchemaPromise = null; }
 
 /** Asiento (con sus líneas) por su idempotency_key. Para poder reversarlo. */
 export async function getAsientoByKey(key, sqlArg) {
@@ -1123,9 +1150,10 @@ export async function getUsuarioRolPorEmail(email, sqlArg) {
 }
 
 /** Lista/busca movimientos (para consultas puntuales, SilvIA y dashboard). */
-export async function queryMovimientos({ desde, hasta, categoria, quien, texto, limit = 50 }, sqlArg) {
+export async function queryMovimientos({ desde, hasta, categoria, quien, texto, tipoGasto, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();
   await ensureCorreccionSchema(sql);
+  await ensureTipoGastoSchema(sql);
   const params = [];
   const cond = ['not coalesce(anulado,false)'];
   if (desde) { params.push(desde); cond.push(`fecha >= $${params.length}`); }
@@ -1133,11 +1161,13 @@ export async function queryMovimientos({ desde, hasta, categoria, quien, texto, 
   if (categoria) { params.push(`%${categoria.toLowerCase()}%`); cond.push(`lower(categoria) like $${params.length}`); }
   if (quien) { params.push(`%${quien.toLowerCase()}%`); cond.push(`lower(coalesce(quien_pago,'')) like $${params.length}`); }
   if (texto) { params.push(`%${texto.toLowerCase()}%`); cond.push(`lower(descripcion) like $${params.length}`); }
+  if (tipoGasto) { params.push(String(tipoGasto).toLowerCase()); cond.push(`tipo_gasto = $${params.length}`); }
   const where = cond.length ? `where ${cond.join(' and ')}` : '';
   params.push(Math.min(Number(limit) || 50, 500));
   const rows = await sql.query(
     `select id, fecha, tipo, categoria, subcategoria, descripcion, monto, moneda,
-            metodo_pago, quien_pago, tarjeta, cuenta_destino, notas, origen, creado_en
+            metodo_pago, quien_pago, tarjeta, cuenta_destino, notas, origen, creado_en,
+            tipo_gasto, tipo_gasto_persona, tipo_gasto_auto
        from movimientos ${where}
       order by fecha desc, creado_en desc
       limit $${params.length}`,

@@ -182,7 +182,7 @@ export async function movimientosHandler(req) {
   try {
     const rows = await queryMovimientos({
       desde: g('desde'), hasta: g('hasta'), categoria: g('categoria'),
-      quien: g('quien'), texto: g('texto'), limit: g('limit'),
+      quien: g('quien'), texto: g('texto'), tipoGasto: g('tipo_gasto'), limit: g('limit'),
     });
     return ok({ ok: true, movimientos: rows, n: rows.length });
   } catch (e) {
@@ -216,7 +216,7 @@ export async function pwaMovimientosHandler(req) {
   try {
     const rows = await queryMovimientos({
       desde: g('desde'), hasta: g('hasta'), categoria: g('categoria'),
-      quien: g('quien'), texto: g('texto'), limit: g('limit'),
+      quien: g('quien'), texto: g('texto'), tipoGasto: g('tipo_gasto'), limit: g('limit'),
     });
     return ok({ ok: true, movimientos: rows, n: rows.length });
   } catch (e) {

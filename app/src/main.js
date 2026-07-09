@@ -375,6 +375,9 @@ function showConf(d) {
   // Quién pagó
   V('cf-who').value = d.quien_pago === 'Carolina' ? 'Carolina' : 'Luis';
 
+  // Hogar/personal: "Auto" por defecto — el backend infiere según la cuenta.
+  V('cf-hogar').value = '';
+
   // Método de pago — match exacto y luego por keyword
   matchMetodo(d.metodo_pago || '');
 
@@ -484,6 +487,9 @@ async function doSheet(confirmar = false) {
   const notas = V('cf-note').value;
   const tarjeta = V('cf-tarjeta').value.trim();
   const moneda = V('cf-moneda') ? V('cf-moneda').value : 'COP';
+  // "" = auto (el backend infiere por la cuenta); "hogar"; "personal:<persona>".
+  const hogarSel = V('cf-hogar') ? V('cf-hogar').value : '';
+  const [tipoGasto, tipoGastoPersona] = hogarSel ? hogarSel.split(':') : [undefined, undefined];
 
   try {
     // El backend clasifica lo que falte, aplica reglas iWin/Delca2, deduplica y
@@ -492,6 +498,7 @@ async function doSheet(confirmar = false) {
       tipo: 'gasto', fecha, monto, moneda, categoria: cat, subcategoria: sub,
       descripcion: desc, quien_pago: quien, metodo_pago: metodo,
       tarjeta_ultimos4: tarjeta, notas, confirmar,
+      tipo_gasto: tipoGasto, tipo_gasto_persona: tipoGastoPersona,
     });
 
     // Posible duplicado → preguntar y reintentar forzando si el usuario acepta.

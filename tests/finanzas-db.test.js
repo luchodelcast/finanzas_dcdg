@@ -8,7 +8,7 @@ import { registrarMovimiento, resumen } from '../netlify/functions/_lib/finanzas
 // consultas que emite el flujo de registro (insert/on-conflict, dedup, update,
 // empresas, eventos). Simula la restricción UNIQUE(idempotency_key).
 // ---------------------------------------------------------------------------
-function fakeDb() {
+function fakeDb({ cuentasMeta = [] } = {}) {
   const movimientos = [];
   const empresas = [];
   let seq = 0;
@@ -19,7 +19,8 @@ function fakeDb() {
 
     if (t.startsWith('insert into movimientos')) {
       // cols: fecha,tipo,categoria,subcategoria,descripcion,monto,moneda,
-      //       metodo_pago,quien_pago,tarjeta,cuenta_destino,notas,origen,idempotency_key
+      //       metodo_pago,quien_pago,tarjeta,cuenta_destino,notas,origen,idempotency_key,
+      //       estado_conciliacion,extracto_linea_id,tipo_gasto,tipo_gasto_persona,tipo_gasto_auto
       const key = params[13];
       if (movimientos.some((m) => m.idempotency_key === key)) return []; // ON CONFLICT DO NOTHING
       const row = {
@@ -27,6 +28,7 @@ function fakeDb() {
         subcategoria: params[3], descripcion: params[4], monto: params[5], moneda: params[6],
         metodo_pago: params[7], quien_pago: params[8], tarjeta: params[9],
         cuenta_destino: params[10], notas: params[11], origen: params[12], idempotency_key: key,
+        tipo_gasto: params[16], tipo_gasto_persona: params[17], tipo_gasto_auto: params[18],
         creado_en: '2026-07-05T12:00:00Z', actualizado_en: null,
       };
       movimientos.push(row);
@@ -57,6 +59,7 @@ function fakeDb() {
       return [row];
     }
     if (t.startsWith('insert into eventos')) return [];
+    if (t.startsWith('select nombre, dueno, bolsillo, cuenta_puc from cuentas_meta')) return cuentasMeta;
     return [];
   }
 
@@ -152,6 +155,57 @@ test('transferencia requiere cuenta de origen y destino', async () => {
     () => registrarMovimiento({ tipo: 'transferencia', monto: 100, cuenta_origen: 'Nequi Luis', fecha: '2026-07-06' }),
     /origen y de destino/,
   );
+  setSqlForTests(null);
+});
+
+// ---------------------------------------------------------------------------
+// Hogar vs. personal (#114): registrarMovimiento infiere tipo_gasto del
+// bolsillo de la cuenta (cuentas_meta, #112), y respeta el override manual.
+// ---------------------------------------------------------------------------
+test('sin fila en cuentas_meta → tipo_gasto "hogar" (auto), comportamiento actual preservado', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+  const r = await registrarMovimiento({ ...base, metodo_pago: 'Bcol 0965' });
+  assert.equal(r.registrado, true);
+  assert.equal(r.tipo_gasto, 'hogar');
+  assert.equal(db._movimientos[0].tipo_gasto, 'hogar');
+  assert.equal(db._movimientos[0].tipo_gasto_auto, true);
+  setSqlForTests(null);
+});
+
+test('cuenta con bolsillo "gasto_individual" → tipo_gasto "personal" del dueño (auto)', async () => {
+  const db = fakeDb({
+    cuentasMeta: [{ nombre: 'Serfinanza', dueno: 'carolina', bolsillo: 'gasto_individual', cuenta_puc: null }],
+  });
+  setSqlForTests(db);
+  const r = await registrarMovimiento({ ...base, metodo_pago: 'Serfinanza' });
+  assert.equal(r.registrado, true);
+  assert.equal(r.tipo_gasto, 'personal');
+  assert.equal(r.tipo_gasto_persona, 'Carolina');
+  assert.equal(db._movimientos[0].tipo_gasto, 'personal');
+  assert.equal(db._movimientos[0].tipo_gasto_persona, 'Carolina');
+  setSqlForTests(null);
+});
+
+test('override manual "hogar" manda aunque la cuenta sea individual', async () => {
+  const db = fakeDb({
+    cuentasMeta: [{ nombre: 'Serfinanza', dueno: 'carolina', bolsillo: 'gasto_individual', cuenta_puc: null }],
+  });
+  setSqlForTests(db);
+  const r = await registrarMovimiento({ ...base, metodo_pago: 'Serfinanza', tipo_gasto: 'hogar' });
+  assert.equal(r.tipo_gasto, 'hogar');
+  assert.equal(db._movimientos[0].tipo_gasto, 'hogar');
+  assert.equal(db._movimientos[0].tipo_gasto_auto, false);
+  setSqlForTests(null);
+});
+
+test('override manual "personal" con persona explícita manda sobre la cuenta común', async () => {
+  const db = fakeDb();
+  setSqlForTests(db);
+  const r = await registrarMovimiento({ ...base, metodo_pago: 'Bcol 0965', tipo_gasto: 'personal', tipo_gasto_persona: 'Luis' });
+  assert.equal(r.tipo_gasto, 'personal');
+  assert.equal(r.tipo_gasto_persona, 'Luis');
+  assert.equal(db._movimientos[0].tipo_gasto_auto, false);
   setSqlForTests(null);
 });
 
