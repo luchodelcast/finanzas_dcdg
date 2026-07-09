@@ -17,6 +17,7 @@ import {
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
   queryAsientos, movimientosSinAsiento, ingresosSinAsiento,
   insertMovimiento, getExtractoLinea, marcarLineaMaterializada,
+  listCuentasMeta, upsertCuentaMeta,
 } from './repo.js';
 import { deriveIngresoKey } from './idempotency.js';
 import { registrarCuenta, listCuentas } from './cuentas.js';
@@ -350,6 +351,44 @@ export async function pwaPlanCuentasHandler(req) {
   try {
     const cuentas = await listPlanCuentas({ clase });
     return ok({ ok: true, cuentas, n: cuentas.length });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Metadatos de cuenta — dueño/bolsillo/cuenta PUC explícita (issue #112). Auth Google.
+ *   GET  /api/pwa-cuentas-meta → cada cuenta del catálogo `⚙️ CUENTAS`, con sus
+ *        metadatos si tiene fila (lectura, todo el equipo).
+ *   POST /api/pwa-cuentas-meta { nombre, dueno, bolsillo, cuenta_puc? } → fija los
+ *        metadatos de una cuenta. SOLO owners.
+ */
+export async function pwaCuentasMetaHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'POST') {
+    if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden editar los metadatos de una cuenta.', 403);
+    const body = await parseBody(req);
+    try {
+      const meta = await upsertCuentaMeta(body);
+      return ok({ ok: true, meta });
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+
+  try {
+    const [cuentas, metas] = await Promise.all([listCuentas(), listCuentasMeta()]);
+    const porNombre = new Map(metas.map((m) => [String(m.nombre).trim().toLowerCase(), m]));
+    const items = cuentas.map((c) => ({
+      nombre: c.name,
+      banco: c.banco,
+      titular: c.titular,
+      meta: porNombre.get(String(c.name).trim().toLowerCase()) || null,
+    }));
+    return ok({ ok: true, cuentas: items, n: items.length });
   } catch (e) {
     return bad(e.message, 422);
   }
