@@ -1025,6 +1025,18 @@ export async function queryPagosEstadoMes({ anio, mes }, sqlArg) {
   return sql.query('select * from pagos_estado where anio = $1 and mes = $2', [Number(anio), Number(mes)]);
 }
 
+/** Filas de `pagos_estado` en un rango [desde, hasta] inclusive (para el historial). */
+export async function queryPagosEstadoRango({ desde, hasta }, sqlArg) {
+  await ensurePagosFijosSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const lo = Number(desde.anio) * 12 + Number(desde.mes);
+  const hi = Number(hasta.anio) * 12 + Number(hasta.mes);
+  return sql.query(
+    'select * from pagos_estado where (anio * 12 + mes) between $1 and $2 order by anio, mes',
+    [lo, hi]
+  );
+}
+
 /** Agrega un pago fijo nuevo al catálogo (gestión, solo owners). */
 export async function insertPagoFijo(p, sqlArg) {
   await ensurePagosFijosSchema(sqlArg);

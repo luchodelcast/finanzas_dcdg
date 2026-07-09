@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mesAnterior, estadoPago, armarPagosDelMes, resumenPagos, estaVigenteEnMes } from '../netlify/functions/_lib/pagos.js';
+import { mesAnterior, estadoPago, armarPagosDelMes, resumenPagos, estaVigenteEnMes, ultimosMeses, historialPagos } from '../netlify/functions/_lib/pagos.js';
 import { setSqlForTests } from '../netlify/functions/_lib/db.js';
 import {
   ensurePagosFijosSchema, resetPagosFijosSchemaParaTests, listPagosFijos,
@@ -244,6 +244,30 @@ test('ensurePagosFijosSchema: llamadas concurrentes (Promise.all) corren el DDL 
 
   setSqlForTests(null);
   resetPagosFijosSchemaParaTests();
+});
+
+test('ultimosMeses: N meses hacia atrás con rollover de año', () => {
+  assert.deepEqual(ultimosMeses(2026, 2, 4), [
+    { anio: 2026, mes: 2 }, { anio: 2026, mes: 1 }, { anio: 2025, mes: 12 }, { anio: 2025, mes: 11 },
+  ]);
+});
+
+test('historialPagos: resumen por mes + acumulado por quién asume', () => {
+  const pagosFijos = [
+    { id: 1, concepto: 'Agua', monto: 100, asumido_por: 'LADCC', activo: true, dia_vencimiento: 10, creado_en: '2026-01-01' },
+    { id: 2, concepto: 'Gas', monto: 50, asumido_por: 'CMDG', activo: true, dia_vencimiento: 10, creado_en: '2026-01-01' },
+  ];
+  const estados = [
+    { pago_fijo_id: 1, anio: 2026, mes: 6, estado: 'pagado', monto_pagado: 120 },
+    { pago_fijo_id: 2, anio: 2026, mes: 7, estado: 'pagado', monto_pagado: 55 },
+  ];
+  const meses = ultimosMeses(2026, 7, 2); // [jul, jun]
+  const h = historialPagos(pagosFijos, estados, meses, '2026-07-31');
+  assert.equal(h.por_mes.find((m) => m.mes === 7).total_pagado, 55);
+  assert.equal(h.por_mes.find((m) => m.mes === 6).total_pagado, 120);
+  assert.equal(h.acumulado.por_asumido.LADCC, 120);
+  assert.equal(h.acumulado.por_asumido.CMDG, 55);
+  assert.equal(h.acumulado.total_pagado, 175);
 });
 
 // Fake enfocado en la siembra canónica (#136): modela el centinela, el retiro
