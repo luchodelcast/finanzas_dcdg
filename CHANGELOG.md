@@ -9,6 +9,21 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-09 (autobuild)
+- 🔎 **Cola de `autobuild` revisada, sin item elegible para construir directo**:
+  #40/#41/#92/#98 ya tienen PR borrador esperando revisión (#58/#55/#96/#103),
+  #51/#52 están divididos en sub-issues ya fusionados o en espera, y la épica
+  #111 (contabilidad familiar) que se abrió hoy quedó **completa** (sus 7
+  sub-issues #112–#118, todos fusionados). Sin nada que construir, propuse
+  **una funcionalidad nueva**: **issue #130**, "Hoja de trabajo de renta por
+  cédulas + patrimonio fiscal a 31-dic" (Fase 3.3 de
+  `docs/roadmap-contable.md`, el objetivo #2 del Horizonte 1, pendiente desde
+  que se aprobó el reporte IBC). Queda como `propuesta` esperando el OK de
+  Luis; no se construyó nada esta corrida. `AUTOBUILD_NOTIFY_URL` no estaba
+  configurado en el entorno de esta corrida, así que el aviso de WhatsApp no
+  salió — este registro es la red de seguridad. 🔎 Propuesta #130 por aprobar:
+  hoja de trabajo de renta por cédulas + patrimonio fiscal a 31-dic — insumo
+  para que Santiago prepare la declaración de renta. Dime "aprueba la 130" o
+  revísala en https://github.com/luchodelcast/finanzas_dcdg/issues/130.
 - 🤖 **[Contab. familiar E] Metas financieras (emergencia/retiro/educación) +
   pensión de Carolina** (issue #117, `auto-ok`, PR #127): nuevo módulo de
   metas/objetivos con barra de progreso (tabla `metas`, DDL idempotente en
