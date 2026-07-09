@@ -8,7 +8,7 @@
 
 import { getResumen, getMovimientos, anularMovimiento, recategorizarMovimiento } from '../services/finanzas.js';
 import { currentUser } from '../services/auth.js';
-import { formatCOP } from '../utils/formatters.js';
+import { formatCOP, formatMoneda } from '../utils/formatters.js';
 
 const V = (id) => document.getElementById(id);
 const esOwner = () => (currentUser() || {}).rol === 'owner';
@@ -118,7 +118,7 @@ function movsHTML(movs, owner) {
       : '';
     return `<div class="h-item">
       <div><div class="h-name">${esc(m.descripcion)}</div><div class="h-meta">${esc(m.categoria || '—')}${m.subcategoria ? ' · ' + esc(m.subcategoria) : ''} · ${esc(fecha)}</div>${fix}</div>
-      <div><div class="h-amt">${formatCOP(Number(m.monto) || 0)}</div><div class="h-who">${esc(m.quien_pago || '')}${m.metodo_pago ? ' · ' + esc(m.metodo_pago) : ''}</div></div>
+      <div><div class="h-amt">${esc(formatMoneda(Number(m.monto) || 0, m.moneda))}</div><div class="h-who">${esc(m.quien_pago || '')}${m.metodo_pago ? ' · ' + esc(m.metodo_pago) : ''}</div></div>
     </div>`;
   }).join('');
 }
