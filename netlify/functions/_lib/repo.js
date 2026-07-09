@@ -1333,3 +1333,102 @@ export async function listAportesHogarPeriodo({ desde, hasta } = {}, sqlArg) {
     params
   );
 }
+
+// ---------------------------------------------------------------------------
+// Metas financieras (issue #117, Contab. familiar E, `auto-ok`). Esquema nuevo
+// vía DDL idempotente en runtime (sin `.sql` manual) — mismo patrón que
+// ensureAportesHogarSchema/ensurePrestamosSchema. Ver AUTOBUILD.md § modo auto-ok.
+// ---------------------------------------------------------------------------
+let _metasSchemaPromise = null;
+
+/** Crea (si no existe) `metas`. Memoizado. */
+export async function ensureMetasSchema(sqlArg) {
+  if (!_metasSchemaPromise) {
+    _metasSchemaPromise = aplicarMetasSchema(sqlArg)
+      .catch((e) => { _metasSchemaPromise = null; throw e; }); // reintentable si falló
+  }
+  return _metasSchemaPromise;
+}
+
+async function aplicarMetasSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists metas (
+      id              bigint generated always as identity primary key,
+      nombre          text not null,
+      categoria       text not null default 'otra',
+      monto_objetivo  numeric(14,2) not null check (monto_objetivo > 0),
+      fecha_objetivo  date,
+      cuentas_puc     text not null default '',
+      entidad_id      bigint references entidades (id),
+      activa          boolean not null default true,
+      notas           text,
+      creado_en       timestamptz not null default now(),
+      actualizado_en  timestamptz not null default now()
+    )
+  `, []);
+  await sql.query('create index if not exists metas_activa_idx on metas (activa)', []);
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetMetasSchemaParaTests() {
+  _metasSchemaPromise = null;
+}
+
+/** Lista de metas (opcionalmente solo las activas), de más vieja a más nueva. */
+export async function listMetas({ soloActivas } = {}, sqlArg) {
+  await ensureMetasSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    soloActivas
+      ? 'select * from metas where activa order by creado_en asc, id asc'
+      : 'select * from metas order by creado_en asc, id asc',
+    []
+  );
+}
+
+/** Una meta por id. */
+export async function getMeta(id, sqlArg) {
+  await ensureMetasSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query('select * from metas where id = $1 limit 1', [id]);
+  return rows[0] || null;
+}
+
+/** Crea una meta nueva. */
+export async function insertMeta(m, sqlArg) {
+  await ensureMetasSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `insert into metas (nombre, categoria, monto_objetivo, fecha_objetivo, cuentas_puc, entidad_id, notas)
+     values ($1, $2, $3, $4, $5, $6, $7)
+     returning *`,
+    [m.nombre, m.categoria || 'otra', Number(m.monto_objetivo) || 0, m.fecha_objetivo || null,
+      m.cuentas_puc || '', m.entidad_id || null, m.notas || null]
+  );
+  return rows[0];
+}
+
+/** Edita campos de una meta existente (gestión, solo owners). */
+export async function updateMeta(id, patch, sqlArg) {
+  await ensureMetasSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const rows = await sql.query(
+    `update metas set
+        nombre = coalesce($2, nombre),
+        categoria = coalesce($3, categoria),
+        monto_objetivo = coalesce($4, monto_objetivo),
+        fecha_objetivo = coalesce($5, fecha_objetivo),
+        cuentas_puc = coalesce($6, cuentas_puc),
+        activa = coalesce($7, activa),
+        notas = coalesce($8, notas),
+        actualizado_en = now()
+      where id = $1
+      returning *`,
+    [id, patch.nombre ?? null, patch.categoria ?? null,
+      patch.monto_objetivo != null ? Number(patch.monto_objetivo) : null,
+      patch.fecha_objetivo ?? null, patch.cuentas_puc ?? null,
+      patch.activa != null ? !!patch.activa : null, patch.notas ?? null]
+  );
+  return rows[0] || null;
+}

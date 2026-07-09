@@ -803,6 +803,31 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
+<!-- ── METAS FINANCIERAS (Contab. familiar E, issue #117) ── -->
+<div class="scr" id="scr-metas">
+  <div class="card">
+    <div class="card-ttl">Nueva meta</div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Nombre</label><input type="text" id="mt-n-nombre" placeholder="Ej: Viaje fin de año"></div>
+      <div class="fld"><label>Categoría</label><select id="mt-n-categoria"></select></div>
+    </div>
+    <div class="row2" style="gap:8px">
+      <div class="fld"><label>Monto objetivo</label><input type="number" id="mt-n-monto" placeholder="0" inputmode="numeric"></div>
+      <div class="fld"><label>Fecha objetivo (opcional)</label><input type="date" id="mt-n-fecha"></div>
+    </div>
+    <div class="fld"><label>Cuenta(s) de respaldo (opcional)</label><select id="mt-n-cuentas" multiple size="4"></select></div>
+    <div class="fld"><label>Notas (opcional)</label><input type="text" id="mt-n-notas" placeholder="Ej: aporte mensual de 200.000"></div>
+    <div id="mt-n-msg" style="font-size:12px;margin-top:6px;font-weight:600"></div>
+    <button class="btn btn-p" data-act="mtCrear" style="margin-top:8px">＋ Crear meta</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">Tus metas</div>
+    <div id="mt-msg" style="font-size:12px;margin-bottom:8px;font-weight:600"></div>
+    <div id="mt-lista"><div class="empty">Cargando…</div></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
 <!-- ── EXPORTS CONTABLES EN CSV (T12a, issue #91, solo lectura) ── -->
 <div class="scr" id="scr-exports">
   <div id="exp-msg" style="font-size:12px;font-weight:600;margin-bottom:4px"></div>
@@ -1069,6 +1094,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
     <button class="mas-item" data-go="mayor"><div class="mas-ico">📒</div><div class="mas-txt"><strong>Libro Mayor</strong><span>Mayor y comprobación</span></div></button>
     <button class="mas-item" data-go="estados"><div class="mas-ico">📈</div><div class="mas-txt"><strong>Estados financieros</strong><span>Resultados y balance general</span></div></button>
     <button class="mas-item" data-go="patrimonio"><div class="mas-ico">🪙</div><div class="mas-txt"><strong>Mi patrimonio</strong><span>Neto por persona y evolución</span></div></button>
+    <button class="mas-item" data-go="metas"><div class="mas-ico">🎯</div><div class="mas-txt"><strong>Metas</strong><span>Emergencia, retiro, educación…</span></div></button>
     <button class="mas-item" data-go="exports"><div class="mas-ico">📥</div><div class="mas-txt"><strong>Exportar CSV</strong><span>Reportes contables</span></div></button>
   </div>
   <div class="mas-group">
