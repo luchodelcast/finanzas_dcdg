@@ -9,6 +9,30 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — quinta corrida seguida con el
+  mismo resultado**: repasé los 9 issues `autobuild` abiertos, mismo estado que
+  las cuatro corridas anteriores de hoy — #40/#41/#92/#98 con PR borrador
+  esperando revisión (#58/#55/#96/#103), #51/#52 son los "padre" ya divididos
+  en sub-issues (fusionados o en espera), y #100/#130/#145 siguen como
+  `propuesta` sin que Luis les haya quitado la etiqueta. No hay issues nuevos
+  en la cola ni docs modificados desde la corrida anterior (`docs/*.md` sin
+  cambios). Repasé además `docs/plan-partida-doble-jul2026.md`,
+  `docs/design-brief-pwa.md`, `docs/arquitectura.md` y `docs/despliegue.md`
+  buscando un ángulo genuino distinto de las tres propuestas ya abiertas: lo
+  único pendiente que mencionan son validaciones que le tocan a Santiago
+  (contador) y bloques de despliegue que solo puede hacer Luis (dueño de la
+  cuenta) — no son funcionalidades a construir. No fuerzo una cuarta propuesta
+  de relleno. `AUTOBUILD_NOTIFY_URL` no está configurado en este entorno, así
+  que no sale aviso de WhatsApp; este registro es la red de seguridad.
+  **Recordatorio: 3 propuestas siguen esperando tu OK** — 🔎 #100 (cuadre de
+  saldos del extracto), 🔎 #130 (hoja de trabajo de renta por cédulas +
+  patrimonio fiscal) y 🔎 #145 (reporte de discrepancias de conciliación) — y
+  **2 PR borrador esperando revisión bajo candado** — 🔒 #96 (cierre mensual,
+  issue #92) y 🔒 #103 (portal solo-lectura, issue #98). Dime "aprueba la
+  100/130/145" o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — cuarta corrida seguida con el
   mismo resultado**: repasé los 9 issues `autobuild` abiertos, mismo estado que
   las tres corridas anteriores de hoy — #40/#41/#92/#98 con PR borrador
