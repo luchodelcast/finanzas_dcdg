@@ -9,6 +9,29 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada, sin item elegible — sin proponer una séptima**: de los 6
+  issues `autobuild` abiertos, ninguno es tomable directo — #40/#41/#92/#98
+  llevan `autobuild-espera` con PR borrador ya abierto (#58/#55/#96/#103) y
+  #51/#52 son los "padre" ya divididos en sub-issues (fusionados o en
+  espera). Las 4 propuestas que estaban pendientes (#100, #130, #145, #154)
+  ya fueron aprobadas y construidas en corridas anteriores de hoy — no queda
+  ninguna `propuesta` abierta. Repasé los docs que ninguna corrida había
+  mirado todavía: `docs/arquitectura.md`, `docs/despliegue.md` y
+  `docs/design-brief-pwa.md` no dejan ninguna fase pendiente sin construir —
+  el último es explícitamente un brief para un rediseño de UI/UX dirigido a
+  un agente/diseñador dedicado ("Para: Claude Design"), de alcance mucho
+  mayor que una funcionalidad por corrida, así que no lo tomo como propuesta
+  de autobuild. Sin ángulo genuino distinto, no fuerzo una séptima propuesta.
+  **Lo que sí necesita a Luis ahora**: 4 PR borrador siguen esperando
+  revisión bajo el candado, sin ningún comentario ni actividad desde que se
+  abrieron — 🔒 #55 (backup DB, issue #41, desde 07-07), 🔒 #58
+  (config-como-datos, issue #40, desde 07-07), 🔒 #96 (cierre mensual, issue
+  #92, desde 07-08) y 🔒 #103 (portal solo-lectura, issue #98, desde 07-08).
+  `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` siguen sin configurar en
+  este entorno, así que el aviso de WhatsApp no puede salir; se avisa por
+  notificación directa dado que ya llevan 2-3 días sin decisión.
+
+## 2026-07-10 (autobuild)
 - ✅ **Captura de costos de actividad económica (Ahinoa)** (issue #154,
   aprobada por Luis): `costos_actividad` ya existía en `sql/contable.sql` y ya
   se leía de forma agregada en el reporte de aportes IBC, pero no tenía
