@@ -9,6 +9,30 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — corregí un bug de etiquetado
+  en #145**: repasé los 9 issues `autobuild` abiertos, mismo resultado que la
+  corrida anterior de hoy — #40/#41/#92/#98 con PR borrador esperando revisión
+  (#58/#55/#96/#103), #51/#52 son los "padre" ya divididos en sub-issues
+  (fusionados o en espera), y #100/#130/#145 son `propuesta` sin decisión de
+  Luis. Al revisar #145 encontré que le faltaba la etiqueta **`propuesta`**:
+  el título y el cuerpo del issue (generados por la corrida que lo abrió,
+  2026-07-09) dicen explícitamente "tiene la etiqueta `propuesta`", pero nunca
+  se aplicó — quedó solo con `autobuild`, lo que técnicamente lo hacía
+  "elegible" para construir directo. Eso es un bug de la corrida que lo creó,
+  no una aprobación de Luis: se lo agregué para que la compuerta funcione
+  como se documentó, sin construir nada de #145 ni tocar su alcance. Con la
+  cola confirmada vacía otra vez y sin un ángulo nuevo genuino desde ayer
+  (mismo repaso de `docs/migracion-db.md` §"Siguientes fases" que ya hizo la
+  corrida anterior), no fuerzo una cuarta propuesta de relleno.
+  `AUTOBUILD_NOTIFY_URL` no está configurado en este entorno, así que no salió
+  aviso de WhatsApp; este registro es la red de seguridad.
+  **Recordatorio: 3 propuestas siguen esperando tu OK** — 🔎 #100 (cuadre de
+  saldos del extracto), 🔎 #130 (hoja de trabajo de renta por cédulas +
+  patrimonio fiscal) y 🔎 #145 (reporte de discrepancias de conciliación).
+  Dime "aprueba la 100/130/145" o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola de `autobuild` revisada de nuevo, sin item elegible para construir
   directo — sin proponer una cuarta**: repasé los 9 issues abiertos con label
   `autobuild`. #40/#41/#92/#98 siguen con PR borrador esperando revisión
