@@ -9,6 +9,26 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — cuarta corrida seguida con el
+  mismo resultado**: repasé los 9 issues `autobuild` abiertos, mismo estado que
+  las tres corridas anteriores de hoy — #40/#41/#92/#98 con PR borrador
+  esperando revisión (#58/#55/#96/#103), #51/#52 son los "padre" ya divididos
+  en sub-issues (fusionados o en espera; confirmé además que #48, la
+  dependencia bloqueante de #51/#52, ya está cerrado — no cambia su
+  elegibilidad porque igual están cubiertos por sus splits), y #100/#130/#145
+  siguen como `propuesta` sin que Luis les haya quitado la etiqueta. No fuerzo
+  una cuarta propuesta de relleno — sin ángulo nuevo genuino desde la corrida
+  anterior. `AUTOBUILD_NOTIFY_URL` no está configurado en este entorno, así que
+  no sale aviso de WhatsApp; este registro es la red de seguridad.
+  **Recordatorio: 3 propuestas siguen esperando tu OK** — 🔎 #100 (cuadre de
+  saldos del extracto), 🔎 #130 (hoja de trabajo de renta por cédulas +
+  patrimonio fiscal) y 🔎 #145 (reporte de discrepancias de conciliación) — y
+  **2 PR borrador esperando revisión bajo candado** — 🔒 #96 (cierre mensual,
+  issue #92) y 🔒 #103 (portal solo-lectura, issue #98). Dime "aprueba la
+  100/130/145" o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada de nuevo, sin item elegible — mismo estado que la corrida
   anterior**: repasé los 9 issues `autobuild` abiertos: #40/#41/#92/#98 con PR
   borrador esperando revisión (#58/#55/#96/#103), #51/#52 son los "padre" ya
