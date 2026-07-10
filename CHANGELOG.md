@@ -9,6 +9,23 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
+  anterior (#166)**: los 6 issues `autobuild` abiertos siguen sin ninguno
+  elegible — #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
+  (#58/#55/#96/#103, sin comentarios ni actividad nueva en ninguno desde la
+  corrida anterior) y #51/#52 siguen como issues "padre" ya divididos en
+  sub-issues (fusionados o en espera de revisión). Sin issues `autobuild`
+  nuevos y sin ninguna `propuesta` abierta, así que no se fuerza una
+  construcción ni una propuesta de relleno. De paso, encontré la rama de
+  desarrollo `claude/zealous-brown-w8b78b` con un commit suelto ("Pagos:
+  reporte histórico") que nunca tuvo PR — verifiqué que es idéntico byte a
+  byte al que ya se fusionó como PR #148 (mismo `Claude-Session`, diff vacío
+  contra `9758a23`), así que no es trabajo perdido: reseteé la rama a
+  `main` para que la próxima corrida parta limpia. Sin nada nuevo que avisar
+  a Luis, no se manda notificación esta corrida (ya se avisó en corridas
+  anteriores); este registro es la constancia.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, mismo estado que la corrida anterior (#165)**:
   los 6 issues `autobuild` abiertos siguen sin ninguno elegible —
   #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
