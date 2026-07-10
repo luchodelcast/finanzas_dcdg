@@ -13,6 +13,11 @@
  *                "Contabilizar estas N líneas" (backfill, issue #72): revisa
  *                una propuesta de clasificación y las materializa como
  *                movimiento/ingreso ya contabilizado (ver `_lib/backfill.js`).
+ *
+ * Además, el caso inverso (issue #145): un movimiento/ingreso `provisional`
+ * que el extracto no corrobora en absoluto (nunca fue candidato de ninguna
+ * propuesta) se muestra en la sección "Capturado que el extracto no
+ * corrobora" — solo informativo, sin acción asociada.
  */
 
 import {
@@ -67,6 +72,14 @@ function cuadreHTML(cuadre) {
 function candidatoLabel(c) {
   const fecha = String(c.fecha || '').slice(0, 10);
   return `${fecha} · ${c.descripcion || '(sin descripción)'} · ${formatCOP(Math.abs(Number(c.monto) || 0))}`;
+}
+
+function discrepanciaHTML(d) {
+  const fecha = String(d.fecha || '').slice(0, 10);
+  return `<div class="h-item">
+    <div><div class="h-name">${esc(d.descripcion || '(sin descripción)')}</div><div class="h-meta">${esc(fecha)} · ${d.tipo}</div></div>
+    <div class="h-amt">${formatCOP(Math.abs(Number(d.monto) || 0))}</div>
+  </div>`;
 }
 
 function propuestaHTML(p) {
@@ -126,12 +139,16 @@ async function refreshPropuestas() {
   V('bf-card').style.display = _extractoId ? '' : 'none';
   V('bf-resumen').textContent = '';
   V('bf-msg').textContent = '';
+  V('disc-card').style.display = 'none';
+  V('disc-resumen').textContent = '';
+  V('disc-list').innerHTML = '';
   renderBfList();
   if (!_extractoId) { list.innerHTML = '<div class="empty">Elige un extracto</div>'; return; }
   list.innerHTML = '<div class="empty">Cargando propuestas…</div>';
   try {
     const r = await getPropuestasConciliacion(_extractoId);
     const props = r.propuestas || [];
+    const disc = r.discrepancias || [];
     const res = r.resumen || {};
     V('conc-resumen').textContent = props.length
       ? `${res.n_match || 0} propuesta(s) · ${res.n_ambiguo || 0} ambigua(s) · ${res.n_solo_extracto || 0} sin capturado`
@@ -140,6 +157,11 @@ async function refreshPropuestas() {
     list.innerHTML = props.length
       ? props.map(propuestaHTML).join('')
       : '<div class="empty">Nada pendiente de revisar en este extracto.</div>';
+    if (disc.length) {
+      V('disc-card').style.display = '';
+      V('disc-resumen').textContent = `${disc.length} capturado(s) que el extracto no corrobora — puede ser timing (postea el mes siguiente) o un error de captura.`;
+      V('disc-list').innerHTML = disc.map(discrepanciaHTML).join('');
+    }
   } catch (e) {
     list.innerHTML = `<div class="empty" style="color:var(--red)">${esc(e.message)}</div>`;
   }

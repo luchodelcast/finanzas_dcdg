@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { proponerCruces, cuadreExtracto, VENTANA_DIAS_DEFAULT, toISODate } from '../netlify/functions/_lib/conciliacion.js';
+import { proponerCruces, cuadreExtracto, detectarDiscrepancias, VENTANA_DIAS_DEFAULT, toISODate } from '../netlify/functions/_lib/conciliacion.js';
 import { setSqlForTests } from '../netlify/functions/_lib/db.js';
 import { confirmarConciliacion } from '../netlify/functions/_lib/repo.js';
 
@@ -99,6 +99,54 @@ test('proponerCruces: la descripción desempata el orden de candidatos ambiguos 
   // El que matchea por descripción (mismos primeros 6 chars) va primero, pero ambos quedan listados.
   assert.equal(p.candidatos[0].id, 110);
   assert.equal(p.candidatos.length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// detectarDiscrepancias — capturado que el extracto no corrobora (issue #145).
+// ---------------------------------------------------------------------------
+
+test('detectarDiscrepancias: movimiento/ingreso que sí es candidato de una propuesta no es discrepancia', () => {
+  const lineas = [{ id: 1, fecha: '2026-07-05', descripcion: 'Pago Exito', monto: -45000 }];
+  const movimientos = [{ id: 101, fecha: '2026-07-05', descripcion: 'Éxito', monto: 45000 }];
+  const propuestas = proponerCruces(lineas, movimientos, []);
+  assert.deepEqual(detectarDiscrepancias(propuestas, movimientos, []), []);
+});
+
+test('detectarDiscrepancias: candidato de un `ambiguo` tampoco es discrepancia (aunque no se auto-resuelva)', () => {
+  const lineas = [{ id: 4, fecha: '2026-07-05', descripcion: 'Transferencia', monto: -50000 }];
+  const movimientos = [
+    { id: 103, fecha: '2026-07-04', descripcion: 'Transferencia a Juan', monto: 50000 },
+    { id: 104, fecha: '2026-07-06', descripcion: 'Transferencia a Pedro', monto: 50000 },
+  ];
+  const propuestas = proponerCruces(lineas, movimientos, []);
+  assert.deepEqual(detectarDiscrepancias(propuestas, movimientos, []), []);
+});
+
+test('detectarDiscrepancias: movimiento/ingreso provisional que nunca fue candidato de nada → discrepancia', () => {
+  // La línea del extracto no matchea con nada (solo_extracto); el movimiento
+  // provisional de la ventana tampoco aparece en ningún candidato → discrepancia.
+  const lineas = [{ id: 5, fecha: '2026-07-05', descripcion: 'Comisión', monto: -12000 }];
+  const movimientos = [{ id: 105, fecha: '2026-07-06', descripcion: 'Uber suelto', monto: 18500 }];
+  const ingresos = [{ id: 205, fecha: '2026-07-07', descripcion: 'Reembolso suelto', monto: 30000 }];
+  const propuestas = proponerCruces(lineas, movimientos, ingresos);
+  assert.equal(propuestas[0].caso, 'solo_extracto');
+  const disc = detectarDiscrepancias(propuestas, movimientos, ingresos);
+  assert.equal(disc.length, 2);
+  assert.deepEqual(disc.map((d) => `${d.tipo}:${d.id}`).sort(), ['ingreso:205', 'movimiento:105']);
+});
+
+test('detectarDiscrepancias: ordena por fecha ascendente', () => {
+  const movimientos = [
+    { id: 1, fecha: '2026-07-10', descripcion: 'B', monto: 1000 },
+    { id: 2, fecha: '2026-07-01', descripcion: 'A', monto: 2000 },
+  ];
+  const disc = detectarDiscrepancias([], movimientos, []);
+  assert.deepEqual(disc.map((d) => d.id), [2, 1]);
+});
+
+test('detectarDiscrepancias: sin propuestas ni capturados → []', () => {
+  assert.deepEqual(detectarDiscrepancias([], [], []), []);
+  assert.deepEqual(detectarDiscrepancias(undefined, undefined, undefined), []);
 });
 
 // ---------------------------------------------------------------------------

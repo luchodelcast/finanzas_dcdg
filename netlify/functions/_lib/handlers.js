@@ -36,7 +36,7 @@ import { estadoResultados, balanceGeneral } from './estados.js';
 import { patrimonioPorPersona, miPatrimonio } from './patrimonio.js';
 import { listarMetasConProgreso, crearMeta, editarMeta, CATEGORIAS_META } from './metas.js';
 import { reportePresupuesto, guardarPresupuesto } from './presupuesto.js';
-import { proponerCruces, cuadreExtracto, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
+import { proponerCruces, cuadreExtracto, detectarDiscrepancias, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
 import { reporteRentaAnual } from './renta-anual.js';
@@ -933,13 +933,13 @@ export async function conciliacionHandler(req) {
         .map((l) => ({ ...l, fecha: toISODate(l.fecha) }));
       const resumenVacio = { n_lineas: todasLineas.length, n_sin_conciliar: lineas.length, n_match: 0, n_ambiguo: 0, n_solo_extracto: 0, cuadre };
       if (!lineas.length) {
-        return ok({ ok: true, extracto_id, propuestas: [], resumen: { ...resumenVacio, n_sin_conciliar: 0 } });
+        return ok({ ok: true, extracto_id, propuestas: [], discrepancias: [], resumen: { ...resumenVacio, n_sin_conciliar: 0 } });
       }
       const fechasLineas = lineas.map((l) => l.fecha).filter(Boolean).sort();
       const fechaDesde = toISODate(extracto.fecha_desde) || fechasLineas[0];
       const fechaHasta = toISODate(extracto.fecha_hasta) || fechasLineas[fechasLineas.length - 1];
       if (!fechaDesde || !fechaHasta) {
-        return ok({ ok: true, extracto_id, propuestas: [], resumen: resumenVacio });
+        return ok({ ok: true, extracto_id, propuestas: [], discrepancias: [], resumen: resumenVacio });
       }
       const desde = addDias(fechaDesde, -VENTANA_DIAS_DEFAULT);
       const hasta = addDias(fechaHasta, VENTANA_DIAS_DEFAULT);
@@ -949,7 +949,10 @@ export async function conciliacionHandler(req) {
         queryIngresosProvisionales({ desde, hasta }),
       ]);
       const norm = (arr) => arr.map((m) => ({ ...m, fecha: toISODate(m.fecha) }));
-      const propuestas = proponerCruces(lineas, norm(movimientos), norm(ingresos), VENTANA_DIAS_DEFAULT);
+      const movimientosNorm = norm(movimientos);
+      const ingresosNorm = norm(ingresos);
+      const propuestas = proponerCruces(lineas, movimientosNorm, ingresosNorm, VENTANA_DIAS_DEFAULT);
+      const discrepancias = detectarDiscrepancias(propuestas, movimientosNorm, ingresosNorm);
       const resumen = {
         n_lineas: todasLineas.length,
         n_sin_conciliar: lineas.length,
@@ -958,7 +961,7 @@ export async function conciliacionHandler(req) {
         n_solo_extracto: propuestas.filter((p) => p.caso === 'solo_extracto').length,
         cuadre,
       };
-      return ok({ ok: true, extracto_id, propuestas, resumen });
+      return ok({ ok: true, extracto_id, propuestas, discrepancias, resumen });
     } catch (e) {
       return bad(e.message, 422);
     }

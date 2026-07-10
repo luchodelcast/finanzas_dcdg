@@ -9,6 +9,23 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- ✅ **Reporte de discrepancias de conciliación** (issue #145, aprobada por
+  Luis): nueva función pura `detectarDiscrepancias(propuestas, movimientos,
+  ingresos)` en `_lib/conciliacion.js` — detecta el caso inverso al motor de
+  cruce existente (issue #39): un movimiento/ingreso `provisional` de la
+  ventana del extracto que **nunca fue candidato de ninguna propuesta** (ni
+  `match` ni `ambiguo`), es decir, algo capturado que el banco no corrobora
+  en absoluto. Se expone como `discrepancias: [...]` junto al `resumen` de
+  `GET /api/pwa-conciliacion` y se muestra en la pantalla 🔗 Conciliación bajo
+  "Capturado que el extracto no corrobora" — solo informativo (puede ser
+  timing o un error de captura), sin acción asociada, igual que hoy se
+  informa `solo_extracto`. Alcance elegido de las decisiones abiertas del
+  issue: misma ventana ±4 días y mismo criterio laxo (sin filtrar por cuenta)
+  que ya usa el motor de cruce. Puramente de lectura: no escribe nada, no
+  cambia el flujo de confirmación existente. Riesgo bajo — auto-merge con CI
+  verde (PR #161).
+
+## 2026-07-10 (autobuild)
 - ✅ **Hoja de trabajo de renta por cédulas + patrimonio fiscal a 31-dic**
   (issue #130, Fase 3.3 del roadmap contable, aprobada hoy por Luis): reporte
   anual de solo lectura por persona (Luis/Carolina) — agrupa `ingresos` del
