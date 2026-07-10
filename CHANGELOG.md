@@ -9,6 +9,25 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- ✅ **Captura de costos de actividad económica (Ahinoa)** (issue #154,
+  aprobada por Luis): `costos_actividad` ya existía en `sql/contable.sql` y ya
+  se leía de forma agregada en el reporte de aportes IBC, pero no tenía
+  ningún camino de escritura — Carolina no tenía forma de registrar un costo
+  de Ahinoa (pago a tejedora, compra a proveedor). Se agrega `POST
+  /api/pwa-costo-actividad` (solo `owner`) + `_lib/costos.js` (mini-P&L de
+  solo lectura: ingresos − costos deducibles por negocio) + pantalla "🧵
+  Costos Ahinoa" en la PWA, con el mismo patrón de captura que ya usa
+  `ingresos.js`. `idempotency_key` se agrega a la tabla en runtime con DDL
+  idempotente (`ensureCostosActividadSchema`, mismo patrón que
+  `ensureAportesHogarSchema`) — aditivo, no toca filas existentes. **Alcance
+  de esta primera versión, según lo que dejó abierto la propuesta:** el neto
+  de Ahinoa **no se consolida automáticamente** en la base IBC de Carolina
+  (queda como mini-P&L informativo aparte) — la metodología de consolidación
+  sigue pendiente de confirmar. Riesgo bajo — aditivo (tabla existente, sin
+  alterar columnas ni datos), auto-merge con CI verde (PR pendiente, `Closes
+  #154`).
+
+## 2026-07-10 (autobuild)
 - ✅ **Reporte de discrepancias de conciliación** (issue #145, aprobada por
   Luis): nueva función pura `detectarDiscrepancias(propuestas, movimientos,
   ingresos)` en `_lib/conciliacion.js` — detecta el caso inverso al motor de

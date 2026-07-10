@@ -45,6 +45,21 @@ export function deriveIngresoKey(i = {}) {
 }
 
 /**
+ * Llave de idempotencia de un COSTO de actividad económica (issue #154,
+ * p.ej. Ahinoa: tejedoras, proveedores).
+ * @param {{ entidad_id, fecha, monto, concepto?, idempotency_key? }} c
+ * @returns {string}
+ */
+export function deriveCostoActividadKey(c = {}) {
+  if (c.idempotency_key) return String(c.idempotency_key).slice(0, 80);
+  const fecha = String(c.fecha || '').slice(0, 10);
+  const monto = Math.round(Number(c.monto) || 0);
+  const concepto = normalize(c.concepto).slice(0, 16);
+  const base = `costo|${c.entidad_id}|${fecha}|${monto}|${concepto}`;
+  return createHash('sha256').update(base).digest('hex').slice(0, 40);
+}
+
+/**
  * Llave de idempotencia de un APORTE al fondo común del hogar (issue #113).
  * @param {{ entidad_id, fecha, monto, metodo_pago?, idempotency_key? }} a
  * @returns {string}

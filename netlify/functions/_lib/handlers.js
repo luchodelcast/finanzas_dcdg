@@ -17,9 +17,10 @@ import {
   getExtracto, queryMovimientosProvisionales, queryIngresosProvisionales, confirmarConciliacion,
   queryAsientos, movimientosSinAsiento, ingresosSinAsiento,
   insertMovimiento, getExtractoLinea, marcarLineaMaterializada,
-  listCuentasMeta, upsertCuentaMeta,
+  listCuentasMeta, upsertCuentaMeta, insertCostoActividad,
 } from './repo.js';
-import { deriveIngresoKey, deriveAporteHogarKey } from './idempotency.js';
+import { deriveIngresoKey, deriveAporteHogarKey, deriveCostoActividadKey } from './idempotency.js';
+import { reporteCostosActividad } from './costos.js';
 import { registrarCuenta, listCuentas } from './cuentas.js';
 import { clasificar } from './classify.js';
 import { resolvePwaUser, verifyGoogleIdToken } from './google-auth.js';
@@ -814,6 +815,67 @@ export async function pwaIngresoHandler(req) {
     return ok({
       ok: true, registrado: inserted, ya_existia: !inserted, id: row && row.id,
       mensaje: inserted ? 'Ingreso registrado ✅' : 'Ese ingreso ya estaba registrado (no se duplicó).',
+    });
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Registra (POST) o lista/reporta (GET) costos de actividad económica
+ * (issue #154; p.ej. Ahinoa: tejedoras, proveedores). Auth Google (equipo
+ * financiero); registrar es SOLO owners, igual que pwaIngresoHandler. El GET
+ * también arma el mini-P&L por negocio (ver `reporteCostosActividad`).
+ *   GET  /api/pwa-costo-actividad?entidad_id=&periodo=&desde=&hasta=&limit=
+ *   POST { entidad_id, fecha, concepto, monto, tercero_nombre?, tercero_nit?,
+ *          deducible?, actividad?, notas? }
+ */
+export async function pwaCostoActividadHandler(req) {
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  let auth;
+  try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const g = (k) => url.searchParams.get(k);
+    const desde = g('desde');
+    const hasta = g('hasta');
+    try {
+      const r = await reporteCostosActividad({
+        entidad_id: g('entidad_id'),
+        periodo: g('periodo') || (desde && hasta ? `${desde}..${hasta}` : undefined),
+        limit: g('limit'),
+      });
+      return ok(r);
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  }
+  if (req.method !== 'POST') return bad('Método no permitido', 405);
+  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar costos de actividad.', 403);
+
+  const body = await parseBody(req);
+  const entidad_id = Number(body.entidad_id);
+  if (!entidad_id) return bad('entidad requerida');
+  const monto = Number(body.monto);
+  if (!(monto > 0)) return bad('monto inválido');
+  const fecha = String(body.fecha || '').slice(0, 10) || hoyISO();
+
+  try {
+    let tercero_id = null;
+    if (body.tercero_nombre) {
+      tercero_id = await findOrCreateTercero({ nombre: body.tercero_nombre, nit: body.tercero_nit, tipo: 'proveedor' });
+    }
+    const idempotency_key = deriveCostoActividadKey({
+      entidad_id, fecha, monto, concepto: body.concepto, idempotency_key: body.idempotency_key,
+    });
+    const { inserted, row } = await insertCostoActividad({
+      entidad_id, actividad: body.actividad, fecha, concepto: body.concepto, tercero_id, monto,
+      deducible: body.deducible !== false, notas: body.notas, idempotency_key,
+    });
+    return ok({
+      ok: true, registrado: inserted, ya_existia: !inserted, id: row && row.id,
+      mensaje: inserted ? 'Costo registrado ✅' : 'Ese costo ya estaba registrado (no se duplicó).',
     });
   } catch (e) {
     return bad(e.message, 422);
