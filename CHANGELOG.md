@@ -9,6 +9,28 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- ✅ **Hoja de trabajo de renta por cédulas + patrimonio fiscal a 31-dic**
+  (issue #130, Fase 3.3 del roadmap contable, aprobada hoy por Luis): reporte
+  anual de solo lectura por persona (Luis/Carolina) — agrupa `ingresos` del
+  año por cédula y los `costos_actividad` deducibles (mismo dato que ya usa
+  el reporte de IBC), y reutiliza `patrimonioPorPersona` (#115) a 31-dic sin
+  duplicar su lógica. `GET /api/pwa-renta-anual?anio=&entidad_id=&formato=csv`
+  (equipo, sin gate `owner`) + pantalla 📋 "Renta anual" en la PWA con
+  descarga CSV. Es un borrador/insumo para que Santiago prepare la
+  declaración real, no la reemplaza — mismas salvedades que el IBC (costos
+  reales, Ahinoa sin consolidar). Riesgo bajo — solo lectura, sin escritura ni
+  esquema nuevo; auto-merge con CI verde (PR #159).
+
+  **Nota de bookkeeping**: al revisar la cola encontré que #130, #145 y #154
+  llevaban la aprobación de Luis registrada (label `propuesta` retirado +
+  comentario "Aprobado por Luis" en cada issue, consistente con el formato
+  "aprueba la <n>" que este mismo CHANGELOG venía sugiriendo en corridas
+  anteriores) pero **solo #130 se construye en esta corrida** — una
+  funcionalidad por corrida (AUTOBUILD.md §10). #145 (reporte de
+  discrepancias de conciliación) y #154 (costos de Ahinoa + consolidación
+  IBC) quedan aprobadas y en cola para una corrida futura.
+
+## 2026-07-10 (autobuild)
 - ✅ **Cuadre de saldos del extracto** (issue #100, aprobada hoy por Luis):
   nueva función pura `cuadreExtracto()` en `_lib/conciliacion.js` que valida
   `saldo_inicial + Σ monto(extracto_lineas) ≈ saldo_final` (tolerancia ±1 por
