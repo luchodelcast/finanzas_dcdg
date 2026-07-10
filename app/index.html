@@ -834,6 +834,19 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
+<!-- ── RENTA ANUAL: cédulas + patrimonio fiscal a 31-dic (issue #130, Fase 3.3, solo lectura) ── -->
+<div class="scr" id="scr-renta-anual">
+  <div class="card">
+    <div class="card-ttl">Renta anual</div>
+    <div class="fld"><label>Año</label><input type="number" id="ra-anio" inputmode="numeric"></div>
+    <button class="btn btn-p" data-act="raActualizar" style="margin-top:8px">Actualizar →</button>
+    <button class="btn btn-s" data-act="raDescargar" style="margin-top:8px">Descargar CSV</button>
+    <div id="ra-msg" style="font-size:12px;margin-top:8px;font-weight:600"></div>
+  </div>
+  <div id="ra-body"><div class="empty">Cargando…</div></div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
 <!-- ── METAS FINANCIERAS (Contab. familiar E, issue #117) ── -->
 <div class="scr" id="scr-metas">
   <div class="card">
@@ -1162,6 +1175,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
     <button class="mas-item" data-go="prestamos"><div class="mas-ico">🤝</div><div class="mas-txt"><strong>Préstamos</strong><span>Luis ↔ Carolina</span></div></button>
     <button class="mas-item" data-go="aportes-hogar"><div class="mas-ico">🏡</div><div class="mas-txt"><strong>Fondo común</strong><span>Aportes al hogar y cuota</span></div></button>
     <button class="mas-item" data-go="aportes"><div class="mas-ico">🧮</div><div class="mas-txt"><strong>Aportes IBC</strong><span>Seguridad social por persona</span></div></button>
+    <button class="mas-item" data-go="renta-anual"><div class="mas-ico">📋</div><div class="mas-txt"><strong>Renta anual</strong><span>Cédulas + patrimonio fiscal a 31-dic</span></div></button>
     <button class="mas-item" data-go="solicitudes"><div class="mas-ico">💡</div><div class="mas-txt"><strong>Pedir una mejora</strong><span>Sugerencias para la app</span></div></button>
   </div>
   <div class="mas-group">

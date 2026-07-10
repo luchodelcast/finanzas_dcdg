@@ -109,6 +109,9 @@ export const materializarBackfill = (body) => request('/api/pwa-backfill', { met
 /** Reporte mensual de aportes IBC por persona (Fase 3.2, solo lectura). */
 export const getAportes = (params = {}) => request('/api/pwa-aportes', { params });
 
+/** Hoja de trabajo de renta por cédulas + patrimonio a 31-dic, por persona (issue #130, solo lectura). */
+export const getRentaAnual = (params = {}) => request('/api/pwa-renta-anual', { params });
+
 /** "Cierre del mes" (issue #118): resumen consolidado para la cita financiera de la pareja. */
 export const getCierreMes = (params = {}) => request('/api/pwa-cierre-mes', { params });
 
