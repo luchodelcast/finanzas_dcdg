@@ -9,6 +9,40 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Propuesta nueva #154 — captura de costos de actividad (Ahinoa) +
+  consolidación en el reporte IBC de Carolina**: repasé los 9 issues
+  `autobuild` abiertos, mismo estado que las cinco corridas anteriores de
+  hoy — #40/#41/#92/#98 con PR borrador esperando revisión
+  (#58/#55/#96/#103), #51/#52 son los "padre" ya divididos en sub-issues
+  (fusionados o en espera), y #100/#130/#145 siguen como `propuesta` sin que
+  Luis les haya quitado la etiqueta (ninguna nueva desde la corrida
+  anterior). Esta vez encontré un ángulo genuino y verificado en **código**
+  (no solo mencionado en un doc): [`docs/roadmap-contable.md`](docs/roadmap-contable.md)
+  §8.b documenta que los costos de Ahinoa (tejedoras/proveedores) van en la
+  tabla `costos_actividad` para depurar su base de IBC/renta, y que las
+  entidades tipo `negocio` "aún no se consolidan automáticamente en su
+  dueño". Confirmé con `grep` sobre `netlify/functions/` y `app/src/ui/` que
+  `costos_actividad` **ya está en el esquema y ya se lee/agrega en
+  `_lib/aportes.js`, pero ningún endpoint ni pantalla escribe en ella** —
+  Carolina no tiene hoy forma de registrar un costo de Ahinoa aunque el
+  reporte de IBC ya está armado esperando esos datos. Abrí
+  [#154](https://github.com/luchodelcast/finanzas_dcdg/issues/154) con el
+  alcance propuesto (endpoint + pantalla de captura + consolidación opcional
+  en la base IBC) y las preguntas de metodología para Luis. No es una
+  variante de #100/#130/#145 — es el paso previo (la captura) que ninguna de
+  esas tres toca. `AUTOBUILD_NOTIFY_URL` no está configurado en este
+  entorno, así que no salió aviso de WhatsApp; este registro es la red de
+  seguridad.
+  **Recordatorio: 4 propuestas esperan tu OK** — 🔎 #100 (cuadre de saldos
+  del extracto), 🔎 #130 (hoja de trabajo de renta por cédulas + patrimonio
+  fiscal), 🔎 #145 (reporte de discrepancias de conciliación) y 🔎 #154
+  (costos de Ahinoa + consolidación IBC, nueva) — y **2 PR borrador
+  esperando revisión bajo candado** — 🔒 #96 (cierre mensual, issue #92) y
+  🔒 #103 (portal solo-lectura, issue #98). Dime "aprueba la 100/130/145/154"
+  o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — quinta corrida seguida con el
   mismo resultado**: repasé los 9 issues `autobuild` abiertos, mismo estado que
   las cuatro corridas anteriores de hoy — #40/#41/#92/#98 con PR borrador
