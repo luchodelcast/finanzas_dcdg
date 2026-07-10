@@ -7,7 +7,7 @@
 
 import { authorize, parseBody, ok, bad, csv } from './http.js';
 import {
-  csvLibroDiario, csvLibroMayor, csvComprobacion, csvEstadoResultados, csvBalanceGeneral,
+  csvLibroDiario, csvLibroMayor, csvComprobacion, csvEstadoResultados, csvBalanceGeneral, csvRentaAnual,
 } from './exports.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
 import {
@@ -39,6 +39,8 @@ import { reportePresupuesto, guardarPresupuesto } from './presupuesto.js';
 import { proponerCruces, cuadreExtracto, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
+import { reporteRentaAnual } from './renta-anual.js';
+import { CEDULAS } from './cedulas.js';
 import { reporteAportesHogar, registrarAporteHogar } from './aportes-hogar.js';
 import { cierreDelMes, armarResumenTexto } from './cierre-mes.js';
 import { notificarSilvia } from './silvia-notify.js';
@@ -230,16 +232,6 @@ export async function pwaMovimientosHandler(req) {
     return bad(e.message, 422);
   }
 }
-
-// Cédulas de ingreso (renta personas naturales) para los desplegables del form.
-const CEDULAS = [
-  { value: 'trabajo', label: 'Salario (rentas de trabajo)' },
-  { value: 'honorarios', label: 'Honorarios' },
-  { value: 'no_laboral', label: 'Rentas no laborales (negocio, ventas)' },
-  { value: 'capital', label: 'Rentas de capital (arriendos, rendimientos)' },
-  { value: 'dividendos', label: 'Dividendos' },
-  { value: 'pension', label: 'Pensiones' },
-];
 
 /**
  * Quién soy / qué rol tengo (T8, issue #97). Auth Google. La PWA lo llama tras
@@ -1182,6 +1174,28 @@ export async function pwaAportesHandler(req) {
   const g = (k) => url.searchParams.get(k) || body[k];
   try {
     return ok(await reporteAportes({ periodo: g('periodo') }));
+  } catch (e) {
+    return bad(e.message, 422);
+  }
+}
+
+/**
+ * Hoja de trabajo de renta por cédulas + patrimonio fiscal a 31-dic, por
+ * persona (issue #130, Fase 3.3 del roadmap contable), solo lectura. Auth
+ * Google (equipo financiero). Insumo/borrador para que el contador (Santiago)
+ * prepare la declaración de renta — no la reemplaza.
+ *   GET /api/pwa-renta-anual?anio=&entidad_id=&formato=csv
+ */
+export async function pwaRentaAnualHandler(req) {
+  if (req.method !== 'GET') return bad('Método no permitido', 405);
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  try { await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
+  const url = new URL(req.url);
+  const g = (k) => url.searchParams.get(k);
+  try {
+    const r = await reporteRentaAnual({ anio: g('anio'), entidad_id: g('entidad_id') });
+    if (g('formato') === 'csv') return csv(`renta-anual-${r.anio}.csv`, csvRentaAnual(r.por_persona));
+    return ok(r);
   } catch (e) {
     return bad(e.message, 422);
   }

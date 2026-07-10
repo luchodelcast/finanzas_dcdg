@@ -683,6 +683,21 @@ export async function queryAportesBase({ desde, hasta }, sqlArg) {
   return { ingresos, costos };
 }
 
+/**
+ * Totales de ingresos por entidad y cédula, agrupados en un rango de fechas —
+ * base de la hoja de trabajo de renta por cédulas (issue #130, solo lectura).
+ */
+export async function queryIngresosPorCedula({ desde, hasta }, sqlArg) {
+  const sql = sqlArg || await getSql();
+  return sql.query(
+    `select entidad_id, cedula, coalesce(sum(monto),0)::float8 as total
+       from ingresos
+      where fecha >= $1 and fecha <= $2
+      group by entidad_id, cedula`,
+    [desde, hasta]
+  );
+}
+
 /** Lista ingresos (con nombre de entidad y tercero). */
 export async function queryIngresos({ entidad_id, desde, hasta, limit = 50 }, sqlArg) {
   const sql = sqlArg || await getSql();

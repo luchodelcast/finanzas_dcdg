@@ -179,7 +179,15 @@ Las cuentas de los hijos se registran en `cuentas_bancarias` con su titular
   aún no se consolidan automáticamente en su dueño — ver §3 y §8.b. Ninguna de
   estas decisiones metodológicas está confirmada por Santiago todavía; no usar
   los números para trámites reales sin su validación.
-- **Fase 3.3:** `patrimonio` + hoja de trabajo de renta por cédulas.
+- **Fase 3.3 (implementada, solo lectura — pendiente validación del contador):**
+  patrimonio (`/api/pwa-patrimonio` + `/api/pwa-mi-patrimonio`, issue #115) y
+  **hoja de trabajo de renta por cédulas + patrimonio fiscal a 31-dic**, por
+  persona (`/api/pwa-renta-anual` + tarjeta 📋 "Renta anual" en la PWA, issue
+  #130). Agrupa ingresos del año por cédula y costos deducibles (sin desglose
+  por cédula, igual que Fase 3.2), y reutiliza `patrimonioPorPersona` a
+  31-dic. Es un borrador/insumo para Santiago, no la declaración de renta;
+  las mismas salvedades de la Fase 3.2 (costos reales, Ahinoa sin consolidar)
+  aplican acá.
 - **Fase 4 (Horizonte 2):** partida doble, estados financieros, multi-entidad
   del grupo.
 

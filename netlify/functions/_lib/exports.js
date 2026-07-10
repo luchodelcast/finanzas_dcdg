@@ -81,3 +81,21 @@ export function csvBalanceGeneral(balance) {
   ];
   return filasACsv(headers, filas);
 }
+
+/**
+ * Hoja de trabajo de renta por cédulas + patrimonio a 31-dic (issue #130):
+ * una fila por (entidad × cédula), más una fila de costos deducibles y tres
+ * de patrimonio (activo/pasivo/neto) por entidad.
+ */
+export function csvRentaAnual(porPersona) {
+  const headers = ['anio', 'entidad', 'concepto', 'monto'];
+  const filas = [];
+  for (const p of porPersona || []) {
+    for (const c of p.cedulas || []) filas.push([p.anio, p.entidad, c.cedula, c.total]);
+    filas.push([p.anio, p.entidad, 'costos_deducibles', p.costos_deducibles]);
+    filas.push([p.anio, p.entidad, 'patrimonio_activo', p.patrimonio.activo]);
+    filas.push([p.anio, p.entidad, 'patrimonio_pasivo', p.patrimonio.pasivo]);
+    filas.push([p.anio, p.entidad, 'patrimonio_neto', p.patrimonio.neto]);
+  }
+  return filasACsv(headers, filas);
+}
