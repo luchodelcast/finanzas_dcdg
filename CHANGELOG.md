@@ -10,6 +10,23 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
+  anterior (#168)**: los 6 issues `autobuild` abiertos siguen sin ninguno
+  elegible — #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
+  (#58/#55/#96/#103, solo el comentario automático de Netlify desde que se
+  abrieron, sin actividad de Luis) y #51/#52 siguen como issues "padre" ya
+  divididos en sub-issues (fusionados o en espera). No hay ninguna
+  `propuesta` abierta. De paso encontré, otra vez, mi propia rama de
+  desarrollo (`claude/zealous-brown-jos6i6`, la de esta sesión) con el mismo
+  commit suelto ("Pagos: reporte histórico") que las corridas anteriores ya
+  habían visto en otras ramas — confirmé que el diff contra el commit ya
+  fusionado (PR #148, `9758a23`) es vacío, así que no era trabajo perdido:
+  reseteé la rama a `main`. Sin nada nuevo que avisar a Luis (los 4 PR
+  borrador ya se reportaron varias veces en corridas anteriores, sin
+  actividad nueva de su parte), no se manda notificación esta corrida; este
+  registro es la constancia.
+
+## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
   anterior (#167)**: los 6 issues `autobuild` abiertos siguen sin ninguno
   elegible — #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
   (#58/#55/#96/#103, solo el comentario automático de Netlify desde que se
