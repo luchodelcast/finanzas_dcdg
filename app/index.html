@@ -594,6 +594,33 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
   <button class="btn btn-s" data-go="home">← Volver</button>
 </div>
 
+<!-- ── COSTOS DE ACTIVIDAD (Ahinoa, issue #154) ── -->
+<div class="scr" id="scr-costos">
+  <div class="card">
+    <div class="card-ttl">Registrar costo de actividad</div>
+    <div id="costo-form"><div class="empty">Cargando…</div></div>
+    <div id="costo-msg" style="font-size:12px;margin-top:10px;font-weight:600"></div>
+    <button class="btn btn-p" id="btn-save-costo" data-act="saveCosto" style="margin-top:14px">✓ Registrar costo</button>
+  </div>
+  <div id="costo-pnl"></div>
+  <div class="card">
+    <div class="card-ttl">Últimos costos</div>
+    <div class="row2">
+      <div class="fld"><label>Negocio</label><select id="costo-filtro-entidad"><option value="">Todos</option></select></div>
+      <div class="fld"><label>Periodo</label>
+        <select id="costo-filtro-periodo">
+          <option value="mes">Este mes</option>
+          <option value="mespasado">Mes pasado</option>
+          <option value="anio">Año</option>
+        </select>
+      </div>
+    </div>
+    <div id="costo-total" style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px"></div>
+    <div id="costo-list"><div class="empty">—</div></div>
+  </div>
+  <button class="btn btn-s" data-go="home">← Volver</button>
+</div>
+
 <!-- ── PAGOS DEL MES (Nocturno 2/7, issue #73) ── -->
 <div class="scr" id="scr-pagos">
   <div class="card">
@@ -1180,6 +1207,7 @@ html,body{height:100%;font-family:var(--font-body);background:var(--bg);color:va
     <button class="mas-item" data-go="prestamos"><div class="mas-ico">🤝</div><div class="mas-txt"><strong>Préstamos</strong><span>Luis ↔ Carolina</span></div></button>
     <button class="mas-item" data-go="aportes-hogar"><div class="mas-ico">🏡</div><div class="mas-txt"><strong>Fondo común</strong><span>Aportes al hogar y cuota</span></div></button>
     <button class="mas-item" data-go="aportes"><div class="mas-ico">🧮</div><div class="mas-txt"><strong>Aportes IBC</strong><span>Seguridad social por persona</span></div></button>
+    <button class="mas-item" data-go="costos"><div class="mas-ico">🧵</div><div class="mas-txt"><strong>Costos Ahinoa</strong><span>Tejedoras, proveedores + mini-P&amp;L</span></div></button>
     <button class="mas-item" data-go="renta-anual"><div class="mas-ico">📋</div><div class="mas-txt"><strong>Renta anual</strong><span>Cédulas + patrimonio fiscal a 31-dic</span></div></button>
     <button class="mas-item" data-go="solicitudes"><div class="mas-ico">💡</div><div class="mas-txt"><strong>Pedir una mejora</strong><span>Sugerencias para la app</span></div></button>
   </div>

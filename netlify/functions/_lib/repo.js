@@ -683,6 +683,91 @@ export async function queryAportesBase({ desde, hasta }, sqlArg) {
   return { ingresos, costos };
 }
 
+// ---------------------------------------------------------------------------
+// Costos de actividad económica (p.ej. Ahinoa: tejedoras, proveedores) —
+// issue #154. La tabla `costos_actividad` ya existe en sql/contable.sql (se
+// lee para el reporte de aportes IBC vía queryAportesBase), pero hasta ahora
+// no tenía ningún camino de escritura. Se agrega `idempotency_key` en runtime
+// con el mismo patrón "ensureSchema" idempotente que el resto de fases
+// aditivas (p.ej. ensureAportesHogarSchema) — aditivo, sin tocar filas existentes.
+// ---------------------------------------------------------------------------
+let _costosActividadSchemaPromise = null;
+
+/** Crea (si no existe) `costos_actividad` y agrega `idempotency_key`. Memoizado. */
+export async function ensureCostosActividadSchema(sqlArg) {
+  if (!_costosActividadSchemaPromise) {
+    _costosActividadSchemaPromise = aplicarCostosActividadSchema(sqlArg)
+      .catch((e) => { _costosActividadSchemaPromise = null; throw e; });
+  }
+  return _costosActividadSchemaPromise;
+}
+
+async function aplicarCostosActividadSchema(sqlArg) {
+  const sql = sqlArg || await getSql();
+  await sql.query(`
+    create table if not exists costos_actividad (
+      id          bigint generated always as identity primary key,
+      entidad_id  bigint not null references entidades (id),
+      actividad   text,
+      fecha       date not null,
+      concepto    text,
+      tercero_id  bigint references terceros (id),
+      monto       numeric(14,2) not null check (monto > 0),
+      deducible   boolean default true,
+      notas       text,
+      creado_en   timestamptz not null default now()
+    )
+  `, []);
+  await sql.query('alter table costos_actividad add column if not exists idempotency_key text unique', []);
+  await sql.query('create index if not exists costos_actividad_entidad_fecha_idx on costos_actividad (entidad_id, fecha)', []);
+}
+
+/** Solo para tests: fuerza a que la próxima llamada vuelva a intentar el DDL. */
+export function resetCostosActividadSchemaParaTests() {
+  _costosActividadSchemaPromise = null;
+}
+
+/** Registra un costo de actividad (idempotente por idempotency_key). */
+export async function insertCostoActividad(c, sqlArg) {
+  await ensureCostosActividadSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const cols = ['entidad_id', 'actividad', 'fecha', 'concepto', 'tercero_id', 'monto', 'deducible', 'notas', 'idempotency_key'];
+  const vals = [c.entidad_id, c.actividad || null, c.fecha, c.concepto || null, c.tercero_id || null,
+    c.monto, c.deducible !== false, c.notas || null, c.idempotency_key];
+  const ph = vals.map((_, i) => `$${i + 1}`).join(', ');
+  const ins = await sql.query(
+    `insert into costos_actividad (${cols.join(', ')}) values (${ph})
+     on conflict (idempotency_key) do nothing
+     returning *`,
+    vals
+  );
+  if (ins.length) return { inserted: true, row: ins[0] };
+  const prev = await sql.query('select * from costos_actividad where idempotency_key = $1 limit 1', [c.idempotency_key]);
+  return { inserted: false, row: prev[0] || null };
+}
+
+/** Lista costos de actividad (con nombre de entidad y tercero), para captura/reporte. */
+export async function listCostosActividad({ entidad_id, desde, hasta, limit = 50 } = {}, sqlArg) {
+  await ensureCostosActividadSchema(sqlArg);
+  const sql = sqlArg || await getSql();
+  const params = [];
+  const cond = [];
+  if (entidad_id) { params.push(entidad_id); cond.push(`c.entidad_id = $${params.length}`); }
+  if (desde) { params.push(desde); cond.push(`c.fecha >= $${params.length}`); }
+  if (hasta) { params.push(hasta); cond.push(`c.fecha <= $${params.length}`); }
+  const where = cond.length ? `where ${cond.join(' and ')}` : '';
+  params.push(Math.min(Number(limit) || 50, 500));
+  return sql.query(
+    `select c.id, c.entidad_id, c.fecha, c.concepto, c.monto, c.deducible, c.actividad,
+            e.nombre as entidad, t.nombre as tercero
+       from costos_actividad c
+       join entidades e on e.id = c.entidad_id
+       left join terceros t on t.id = c.tercero_id
+       ${where}
+      order by c.fecha desc, c.creado_en desc
+      limit $${params.length}`, params);
+}
+
 /**
  * Totales de ingresos por entidad y cédula, agrupados en un rango de fechas —
  * base de la hoja de trabajo de renta por cédulas (issue #130, solo lectura).

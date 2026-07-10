@@ -31,6 +31,7 @@ import { renderIngresos } from './ui/ingresos.js';
 import { renderExtractos } from './ui/extractos.js';
 import { renderConciliacion } from './ui/conciliacion.js';
 import { renderAportes } from './ui/aportes.js';
+import { renderCostos } from './ui/costos.js';
 import { renderRentaAnual } from './ui/renta-anual.js';
 import { renderAportesHogar } from './ui/aportes-hogar.js';
 import { renderPagos } from './ui/pagos.js';
@@ -92,6 +93,7 @@ function go(s) {
   if (s === 'extractos') renderExtractos();
   if (s === 'conciliacion') renderConciliacion();
   if (s === 'aportes') renderAportes();
+  if (s === 'costos') renderCostos();
   if (s === 'renta-anual') renderRentaAnual();
   if (s === 'aportes-hogar') renderAportesHogar();
   if (s === 'pagos') renderPagos();
