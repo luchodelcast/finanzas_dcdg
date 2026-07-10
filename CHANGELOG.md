@@ -9,6 +9,21 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
+  anterior**: repasé los 6 issues `autobuild` abiertos, sin cambios desde la
+  última corrida (#163) — #40/#41/#92/#98 siguen con `autobuild-espera` y PR
+  borrador abierto (#58/#55/#96/#103), y #51/#52 siguen como issues "padre"
+  ya divididos en sub-issues (fusionados o en espera). Sin issues nuevos, sin
+  `propuesta` abierta y sin ningún doc modificado desde la corrida anterior
+  — no fuerzo una séptima propuesta de relleno. Los mismos 4 PR borrador
+  siguen esperando revisión bajo el candado: 🔒 #55 (backup DB, issue #41),
+  🔒 #58 (config-como-datos, issue #40), 🔒 #96 (cierre mensual, issue #92) y
+  🔒 #103 (portal solo-lectura, issue #98) — sin actividad ni comentarios
+  nuevos desde la corrida anterior, así que no se repite el aviso.
+  `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` siguen sin configurar en
+  este entorno; este registro es la red de seguridad.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada, sin item elegible — sin proponer una séptima**: de los 6
   issues `autobuild` abiertos, ninguno es tomable directo — #40/#41/#92/#98
   llevan `autobuild-espera` con PR borrador ya abierto (#58/#55/#96/#103) y
