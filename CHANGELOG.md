@@ -9,6 +9,33 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo resultado, sin
+  proponer una séptima**: repasé los mismos 10 issues `autobuild` abiertos;
+  estado idéntico al de la corrida anterior — #40/#41/#92/#98 con PR borrador
+  esperando revisión (#58/#55/#96/#103), #51/#52 son los "padre" ya divididos
+  en sub-issues (fusionados o en espera), y #100/#130/#145/#154 siguen como
+  `propuesta` sin que Luis les haya quitado la etiqueta. Sin commits nuevos en
+  `docs/` desde la corrida anterior (último cambio en docs sigue siendo #107)
+  y sin issues nuevos en la cola, así que no hay ángulo genuino distinto que
+  buscar esta vez — forzar una séptima propuesta sería relleno. `npm ci`
+  corrió limpio (29 paquetes). `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET`
+  siguen sin estar configurados en este entorno — van ya **ocho corridas**
+  de hoy sin poder salir el aviso de WhatsApp, con 4 propuestas y 2 PR
+  borrador acumulados desde el 8-9 de julio sin decisión. Dado que el canal
+  automático sigue caído y el backlog de aprobaciones ya lleva varios días
+  repitiéndose sin que Luis lo vea, esta corrida además avisa por notificación
+  directa (fuera del canal de WhatsApp de SilvIA) — este registro sigue
+  siendo la red de seguridad garantizada.
+  **Recordatorio: 4 propuestas esperan tu OK** — 🔎 #100 (cuadre de saldos del
+  extracto, desde 07-08), 🔎 #130 (hoja de trabajo de renta por cédulas +
+  patrimonio fiscal, desde 07-09), 🔎 #145 (reporte de discrepancias de
+  conciliación, desde 07-09) y 🔎 #154 (costos de Ahinoa + consolidación IBC,
+  desde 07-10) — y **2 PR borrador esperando revisión bajo candado** — 🔒 #96
+  (cierre mensual, issue #92, desde 07-08) y 🔒 #103 (portal solo-lectura,
+  issue #98, desde 07-08). Dime "aprueba la 100/130/145/154" o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — sin proponer una sexta**:
   repasé los 10 issues `autobuild` abiertos, mismo estado que la corrida
   anterior de hoy (la que abrió #154) — #40/#41/#92/#98 con PR borrador
