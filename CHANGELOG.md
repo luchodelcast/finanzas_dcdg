@@ -9,6 +9,25 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada de nuevo, sin item elegible — mismo estado que la corrida
+  anterior**: repasé los 9 issues `autobuild` abiertos: #40/#41/#92/#98 con PR
+  borrador esperando revisión (#58/#55/#96/#103), #51/#52 son los "padre" ya
+  divididos en sub-issues (fusionados o en espera), y #100/#130/#145 siguen
+  como `propuesta` sin decisión de Luis (ninguna perdió la etiqueta desde la
+  corrida anterior). No encontré un ángulo nuevo genuino en los docs
+  (`docs/migracion-db.md`, `docs/conciliacion.md`, `docs/roadmap-contable.md`)
+  distinto de esas tres propuestas ya abiertas, así que no fuerzo una cuarta
+  de relleno — sería el "trabajo silencioso" que las barandas de
+  `AUTOBUILD.md` buscan evitar. `AUTOBUILD_NOTIFY_URL` no está configurado en
+  este entorno, así que no sale aviso de WhatsApp; este registro es la red de
+  seguridad.
+  **Recordatorio: 3 propuestas siguen esperando tu OK** — 🔎 #100 (cuadre de
+  saldos del extracto), 🔎 #130 (hoja de trabajo de renta por cédulas +
+  patrimonio fiscal) y 🔎 #145 (reporte de discrepancias de conciliación).
+  Dime "aprueba la 100/130/145" o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — corregí un bug de etiquetado
   en #145**: repasé los 9 issues `autobuild` abiertos, mismo resultado que la
   corrida anterior de hoy — #40/#41/#92/#98 con PR borrador esperando revisión
