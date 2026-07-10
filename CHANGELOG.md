@@ -9,6 +9,36 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada otra vez, sin item elegible — sin proponer una sexta**:
+  repasé los 10 issues `autobuild` abiertos, mismo estado que la corrida
+  anterior de hoy (la que abrió #154) — #40/#41/#92/#98 con PR borrador
+  esperando revisión (#58/#55/#96/#103), #51/#52 son los "padre" ya divididos
+  en sub-issues (fusionados o en espera), y #100/#130/#145/#154 siguen como
+  `propuesta` sin que Luis les haya quitado la etiqueta (ninguna nueva desde
+  la corrida anterior). No hay issues nuevos en la cola ni documentación
+  modificada desde entonces (`git log` sin commits en `docs/` desde antes de
+  las 08:00 UTC de hoy). Repasé los tres docs que ninguna corrida anterior
+  había mirado todavía —
+  [`docs/auth-pwa-sesion.md`](docs/auth-pwa-sesion.md),
+  [`docs/cuentas-bancarias.md`](docs/cuentas-bancarias.md) y
+  [`docs/reglas-clasificacion.md`](docs/reglas-clasificacion.md)— buscando un
+  quinto ángulo genuino: no mencionan ninguna fase pendiente sin construir,
+  así que no fuerzo una quinta propuesta de relleno (sería el "trabajo
+  silencioso" que las barandas de `AUTOBUILD.md` buscan evitar).
+  `AUTOBUILD_NOTIFY_URL` sigue sin estar configurado en este entorno (van ya
+  siete corridas de hoy sin poder salir el aviso de WhatsApp) — este registro
+  es la red de seguridad, y aviso a Luis por otra vía dado que ya son varios
+  días de propuestas/PRs acumulados sin decisión.
+  **Recordatorio: 4 propuestas esperan tu OK** — 🔎 #100 (cuadre de saldos del
+  extracto, desde 07-08), 🔎 #130 (hoja de trabajo de renta por cédulas +
+  patrimonio fiscal, desde 07-09), 🔎 #145 (reporte de discrepancias de
+  conciliación, desde 07-09) y 🔎 #154 (costos de Ahinoa + consolidación IBC,
+  desde hoy) — y **2 PR borrador esperando revisión bajo candado** — 🔒 #96
+  (cierre mensual, issue #92, desde 07-08) y 🔒 #103 (portal solo-lectura,
+  issue #98, desde 07-08). Dime "aprueba la 100/130/145/154" o revísalas en
+  https://github.com/luchodelcast/finanzas_dcdg/issues?q=is:issue+is:open+label:propuesta.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Propuesta nueva #154 — captura de costos de actividad (Ahinoa) +
   consolidación en el reporte IBC de Carolina**: repasé los 9 issues
   `autobuild` abiertos, mismo estado que las cinco corridas anteriores de
