@@ -102,3 +102,37 @@ export function proponerCruces(lineas, movimientos, ingresos, ventanaDias = VENT
     };
   });
 }
+
+// Mismo margen de redondeo que ya usa el resto del motor de cruce (±1, ver
+// `candidatosPara`) — algunos extractos de banco redondean distinto al peso.
+export const TOLERANCIA_CUADRE_DEFAULT = 1;
+
+/**
+ * Cuadre de saldos (paso 4 de "El proceso de conciliación", docs/conciliacion.md):
+ * valida que `saldo_inicial + Σ monto(lineas) ≈ saldo_final`. `lineas` debe ser
+ * TODAS las líneas del extracto (conciliadas + sin_conciliar + solo_extracto) —
+ * el saldo que reporta el banco ya incluye todo lo que pasó por la cuenta, esté
+ * o no cruzado con algo capturado.
+ * @param {{saldo_inicial: number|null, saldo_final: number|null}} extracto
+ * @param {Array<{monto: number}>} lineas
+ * @returns {null|{saldo_inicial: number, saldo_final: number, saldo_calculado: number, diferencia: number, cuadra: boolean}}
+ *   `null` si el extracto no tiene `saldo_inicial`/`saldo_final` cargado (nunca los tuvo, no es un error).
+ */
+export function cuadreExtracto(extracto, lineas, tolerancia = TOLERANCIA_CUADRE_DEFAULT) {
+  const saldoInicial = extracto && extracto.saldo_inicial != null ? Number(extracto.saldo_inicial) : null;
+  const saldoFinal = extracto && extracto.saldo_final != null ? Number(extracto.saldo_final) : null;
+  if (saldoInicial == null || saldoFinal == null || Number.isNaN(saldoInicial) || Number.isNaN(saldoFinal)) {
+    return null;
+  }
+
+  const sumaLineas = (lineas || []).reduce((acc, l) => acc + (Number(l.monto) || 0), 0);
+  const saldoCalculado = Math.round((saldoInicial + sumaLineas) * 100) / 100;
+  const diferencia = Math.round((saldoCalculado - saldoFinal) * 100) / 100;
+  return {
+    saldo_inicial: saldoInicial,
+    saldo_final: saldoFinal,
+    saldo_calculado: saldoCalculado,
+    diferencia,
+    cuadra: Math.abs(diferencia) <= tolerancia,
+  };
+}

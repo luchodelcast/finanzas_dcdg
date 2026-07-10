@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from '../netlify/functions/_lib/conciliacion.js';
+import { proponerCruces, cuadreExtracto, VENTANA_DIAS_DEFAULT, toISODate } from '../netlify/functions/_lib/conciliacion.js';
 import { setSqlForTests } from '../netlify/functions/_lib/db.js';
 import { confirmarConciliacion } from '../netlify/functions/_lib/repo.js';
 
@@ -99,6 +99,54 @@ test('proponerCruces: la descripción desempata el orden de candidatos ambiguos 
   // El que matchea por descripción (mismos primeros 6 chars) va primero, pero ambos quedan listados.
   assert.equal(p.candidatos[0].id, 110);
   assert.equal(p.candidatos.length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// cuadreExtracto — cuadre de saldos (issue #100): saldo_inicial + Σ líneas = saldo_final.
+// ---------------------------------------------------------------------------
+
+test('cuadreExtracto: cuadra exacto', () => {
+  const extracto = { saldo_inicial: 100000, saldo_final: 130000 };
+  const lineas = [{ monto: -20000 }, { monto: 50000 }]; // 100000 - 20000 + 50000 = 130000
+  const c = cuadreExtracto(extracto, lineas);
+  assert.equal(c.saldo_calculado, 130000);
+  assert.equal(c.diferencia, 0);
+  assert.equal(c.cuadra, true);
+});
+
+test('cuadreExtracto: dentro de tolerancia (±1) sigue cuadrando', () => {
+  const extracto = { saldo_inicial: 100000, saldo_final: 130001 };
+  const lineas = [{ monto: -20000 }, { monto: 50000 }]; // calculado 130000, diferencia -1
+  const c = cuadreExtracto(extracto, lineas);
+  assert.equal(c.diferencia, -1);
+  assert.equal(c.cuadra, true);
+});
+
+test('cuadreExtracto: fuera de tolerancia → no cuadra', () => {
+  const extracto = { saldo_inicial: 100000, saldo_final: 135000 };
+  const lineas = [{ monto: -20000 }, { monto: 50000 }]; // calculado 130000, diferencia -5000
+  const c = cuadreExtracto(extracto, lineas);
+  assert.equal(c.saldo_calculado, 130000);
+  assert.equal(c.diferencia, -5000);
+  assert.equal(c.cuadra, false);
+});
+
+test('cuadreExtracto: sin saldo_inicial o saldo_final cargado → null (no es error)', () => {
+  assert.equal(cuadreExtracto({ saldo_inicial: null, saldo_final: 100000 }, []), null);
+  assert.equal(cuadreExtracto({ saldo_inicial: 100000, saldo_final: null }, []), null);
+  assert.equal(cuadreExtracto({ saldo_inicial: null, saldo_final: null }, []), null);
+  assert.equal(cuadreExtracto(null, []), null);
+});
+
+test('cuadreExtracto: incluye TODAS las líneas (conciliadas y no), no solo sin_conciliar', () => {
+  const extracto = { saldo_inicial: 0, saldo_final: 15000 };
+  const lineas = [
+    { monto: 10000 }, // conciliada
+    { monto: 5000 },  // sin_conciliar
+  ];
+  const c = cuadreExtracto(extracto, lineas);
+  assert.equal(c.saldo_calculado, 15000);
+  assert.equal(c.cuadra, true);
 });
 
 // ---------------------------------------------------------------------------

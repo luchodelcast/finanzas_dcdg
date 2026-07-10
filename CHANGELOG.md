@@ -9,6 +9,18 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- ✅ **Cuadre de saldos del extracto** (issue #100, aprobada hoy por Luis):
+  nueva función pura `cuadreExtracto()` en `_lib/conciliacion.js` que valida
+  `saldo_inicial + Σ monto(extracto_lineas) ≈ saldo_final` (tolerancia ±1 por
+  redondeo, mismo margen que ya usa el motor de cruce) usando **todas** las
+  líneas del extracto, no solo las `sin_conciliar`. Se expone como
+  `resumen.cuadre` en `GET /api/pwa-conciliacion` (`null` si el extracto
+  nunca tuvo `saldo_inicial`/`saldo_final` cargado — no es un error) y se
+  muestra en la pantalla 🔗 Conciliación de la PWA junto al resto del
+  resumen. Puramente de lectura: no escribe nada, no cambia ningún flujo
+  existente. Riesgo bajo — auto-merge con CI verde.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — mismo resultado, sin
   proponer una séptima**: repasé los mismos 10 issues `autobuild` abiertos;
   estado idéntico al de la corrida anterior — #40/#41/#92/#98 con PR borrador

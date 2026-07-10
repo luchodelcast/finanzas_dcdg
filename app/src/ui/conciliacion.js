@@ -56,6 +56,14 @@ const CASO_COLOR = {
   solo_extracto: 'var(--gray-d)',
 };
 
+function cuadreHTML(cuadre) {
+  if (!cuadre) return '';
+  if (cuadre.cuadra) {
+    return `<span style="color:var(--green)">✓ Cuadra</span> — saldo inicial ${formatCOP(cuadre.saldo_inicial)} + líneas = ${formatCOP(cuadre.saldo_calculado)} (saldo final del extracto: ${formatCOP(cuadre.saldo_final)})`;
+  }
+  return `<span style="color:var(--red)">⚠ No cuadra</span> — calculado ${formatCOP(cuadre.saldo_calculado)} vs. saldo final ${formatCOP(cuadre.saldo_final)} (diferencia de ${formatCOP(Math.abs(cuadre.diferencia))})`;
+}
+
 function candidatoLabel(c) {
   const fecha = String(c.fecha || '').slice(0, 10);
   return `${fecha} · ${c.descripcion || '(sin descripción)'} · ${formatCOP(Math.abs(Number(c.monto) || 0))}`;
@@ -113,6 +121,7 @@ async function refreshPropuestas() {
   const msg = V('conc-msg');
   const list = V('conc-list');
   msg.textContent = '';
+  V('conc-cuadre').innerHTML = '';
   _bf = [];
   V('bf-card').style.display = _extractoId ? '' : 'none';
   V('bf-resumen').textContent = '';
@@ -127,6 +136,7 @@ async function refreshPropuestas() {
     V('conc-resumen').textContent = props.length
       ? `${res.n_match || 0} propuesta(s) · ${res.n_ambiguo || 0} ambigua(s) · ${res.n_solo_extracto || 0} sin capturado`
       : (res.n_sin_conciliar === 0 ? 'Todas las líneas de este extracto ya están conciliadas.' : '');
+    V('conc-cuadre').innerHTML = cuadreHTML(res.cuadre);
     list.innerHTML = props.length
       ? props.map(propuestaHTML).join('')
       : '<div class="empty">Nada pendiente de revisar en este extracto.</div>';

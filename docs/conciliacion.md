@@ -86,10 +86,10 @@ DDL en [`sql/conciliacion.sql`](../sql/conciliacion.sql) (idempotente).
 ## Fases
 
 - **Listo:** esquema (`extractos`, `extracto_lineas`, `estado_conciliacion`).
-- **Listo:** cargador de extractos en CSV (botón 🧾 de la PWA · endpoint
-  `/api/pwa-extracto`) — sube fecha/descripción/monto de una cuenta y un
-  periodo, y los guarda en `extracto_lineas` con `estado='sin_conciliar'`.
-  Sin PDF aún.
+- **Listo:** cargador de extractos en CSV **y PDF** (`_lib/extracto-pdf.js`,
+  botón 🧾 de la PWA · endpoint `/api/pwa-extracto`) — sube fecha/descripción/
+  monto de una cuenta y un periodo, y los guarda en `extracto_lineas` con
+  `estado='sin_conciliar'`.
 - **Listo (primera versión, issue #39):** motor de cruce automático — botón 🔗
   de la PWA · endpoint `/api/pwa-conciliacion`. Para **un extracto a la vez**,
   PROPONE cruces (monto ±1, fecha ±4 días, descripción como desempate,
@@ -102,8 +102,18 @@ DDL en [`sql/conciliacion.sql`](../sql/conciliacion.sql) (idempotente).
   `solo_extracto` (línea sin nada capturado que coincida) es solo informativo
   en esta versión: el motor no crea el movimiento/ingreso faltante por sí
   solo, el usuario lo registra por las pantallas normales.
-  Sin PDF, sin soporte multi-extracto simultáneo y **sin el cuadre de saldos**
-  (paso 4 de "El proceso de conciliación" arriba) todavía.
-- **Siguiente:** cuadre de saldos + creación guiada del movimiento faltante
-  para `solo_extracto` + reporte de discrepancias + soporte de PDF.
+  Sin soporte multi-extracto simultáneo todavía.
+- **Listo:** creación guiada del movimiento faltante para `solo_extracto`
+  (issue #72/#79, "Contabilizar estas N líneas").
+- **Listo (issue #100):** cuadre de saldos — paso 4 de "El proceso de
+  conciliación" arriba. `cuadreExtracto()` en `_lib/conciliacion.js` valida
+  que `saldo_inicial + Σ monto(extracto_lineas) ≈ saldo_final` (tolerancia
+  ±1 por redondeo, mismo margen que el resto del motor de cruce) usando
+  **todas** las líneas del extracto, no solo las `sin_conciliar`. Se expone
+  en `resumen.cuadre` de `GET /api/pwa-conciliacion` y se muestra en la
+  pantalla 🔗 Conciliación junto al resto del resumen. Si el extracto nunca
+  tuvo `saldo_inicial`/`saldo_final` cargado, `cuadre` es `null` (no es un
+  error, solo "sin datos para validar") y no se muestra nada.
+- **Siguiente:** reporte de discrepancias (capturado que el extracto no
+  corrobora) + soporte de PDF.
 - **Futuro:** ingesta directa desde los portales de los bancos.
