@@ -9,6 +9,16 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-10 (autobuild)
+- 🔎 **Cola revisada de nuevo, sin cambios desde la corrida anterior (hace ~52
+  min)**: mismo estado exacto — los 6 issues `autobuild` abiertos siguen sin
+  ninguno elegible (#40/#41/#92/#98 con `autobuild-espera` y PR borrador ya
+  abierto; #51/#52 son los "padre" ya divididos en sub-issues), no hay
+  ninguna `propuesta` abierta, y los 4 PR borrador bajo el candado no
+  tuvieron actividad ni comentarios nuevos: 🔒 #55, 🔒 #58, 🔒 #96, 🔒 #103.
+  Sin nada nuevo que avisar, no se manda notificación esta corrida (ya se
+  avisó en las anteriores); este registro es la constancia.
+
+## 2026-07-10 (autobuild)
 - 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
   anterior**: repasé los 6 issues `autobuild` abiertos, sin cambios desde la
   última corrida (#163) — #40/#41/#92/#98 siguen con `autobuild-espera` y PR
