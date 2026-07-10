@@ -36,7 +36,7 @@ import { estadoResultados, balanceGeneral } from './estados.js';
 import { patrimonioPorPersona, miPatrimonio } from './patrimonio.js';
 import { listarMetasConProgreso, crearMeta, editarMeta, CATEGORIAS_META } from './metas.js';
 import { reportePresupuesto, guardarPresupuesto } from './presupuesto.js';
-import { proponerCruces, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
+import { proponerCruces, cuadreExtracto, VENTANA_DIAS_DEFAULT, toISODate } from './conciliacion.js';
 import { proponerBackfillExtracto } from './backfill.js';
 import { reporteAportes } from './aportes.js';
 import { reporteAportesHogar, registrarAporteHogar } from './aportes-hogar.js';
@@ -931,11 +931,15 @@ export async function conciliacionHandler(req) {
       const extracto = await getExtracto(extracto_id);
       if (!extracto) return bad('Extracto no encontrado', 404);
       const todasLineas = await queryExtractoLineas({ extracto_id });
+      // Cuadre de saldos (saldo_inicial + Σ TODAS las líneas = saldo_final): usa
+      // todasLineas (no solo `sin_conciliar`) porque el saldo del banco ya
+      // incluye todo lo que pasó por la cuenta, esté o no cruzado.
+      const cuadre = cuadreExtracto(extracto, todasLineas);
       // Normaliza `fecha` (Date → 'YYYY-MM-DD') para todo el motor de cruce.
       const lineas = todasLineas
         .filter((l) => l.estado === 'sin_conciliar')
         .map((l) => ({ ...l, fecha: toISODate(l.fecha) }));
-      const resumenVacio = { n_lineas: todasLineas.length, n_sin_conciliar: lineas.length, n_match: 0, n_ambiguo: 0, n_solo_extracto: 0 };
+      const resumenVacio = { n_lineas: todasLineas.length, n_sin_conciliar: lineas.length, n_match: 0, n_ambiguo: 0, n_solo_extracto: 0, cuadre };
       if (!lineas.length) {
         return ok({ ok: true, extracto_id, propuestas: [], resumen: { ...resumenVacio, n_sin_conciliar: 0 } });
       }
@@ -960,6 +964,7 @@ export async function conciliacionHandler(req) {
         n_match: propuestas.filter((p) => p.caso === 'match').length,
         n_ambiguo: propuestas.filter((p) => p.caso === 'ambiguo').length,
         n_solo_extracto: propuestas.filter((p) => p.caso === 'solo_extracto').length,
+        cuadre,
       };
       return ok({ ok: true, extracto_id, propuestas, resumen });
     } catch (e) {
