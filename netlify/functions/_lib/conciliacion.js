@@ -103,6 +103,38 @@ export function proponerCruces(lineas, movimientos, ingresos, ventanaDias = VENT
   });
 }
 
+/**
+ * Detecta capturado (movimiento/ingreso `provisional`) que el extracto NO
+ * corrobora (punto 3 de "El proceso de conciliación", docs/conciliacion.md):
+ * un movimiento/ingreso que nunca aparece como candidato de ninguna propuesta
+ * (ni `match` ni `ambiguo`) — ni siquiera fue descartado por ambigüedad, así
+ * que el banco no reporta nada parecido en la ventana de fechas del extracto.
+ * Puede ser timing (posteará el mes siguiente) o un error de captura
+ * (duplicado, monto/fecha mal digitados, un gasto que no se cobró).
+ *
+ * Puramente informativo: no escribe nada, no cambia el estado de ningún
+ * registro ni el flujo de confirmación existente. Mismo alcance laxo que el
+ * resto del motor de cruce (misma ventana ±días, sin filtrar por cuenta).
+ *
+ * @param {Array<{caso, candidatos: Array<{tipo, id}>}>} propuestas  resultado de proponerCruces
+ * @param {Array<{id, fecha, descripcion, monto}>} movimientos  provisional de la ventana
+ * @param {Array<{id, fecha, descripcion, monto}>} ingresos  provisional de la ventana
+ * @returns {Array<{tipo: 'movimiento'|'ingreso', id, fecha, descripcion, monto}>}
+ */
+export function detectarDiscrepancias(propuestas, movimientos, ingresos) {
+  const vistos = new Set();
+  for (const p of propuestas || []) {
+    for (const c of p.candidatos || []) vistos.add(`${c.tipo}:${c.id}`);
+  }
+  const soloNoVistos = (tipo) => (item) => !vistos.has(`${tipo}:${item.id}`);
+  const aItem = (tipo) => (c) => ({ tipo, id: c.id, fecha: c.fecha, descripcion: c.descripcion, monto: c.monto });
+  const discrepancias = [
+    ...(movimientos || []).filter(soloNoVistos('movimiento')).map(aItem('movimiento')),
+    ...(ingresos || []).filter(soloNoVistos('ingreso')).map(aItem('ingreso')),
+  ];
+  return discrepancias.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+}
+
 // Mismo margen de redondeo que ya usa el resto del motor de cruce (±1, ver
 // `candidatosPara`) — algunos extractos de banco redondean distinto al peso.
 export const TOLERANCIA_CUADRE_DEFAULT = 1;
