@@ -10,6 +10,24 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado que las corridas
+  anteriores**: los 6 issues `autobuild` abiertos siguen siendo los mismos —
+  `#40`/`#41`/`#92`/`#98` (`autobuild-espera`, PR borrador `#58`/`#55`/`#96`/
+  `#103` ya abierto) sin ningún comentario ni actividad nueva de Luis desde
+  la última revisión (solo los comentarios automáticos de deploy preview de
+  Netlify en los cuatro), y `#51`/`#52` siguen siendo los issues "padre" ya
+  divididos en sub-issues (`#91`/`#97` fusionados, `#92`/`#98` en espera vía
+  sus PR). No hay ninguna `propuesta` nueva ni issues `autobuild`/`autofix`
+  sin atender, así que no propongo una quinta propuesta (ya hay cuatro
+  esperando el visto bueno de Luis). La rama designada de esta sesión ya no
+  existía en el remoto (se había limpiado/borrado tras una fusión anterior)
+  y la copia local seguía trayendo el mismo commit suelto ya fusionado en
+  `main` ("Pagos: reporte histórico", PR #148, commit `9758a23` — diff vacío
+  contra `dab21e6`) — la reseteé de nuevo a `main`. Sin nada nuevo que avisar
+  a Luis, no se manda notificación esta corrida; este registro es la
+  constancia.
+
+## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado que las corridas
   anteriores**: los 8 issues abiertos son los mismos de las últimas corridas —
   `#40`/`#41` (`propuesta` + `autobuild-espera`, PR borrador `#58`/`#55`) y
   `#92`/`#98` (`autobuild-espera`, PR borrador `#96`/`#103`) siguen sin
