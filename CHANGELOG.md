@@ -10,6 +10,22 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado que las corridas
+  anteriores**: los 8 issues abiertos son los mismos de las últimas corridas —
+  `#40`/`#41` (`propuesta` + `autobuild-espera`, PR borrador `#58`/`#55`) y
+  `#92`/`#98` (`autobuild-espera`, PR borrador `#96`/`#103`) siguen sin
+  actividad nueva de Luis; `#51`/`#52` siguen siendo los issues "padre" ya
+  divididos en sub-issues (fusionados o en espera vía sus PR); la épica
+  `#111` sigue sin label `autobuild` (plan de referencia); `#31` es de
+  `dcdg-autofix`, fuera de este procedimiento. Ninguna `propuesta` ni issue
+  `autobuild`/`autofix` nuevo, así que no propongo una quinta propuesta (ya
+  hay cuatro esperando el visto bueno de Luis). La rama designada de esta
+  sesión volvía a traer el mismo commit suelto ya fusionado en `main`
+  ("Pagos: reporte histórico", PR #148, commit `9758a23`) — la reseteé de
+  nuevo a `main`. Sin nada nuevo que avisar a Luis, no se manda notificación
+  esta corrida; este registro es la constancia.
+
+## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado que las corridas
   anteriores**: de los 8 issues abiertos, `#40`/`#41` (`propuesta` +
   `autobuild-espera`, con PR borrador ya abierto — `#58`/`#55`) y
   `#92`/`#98` (`autobuild-espera`, con PR borrador ya abierto — `#96`/`#103`)
