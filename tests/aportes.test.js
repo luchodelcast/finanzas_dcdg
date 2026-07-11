@@ -139,3 +139,65 @@ test('reporteAportes: sin ninguna entidad tipo persona → lista vacía, no revi
   assert.deepEqual(r.por_persona, []);
   setSqlForTests(null);
 });
+
+// ---------------------------------------------------------------------------
+// Consolidación de negocios en la base IBC de su dueño (issue #154, decisión
+// de Luis: el neto de un negocio como Ahinoa se suma automáticamente a la
+// base IBC de la persona propietaria, vía `propietario_id`).
+// ---------------------------------------------------------------------------
+
+test('reporteAportes: consolida el neto de un negocio (propietario_id) en la base IBC de su dueño', async () => {
+  const db = fakeAportesDb({
+    ingresos: [
+      { entidad_id: 2, total: 4_000_000 }, // Carolina (propia)
+      { entidad_id: 3, total: 5_000_000 }, // Ahinoa (negocio de Carolina)
+    ],
+    costos: [
+      { entidad_id: 3, total: 1_000_000 }, // costos deducibles de Ahinoa
+    ],
+    entidades: [
+      { id: 1, nombre: 'Luis', tipo: 'persona' },
+      { id: 2, nombre: 'Carolina', tipo: 'persona' },
+      { id: 3, nombre: 'Ahinoa', tipo: 'negocio', propietario_id: 2 },
+    ],
+  });
+  setSqlForTests(db);
+
+  const r = await reporteAportes({ periodo: '2025-06' });
+  const caro = r.por_persona.find((p) => p.entidad === 'Carolina');
+
+  // Base consolidada: (4M propios) + (5M − 1M neto de Ahinoa) = 8M.
+  assert.equal(caro.ingresos, 9_000_000, 'ingresos propios + ingresos de Ahinoa');
+  assert.equal(caro.costos_deducibles, 1_000_000, 'costos deducibles de Ahinoa (Carolina no tenía propios)');
+  assert.equal(caro.ibc, calcularIBC({ ingresos: 9_000_000, costosDeducibles: 1_000_000, anio: 2025 }).ibc);
+
+  assert.equal(caro.consolida_negocios.length, 1);
+  assert.equal(caro.consolida_negocios[0].entidad, 'Ahinoa');
+  assert.equal(caro.consolida_negocios[0].neto, 4_000_000);
+
+  const luis = r.por_persona.find((p) => p.entidad === 'Luis');
+  assert.deepEqual(luis.consolida_negocios, [], 'Luis no es dueño de ningún negocio');
+
+  setSqlForTests(null);
+});
+
+test('reporteAportes: un negocio sin propietario_id (o sin dueño persona) no se consolida en nadie', async () => {
+  const db = fakeAportesDb({
+    ingresos: [{ entidad_id: 3, total: 5_000_000 }], // Ahinoa, sin propietario_id
+    costos: [],
+    entidades: [
+      { id: 1, nombre: 'Luis', tipo: 'persona' },
+      { id: 2, nombre: 'Carolina', tipo: 'persona' },
+      { id: 3, nombre: 'Ahinoa', tipo: 'negocio' },
+    ],
+  });
+  setSqlForTests(db);
+
+  const r = await reporteAportes({ periodo: '2025-06' });
+  r.por_persona.forEach((p) => {
+    assert.equal(p.ingresos, 0);
+    assert.deepEqual(p.consolida_negocios, []);
+  });
+
+  setSqlForTests(null);
+});
