@@ -9,6 +9,25 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — misma pila desde el 2026-07-08,
+  ahora bloqueada por revisión pendiente, no por trabajo faltante**: los 6
+  issues `autobuild` abiertos siguen siendo `#40`/`#41`/`#92`/`#98`
+  (`autobuild-espera`, PR borrador `#58`/`#55`/`#96`/`#103` sin ningún
+  comentario de Luis, solo el automático de deploy preview de Netlify) y
+  `#51`/`#52` (issues "padre" ya divididos en sub-issues fusionados o en
+  espera vía sus PR). Sin `propuesta` abierta ni issue `autobuild`/`autofix`
+  nuevo, así que no propongo una quinta funcionalidad (ya hay cuatro
+  esperando el visto bueno de Luis). **Nota para Luis**: esta es la novena
+  corrida seguida (todas hoy, 2026-07-11) que encuentra exactamente este
+  mismo estado — los 4 PR borrador llevan 3 días sin ningún movimiento tuyo.
+  Autobuild no puede avanzar más hasta que revises/apruebes al menos uno;
+  esta vez sí se manda el aviso (las corridas anteriores de hoy decidieron
+  callar por ser "lo mismo de siempre", pero acumular silencio no ayuda).
+  La rama designada de esta sesión volvía a traer el mismo commit suelto ya
+  fusionado en `main` ("Pagos: reporte histórico", PR #148, commit
+  `9758a23`) — la reseteé de nuevo a `main`.
+
+## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado que las corridas
   anteriores**: los 8 issues abiertos son los mismos de las últimas corridas —
   `#40`/`#41`/`#92`/`#98` (`autobuild-espera`, PR borrador ya abierto
