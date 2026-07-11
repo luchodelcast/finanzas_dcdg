@@ -9,6 +9,31 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado, ahora van 4 días
+  (2026-07-08 → 2026-07-11) sin que Luis toque los 4 PR borrador**: verifiqué
+  de nuevo los 6 issues `autobuild` abiertos — `#40`/`#41`/`#92`/`#98` siguen
+  `autobuild-espera` con PR borrador abierto (`#58`/`#55`/`#96`/`#103`, todos
+  `SENSIBLE`/candado, esperando OK explícito) y `#51`/`#52` siguen siendo los
+  issues "padre" ya divididos (sus sub-issues son justo `#92`/`#98`, ya en
+  la cola). Cero issues con label `propuesta` abiertos — no hay nada que
+  proponer una quinta vez. Todos los 18 issues `auto-ok` de la épica #111 y
+  de los "Nocturnos" ya están `CLOSED`/fusionados, así que tampoco hay
+  trabajo `auto-ok` pendiente. **Nota para Luis**: esta es, contando las de
+  hoy, la corrida número quince que encuentra exactamente esta misma pila —
+  el proceso está funcionando bien (verifica, no rehace, no inventa trabajo
+  fuera de la cola), pero está genuinamente parado hasta que revises al
+  menos uno de los 4 PR: [#58](https://github.com/luchodelcast/finanzas_dcdg/pull/58) config-como-datos,
+  [#55](https://github.com/luchodelcast/finanzas_dcdg/pull/55) backup DB→Sheet,
+  [#96](https://github.com/luchodelcast/finanzas_dcdg/pull/96) cierre mensual,
+  [#103](https://github.com/luchodelcast/finanzas_dcdg/pull/103) portal solo-lectura.
+  `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` no están en el entorno de
+  esta sesión, así que el WhatsApp de SilvIA no se puede mandar desde aquí
+  (igual que en corridas anteriores) — este registro y una notificación por
+  el canal nativo de esta sesión son el único aviso real que le llega a Luis
+  esta vez. La rama designada (`claude/zealous-brown-q08kdo`) no existía
+  todavía en el remoto — la creé desde `main`.
+
+## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — misma pila desde el 2026-07-08,
   ahora bloqueada por revisión pendiente, no por trabajo faltante**: los 6
   issues `autobuild` abiertos siguen siendo `#40`/`#41`/`#92`/`#98`
