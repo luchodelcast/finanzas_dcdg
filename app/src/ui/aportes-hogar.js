@@ -100,7 +100,7 @@ async function registrar() {
     await cargarReporte();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden registrar aportes al fondo común.')
+      ? (e.message || 'Tu rol no tiene permiso para registrar aportes al fondo común.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }

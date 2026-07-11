@@ -50,7 +50,7 @@ async function enviar() {
     await cargar();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden enviar solicitudes de mejoras.')
+      ? (e.message || 'Tu rol no tiene permiso para enviar solicitudes de mejoras.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }
