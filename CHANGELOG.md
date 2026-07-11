@@ -9,6 +9,26 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado que las corridas
+  anteriores**: de los 8 issues abiertos, `#40`/`#41` (`propuesta` +
+  `autobuild-espera`, con PR borrador ya abierto — `#58`/`#55`) y
+  `#92`/`#98` (`autobuild-espera`, con PR borrador ya abierto — `#96`/`#103`)
+  siguen sin actividad nueva de Luis (solo el comentario automático de
+  deploy preview de Netlify en los cuatro). `#51`/`#52` siguen siendo los
+  issues "padre" ya divididos en sub-issues (fusionados o en espera vía sus
+  PR). La épica `#111` no lleva label `autobuild` (es el plan de
+  referencia, no se construye directo) y sus 7 sub-issues ya están todos
+  fusionados. El único issue restante (`#31`) es de `dcdg-autofix`, fuera
+  del alcance de este procedimiento. No hay ninguna `propuesta` nueva ni
+  issues `autobuild`/`autofix` sin atender, así que no propongo una quinta
+  propuesta (ya hay cuatro esperando el visto bueno de Luis). La rama
+  designada de esta sesión volvía a traer el mismo commit suelto de una
+  corrida vieja ("Pagos: reporte histórico") — confirmé que su contenido ya
+  está en `main` desde el PR #148 (commit `9758a23`) y reseteé la rama.
+  Sin nada nuevo que avisar a Luis, no se manda notificación esta corrida;
+  este registro es la constancia.
+
+## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado que la corrida anterior**:
   los 6 issues `autobuild` abiertos siguen siendo `#40`/`#41`/`#92`/`#98` (con
   `autobuild-espera` y PR borrador ya abierto — `#58`/`#55`/`#96`/`#103`, sin
