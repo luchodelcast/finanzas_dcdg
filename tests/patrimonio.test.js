@@ -39,7 +39,7 @@ function fakeDb() {
       const e = entidades.find((x) => x.nombre.toLowerCase() === nombre);
       return e ? [{ id: e.id }] : [];
     }
-    if (t.startsWith('select id, nombre, tipo, pais, moneda from entidades')) {
+    if (t.startsWith('select id, nombre, tipo, pais, moneda, propietario_id from entidades')) {
       return entidades;
     }
     if (t.includes('select nombre from usuarios')) {

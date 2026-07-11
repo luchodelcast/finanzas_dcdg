@@ -8,10 +8,14 @@
  * Alcance acotado de esta primera versión (ver PR y roadmap para el detalle
  * de las decisiones que faltan por confirmar con el contador):
  *   - Solo entidades tipo 'persona' (Luis, Carolina…) — se asume que cada una
- *     cotiza por separado (dos contribuyentes). Las entidades tipo 'negocio'
- *     (p.ej. Ahinoa) NO se consolidan automáticamente en su dueño todavía:
- *     si tienen ingresos/costos propios en la DB, quedan fuera de este
- *     reporte hasta que se confirme la metodología de consolidación.
+ *     cotiza por separado (dos contribuyentes).
+ *   - **Consolidación de negocios (issue #154, decisión de Luis):** una
+ *     entidad tipo 'negocio' con `propietario_id` apuntando a una persona
+ *     (p.ej. Ahinoa → Carolina) se consolida automáticamente en la base IBC
+ *     de su dueña — se suman los ingresos y costos deducibles del negocio a
+ *     los propios de la persona antes de calcular el IBC (equivale a sumar
+ *     el neto del negocio a su base). El desglose por negocio queda
+ *     disponible en `consolida_negocios` para trazabilidad.
  *   - Costos reales (no presunción de costos DIAN).
  *   - Sin tratamiento especial de ingresos irregulares (honorarios
  *     multi-mes, anticipos): se cuentan en el mes en que quedaron registrados.
@@ -42,8 +46,27 @@ export async function reporteAportes(q = {}) {
 
   const personas = entidades.filter((e) => e.tipo === 'persona');
   const por_persona = personas.map((e) => {
-    const ingresosMonto = ingresosPorEntidad.get(e.id) || 0;
-    const costosMonto = costosPorEntidad.get(e.id) || 0;
+    const negociosPropios = entidades.filter((n) => n.tipo === 'negocio' && n.propietario_id === e.id);
+    const consolida_negocios = negociosPropios.map((n) => {
+      const ingresosNegocio = ingresosPorEntidad.get(n.id) || 0;
+      const costosNegocio = costosPorEntidad.get(n.id) || 0;
+      const neto = ingresosNegocio - costosNegocio;
+      return {
+        entidad_id: n.id,
+        entidad: n.nombre,
+        ingresos: ingresosNegocio,
+        ingresos_fmt: formatCOP(ingresosNegocio),
+        costos_deducibles: costosNegocio,
+        costos_deducibles_fmt: formatCOP(costosNegocio),
+        neto,
+        neto_fmt: formatCOP(neto),
+      };
+    });
+
+    const ingresosMonto = (ingresosPorEntidad.get(e.id) || 0)
+      + consolida_negocios.reduce((s, n) => s + n.ingresos, 0);
+    const costosMonto = (costosPorEntidad.get(e.id) || 0)
+      + consolida_negocios.reduce((s, n) => s + n.costos_deducibles, 0);
     const ibcCalc = calcularIBC({ ingresos: ingresosMonto, costosDeducibles: costosMonto, anio });
     const aportes = calcularAportes({ ibc: ibcCalc.ibc, smmlv: ibcCalc.smmlv });
 
@@ -54,6 +77,7 @@ export async function reporteAportes(q = {}) {
       ingresos_fmt: formatCOP(ingresosMonto),
       costos_deducibles: costosMonto,
       costos_deducibles_fmt: formatCOP(costosMonto),
+      consolida_negocios,
       ibc: ibcCalc.ibc,
       ibc_fmt: formatCOP(ibcCalc.ibc),
       ibc_topado: ibcCalc.topado, // 'piso' | 'techo' | null
@@ -83,6 +107,7 @@ export async function reporteAportes(q = {}) {
     por_persona,
     nota: 'Solo lectura, no registra pagos ni concilia. Costos reales (no presunción DIAN). '
       + 'No incluye ARL. Asume que cada persona cotiza por separado. Entidades tipo "negocio" '
-      + '(p.ej. Ahinoa) no se consolidan aún en su dueño. Metodología pendiente de validar por el contador.',
+      + '(p.ej. Ahinoa) se consolidan automáticamente en la base IBC de su dueño (ver "consolida_negocios" '
+      + 'en cada persona). Metodología pendiente de validar por el contador.',
   };
 }

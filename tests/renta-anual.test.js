@@ -18,7 +18,7 @@ function fakeDb({ ingresosCedula, costos, entidades, lineas }) {
     if (t.includes('group by entidad_id, cedula')) return ingresosCedula;
     if (t.includes('from costos_actividad')) return costos;
     if (t.includes('from ingresos') && t.includes('group by entidad_id')) return []; // total (no lo usa reporteRentaAnual)
-    if (t.startsWith('select id, nombre, tipo, pais, moneda from entidades')) return entidades;
+    if (t.startsWith('select id, nombre, tipo, pais, moneda, propietario_id from entidades')) return entidades;
     if (t.includes('group by p.codigo, p.nombre, p.clase, p.naturaleza')) {
       let filas = lineas;
       let pi = 0;

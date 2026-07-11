@@ -9,6 +9,36 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-11 (autobuild, corrida nueva)
+- ✅ **Consolidación automática del neto de Ahinoa en la base IBC de Carolina**
+  (issue #154, reabierta y aprobada por Luis — decisión 1 confirmada:
+  "el neto de Ahinoa SÍ se suma automáticamente a la base del IBC de
+  Carolina, no como línea aparte"): la captura de costos de Ahinoa (PR #162)
+  ya existía, pero `reporteAportes()` explícitamente no consolidaba el
+  negocio en su dueña — quedaba pendiente de esta decisión de metodología.
+  `entidades.propietario_id` (columna ya existente en `sql/contable.sql`,
+  Ahinoa ya sembrada con `propietario_id` → Carolina) ahora se usa en
+  `_lib/aportes.js`: cada persona suma los ingresos y costos deducibles de
+  los negocios de los que es propietaria a los suyos propios *antes* de
+  calcular el IBC (equivale a sumar el neto del negocio a la base). El
+  desglose por negocio queda expuesto en `consolida_negocios` (por persona)
+  para trazabilidad, y la tarjeta de "Aportes IBC" en la PWA muestra una
+  línea "Incluye Ahinoa: ingresos − costos = neto" cuando aplica.
+  `_lib/costos.js` (mini-P&L informativo por negocio) no cambia su cálculo,
+  solo su nota, ya que ahora sí hay consolidación en el reporte de IBC.
+  Sin esquema nuevo (la columna ya existía) y sin tocar ninguna fila
+  existente — puramente cambio de código de agregación. Riesgo bajo:
+  aditivo sobre datos ya existentes, sin migraciones ni cambios de auth;
+  auto-merge con CI verde. Las preguntas 2 y 3 del issue (categorías de
+  costo separadas; esperar la metodología "costos reales vs. presunción
+  DIAN" de Santiago) siguen sin resolver — no bloquean esta consolidación,
+  que ya estaba aprobada explícitamente.
+- 🔎 Repasé el resto de la cola: `#40`/`#41`/`#92`/`#98` siguen con
+  `autobuild-espera` y PR borrador abierto (`#58`/`#55`/`#96`/`#103`) sin
+  actividad nueva de Luis, y `#51`/`#52` siguen siendo los issues "padre" ya
+  divididos en sub-issues. Una funcionalidad por corrida (AUTOBUILD.md §10) —
+  esta es la de hoy.
+
+## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado, PRs borrador
   redundantes cerrados**: los 6 issues `autobuild` abiertos siguen igual —
   #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto

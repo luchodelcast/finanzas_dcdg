@@ -9,10 +9,10 @@
  * mini-P&L por negocio); la escritura vive en `insertCostoActividad`
  * (`_lib/repo.js`), llamada desde `pwaCostoActividadHandler`.
  *
- * Consolidación en la base IBC de la persona dueña: esta primera versión NO
- * la hace — sigue pendiente de confirmar la metodología (issue #154,
- * pregunta 1). El mini-P&L de acá es solo informativo, aparte de
- * `reporteAportes()`.
+ * Consolidación en la base IBC de la persona dueña (issue #154, decisión de
+ * Luis): `reporteAportes()` ya suma automáticamente el neto de cada negocio
+ * (por `propietario_id`) a la base IBC de su dueña. El mini-P&L de acá sigue
+ * siendo el reporte informativo por negocio (no reemplaza esa consolidación).
  */
 
 import { listEntidades, listCostosActividad, queryAportesBase } from './repo.js';
@@ -66,7 +66,7 @@ export async function reporteCostosActividad(q = {}) {
     costos,
     por_negocio,
     nota: 'Solo lectura: costos capturados y un mini-P&L (ingresos − costos deducibles) por negocio. '
-      + 'No se consolida automáticamente en la base IBC de la persona dueña — metodología pendiente '
-      + 'de confirmar (issue #154).',
+      + 'El neto de cada negocio ya se consolida automáticamente en la base IBC de su dueño '
+      + '(ver el reporte de Aportes IBC).',
   };
 }

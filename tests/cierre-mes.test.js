@@ -44,7 +44,7 @@ function fakeDb() {
     const t = text.replace(/\s+/g, ' ').trim();
     const tl = t.toLowerCase();
     if (tl.startsWith('create table') || tl.startsWith('create index')) return [];
-    if (t.startsWith('select id, nombre, tipo, pais, moneda from entidades')) return entidades;
+    if (t.startsWith('select id, nombre, tipo, pais, moneda, propietario_id from entidades')) return entidades;
     if (t.includes('from ingresos') && t.includes('group by entidad_id')) {
       const [desde, hasta] = params;
       const filas = ingresos.filter((r) => r.fecha >= desde && r.fecha <= hasta);

@@ -175,10 +175,13 @@ Las cuentas de los hijos se registran en `cuentas_bancarias` con su titular
   cálculo y **reporte IBC mensual** por persona (`/api/pwa-aportes` + tarjeta
   🧮 en la PWA). Usa costos reales (no presunción DIAN), SMMLV/tarifas como
   config versionada en `app/src/config/aportes.js`, y asume que Luis y
-  Carolina cotizan por separado. Las entidades tipo `negocio` (p.ej. Ahinoa)
-  aún no se consolidan automáticamente en su dueño — ver §3 y §8.b. Ninguna de
-  estas decisiones metodológicas está confirmada por Santiago todavía; no usar
-  los números para trámites reales sin su validación.
+  Carolina cotizan por separado. Las entidades tipo `negocio` con
+  `propietario_id` (p.ej. Ahinoa → Carolina) **se consolidan automáticamente**
+  en la base IBC de su dueño (issue #154, decisión de Luis) — el neto del
+  negocio se suma a la base antes de aplicar el 40%; el desglose por negocio
+  queda disponible en `consolida_negocios`. Ninguna de estas decisiones
+  metodológicas está confirmada por Santiago todavía; no usar los números
+  para trámites reales sin su validación.
 - **Fase 3.3 (implementada, solo lectura — pendiente validación del contador):**
   patrimonio (`/api/pwa-patrimonio` + `/api/pwa-mi-patrimonio`, issue #115) y
   **hoja de trabajo de renta por cédulas + patrimonio fiscal a 31-dic**, por
@@ -186,8 +189,10 @@ Las cuentas de los hijos se registran en `cuentas_bancarias` con su titular
   #130). Agrupa ingresos del año por cédula y costos deducibles (sin desglose
   por cédula, igual que Fase 3.2), y reutiliza `patrimonioPorPersona` a
   31-dic. Es un borrador/insumo para Santiago, no la declaración de renta;
-  las mismas salvedades de la Fase 3.2 (costos reales, Ahinoa sin consolidar)
-  aplican acá.
+  las mismas salvedades de la Fase 3.2 (costos reales) aplican acá — a
+  diferencia del reporte IBC, esta hoja de trabajo por cédula **no** consolida
+  aún el neto de Ahinoa (no tiene columna de cédula propia en
+  `costos_actividad`).
 - **Fase 4 (Horizonte 2):** partida doble, estados financieros, multi-entidad
   del grupo.
 

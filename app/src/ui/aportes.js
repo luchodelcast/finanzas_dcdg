@@ -32,6 +32,13 @@ function rowHTML(label, value, { strong = false } = {}) {
   </div>`;
 }
 
+function consolidaHTML(negocios) {
+  if (!negocios || !negocios.length) return '';
+  return negocios.map((n) => `<div style="font-size:10px;color:var(--gray-d);margin:-4px 0 6px">
+    Incluye ${esc(n.entidad)}: ${esc(n.ingresos_fmt)} − ${esc(n.costos_deducibles_fmt)} = ${esc(n.neto_fmt)}
+  </div>`).join('');
+}
+
 function personaCardHTML(p) {
   const topadoTxt = p.ibc_topado === 'piso' ? ' · piso 1 SMMLV'
     : p.ibc_topado === 'techo' ? ' · techo 25 SMMLV' : '';
@@ -40,6 +47,7 @@ function personaCardHTML(p) {
     <div class="card-ttl">${esc(p.entidad)}</div>
     ${rowHTML('Ingresos del mes', p.ingresos_fmt)}
     ${rowHTML('Costos deducibles', p.costos_deducibles_fmt)}
+    ${consolidaHTML(p.consolida_negocios)}
     ${rowHTML('IBC' + topadoTxt, p.ibc_fmt, { strong: true })}
     <div style="height:1px;background:var(--gray-m);margin:10px 0"></div>
     ${rowHTML('Salud (12.5%)', p.aportes.salud_fmt)}

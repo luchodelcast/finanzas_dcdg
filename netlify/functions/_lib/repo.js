@@ -613,7 +613,10 @@ export async function ingresosSinAsiento({ limit = 500 } = {}, sqlArg) {
 /** Entidades activas (Luis, Carolina, Ahinoa, sociedades…). */
 export async function listEntidades(sqlArg) {
   const sql = sqlArg || await getSql();
-  return sql.query('select id, nombre, tipo, pais, moneda from entidades where activo order by tipo, nombre', []);
+  return sql.query(
+    'select id, nombre, tipo, pais, moneda, propietario_id from entidades where activo order by tipo, nombre',
+    [],
+  );
 }
 
 /** Terceros (pagadores/proveedores) para autocompletar. */
