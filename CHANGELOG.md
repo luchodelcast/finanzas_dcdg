@@ -9,6 +9,21 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada tras la consolidación de Ahinoa (issue #154, PR #183) —
+  sin item nuevo elegible**: con #154 ya cerrada, los 6 issues `autobuild`
+  abiertos siguen siendo los mismos de la corrida anterior — `#40`/`#41`/
+  `#92`/`#98` con `autobuild-espera` y PR borrador ya abierto (`#58`/`#55`/
+  `#96`/`#103`) sin actividad nueva de Luis, y `#51`/`#52` siguen siendo los
+  issues "padre" ya divididos en sub-issues (`#97`/`#91` fusionados, `#98`/
+  `#92` en espera vía sus PR). No hay ninguna `propuesta` abierta ni issues
+  `autobuild`/`autofix` nuevos, así que no propongo otra funcionalidad
+  (ya hay cuatro esperando el visto bueno de Luis). Además, la rama
+  designada de esta sesión traía un commit suelto ("Pagos: reporte
+  histórico") idéntico al ya fusionado en PR #148 (`9758a23`) — la reseteé
+  a `main`. Sin nada nuevo que avisar a Luis, no se manda notificación esta
+  corrida; este registro es la constancia.
+
+## 2026-07-11 (autobuild, corrida nueva)
 - ✅ **Consolidación automática del neto de Ahinoa en la base IBC de Carolina**
   (issue #154, reabierta y aprobada por Luis — decisión 1 confirmada:
   "el neto de Ahinoa SÍ se suma automáticamente a la base del IBC de
