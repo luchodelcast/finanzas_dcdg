@@ -10,6 +10,24 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado que la corrida anterior
+  (#176), sin proponer una duodécima**: los 6 issues `autobuild` abiertos
+  siguen igual — #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya
+  abierto (#58/#55/#96/#103, `updated_at` sin cambios desde el 2026-07-08,
+  cero actividad nueva de Luis en ninguno de los 4) y #51/#52 siguen como
+  issues "padre" ya divididos en sub-issues (#91/#97 fusionados, #92/#98 en
+  espera vía sus PR). No hay ninguna `propuesta` abierta ni issues
+  `autobuild` nuevos. Tampoco hay issues `autofix` abiertos. De paso
+  encontré, otra vez, la propia rama de esta sesión
+  (`claude/zealous-brown-7incsg`) con el mismo commit suelto ("Pagos:
+  reporte histórico") que corridas anteriores ya habían visto en otras
+  ramas — confirmé que el diff contra el commit ya fusionado (PR #148,
+  `9758a23`) es vacío, así que no era trabajo perdido: reseteé la rama a
+  `main`. Sin nada nuevo que avisar a Luis (los 4 PR borrador ya se
+  reportaron varias veces, sin actividad nueva de su parte), no se manda
+  notificación esta corrida; este registro es la constancia.
+
+## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado que la corrida anterior
   (#175), sin proponer una undécima**: los 6 issues `autobuild` abiertos siguen
   igual — #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
   (#58/#55/#96/#103, `updated_at` sin cambios desde el 2026-07-08, cero
