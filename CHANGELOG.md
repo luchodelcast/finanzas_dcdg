@@ -9,6 +9,26 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-11 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado, PRs borrador
+  redundantes cerrados**: los 6 issues `autobuild` abiertos siguen igual —
+  #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
+  (#58/#55/#96/#103, sin actividad nueva de Luis desde el 2026-07-08) y
+  #51/#52 siguen como issues "padre" ya divididos en sub-issues (#91/#97
+  fusionados, #92/#98 en espera vía sus PR). No hay ninguna `propuesta`
+  abierta ni issues `autobuild`/`autofix` nuevos. La propia rama de esta
+  sesión (`claude/zealous-brown-nlqsfy`) traía el mismo commit suelto
+  ("Pagos: reporte histórico") que corridas anteriores ya habían visto en
+  otras ramas — confirmé que el diff contra el commit ya fusionado (PR
+  #148, `9758a23`) es vacío, y reseteé la rama a `main`. Además, encontré
+  **cinco PR borrador consecutivos (#177–#181) con este mismo mensaje de
+  "sin item elegible"** que quedaron abiertos sin fusionar (se crearon como
+  borrador por error de corridas previas, así que no auto-mergearon) — los
+  cerré por ser puro ruido duplicado del mismo estado que registra esta
+  entrada; este PR va **listo para auto-merge** (no borrador) para que la
+  cola de PRs no se siga acumulando. Sin nada nuevo que avisar a Luis, no
+  se manda notificación esta corrida; este registro es la constancia.
+
+## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado que la corrida anterior
   (#175), sin proponer una undécima**: los 6 issues `autobuild` abiertos siguen
   igual — #40/#41/#92/#98 con `autobuild-espera` y PR borrador ya abierto
