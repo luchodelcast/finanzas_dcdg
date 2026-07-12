@@ -9,6 +9,24 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-12 (autobuild, corrida nueva)
+- 🔎 **Cola revisada otra vez, sin item elegible — sin cambios desde la corrida
+  anterior de hoy**: los 6 issues `autobuild` abiertos siguen igual —
+  `#40`/`#41`/`#92`/`#98` con `autobuild-espera` y PR borrador
+  `#58`/`#55`/`#96`/`#103` (revisé los comentarios de los cuatro: solo el
+  automático de deploy preview de Netlify, cero actividad nueva de Luis) y
+  `#51`/`#52` siguen siendo los issues "padre" ya divididos en sub-issues.
+  Cero `propuesta` nueva, cero `autofix` abierto, así que sigo sin proponer
+  una quinta funcionalidad. El PR #193 (acceso completo del equipo
+  financiero/contable, de la sesión interactiva aparte) sigue abierto en
+  borrador sin cambios — tampoco lo toco desde aquí. Como el estado es
+  idéntico al de la corrida anterior de hoy (que ya avisó por este mismo
+  motivo), no repito notificación para no duplicar el aviso; este registro es
+  la constancia de la re-verificación. La rama designada
+  (`claude/zealous-brown-39whkz`) volvía a traer el commit suelto no
+  fusionado de PR #193 (`69f95d7`) — la recreé limpia desde `main`, igual que
+  en corridas anteriores con el mismo problema.
+
+## 2026-07-12 (autobuild, corrida nueva)
 - 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
   anterior de hoy, sin novedad de Luis en los 4 PR borrador**: los 6 issues
   `autobuild` abiertos siguen igual — `#40`/`#41`/`#92`/`#98` con
