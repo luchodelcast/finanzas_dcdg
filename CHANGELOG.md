@@ -9,6 +9,25 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-12 (autobuild, corrida nueva)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo estado que la corrida
+  anterior de hoy, sin novedad de Luis en los 4 PR borrador**: los 6 issues
+  `autobuild` abiertos siguen igual — `#40`/`#41`/`#92`/`#98` con
+  `autobuild-espera` y PR borrador `#58`/`#55`/`#96`/`#103` (revisé los
+  comentarios de los cuatro: solo el automático de deploy preview de Netlify,
+  nada de Luis) y `#51`/`#52` siguen siendo los issues "padre" ya divididos en
+  sub-issues. Cero `propuesta` nueva, cero `autofix` abierto, así que sigo sin
+  proponer una quinta funcionalidad. **Novedad que sí vale registrar**: apareció
+  el PR #193 (`claude/silvia-whatsapp-financial-module-k20fu6`, de una sesión
+  interactiva aparte, no de esta rutina), que le da acceso de escritura
+  completo a Angela/María Isabel/Santiago y dice explícitamente que "el
+  portal solo-lectura de #103 queda descartado" (decisión de Luis tomada
+  fuera de este proceso) — pero el propio PR aclara "puedo cerrar #103 cuando
+  me confirmes", así que todavía no está cerrado. No toco #98/#103 ni ese PR
+  desde aquí (no es parte de la cola de Autobuild ni de mi mandato en esta
+  corrida), lo dejo anotado para que se resuelva en esa conversación. Como ya
+  se mandó el aviso nativo de esta sesión más temprano hoy por este mismo
+  estado (4 PR sin revisar), no repito notificación ahora para no duplicar el
+  aviso — este registro es la constancia de la re-verificación.
 - 🔎 **Cola revisada, sin item elegible — mismo estado, ahora van 5 días
   (2026-07-08 → 2026-07-12) sin que Luis toque los 4 PR borrador**: verifiqué
   de nuevo los 6 issues `autobuild` abiertos — `#40`/`#41`/`#92`/`#98` siguen
