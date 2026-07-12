@@ -12,7 +12,11 @@ import { formatCOP, formatMoneda } from '../utils/formatters.js';
 import { CATEGORIAS } from '../config/categories.js';
 
 const V = (id) => document.getElementById(id);
-const esOwner = () => (currentUser() || {}).rol === 'owner';
+// Roles con acceso de escritura (owner + equipo financiero/contable). Igual que
+// el gate del backend (`ROLES_ESCRITURA` en handlers.js): deja escribir a Luis/
+// Carolina y al equipo (admin_financiero/tesoreria/contador); solo_lectura no.
+const ROLES_ESCRITURA = new Set(['owner', 'admin_financiero', 'tesoreria', 'contador']);
+const esOwner = () => ROLES_ESCRITURA.has((currentUser() || {}).rol);
 
 // Paleta para las categorías (se cicla). Usa los tonos de la marca DCDG.
 const PALETTE = ['#2E5FA3', '#0F6E56', '#F0A500', '#534AB7', '#C0392B', '#1A7A4A', '#5DCAA5', '#854F0B'];
@@ -204,7 +208,7 @@ async function corregir(id) {
     load();
   } catch (e) {
     alert((e.status === 401 || e.status === 403)
-      ? 'Solo Luis o Carolina pueden corregir movimientos.'
+      ? 'Tu rol no tiene permiso para corregir movimientos.'
       : ('Error: ' + (e.message || 'no se pudo corregir')));
   }
 }

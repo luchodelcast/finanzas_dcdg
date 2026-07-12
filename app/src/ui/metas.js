@@ -99,7 +99,7 @@ async function crear() {
     await cargarLista();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden crear metas.')
+      ? (e.message || 'Tu rol no tiene permiso para crear metas.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }

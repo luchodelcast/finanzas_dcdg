@@ -69,7 +69,7 @@ async function guardar() {
     msg.style.color = r.registrado ? 'var(--green)' : 'var(--gold)';
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden montar la apertura.')
+      ? (e.message || 'Tu rol no tiene permiso para montar la apertura.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   } finally {
@@ -121,7 +121,7 @@ async function agregarCuenta() {
     await cargarPlan();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden agregar cuentas.')
+      ? (e.message || 'Tu rol no tiene permiso para agregar cuentas.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }
@@ -173,7 +173,7 @@ async function guardarFilaCuentaMeta(fila) {
     msg.textContent = 'Guardado ✅'; msg.style.color = 'var(--green)';
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden editar los metadatos de una cuenta.')
+      ? (e.message || 'Tu rol no tiene permiso para editar los metadatos de una cuenta.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }

@@ -86,7 +86,7 @@ async function crear() {
     await cargar();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden registrar préstamos.')
+      ? (e.message || 'Tu rol no tiene permiso para registrar préstamos.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }
@@ -98,7 +98,7 @@ async function toggleSaldado(id, saldado) {
     await cargar();
   } catch (e) {
     V('pr-msg').textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden gestionar préstamos.')
+      ? (e.message || 'Tu rol no tiene permiso para gestionar préstamos.')
       : 'Error: ' + e.message;
     V('pr-msg').style.color = 'var(--red)';
   }
@@ -140,7 +140,7 @@ async function pagarPorOtro() {
     await cargar();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden registrar préstamos.')
+      ? (e.message || 'Tu rol no tiene permiso para registrar préstamos.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }

@@ -186,7 +186,7 @@ async function marcar(id) {
     await cargar();
   } catch (e) {
     V('pg-msg').textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden gestionar pagos fijos.')
+      ? (e.message || 'Tu rol no tiene permiso para gestionar pagos fijos.')
       : 'Error: ' + e.message;
     V('pg-msg').style.color = 'var(--red)';
   }
@@ -198,7 +198,7 @@ async function desmarcar(id) {
     await cargar();
   } catch (e) {
     V('pg-msg').textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden gestionar pagos fijos.')
+      ? (e.message || 'Tu rol no tiene permiso para gestionar pagos fijos.')
       : 'Error: ' + e.message;
     V('pg-msg').style.color = 'var(--red)';
   }
@@ -250,7 +250,7 @@ async function crear() {
     await Promise.all([cargarGestion(), cargar()]);
   } catch (e) {
     V('pg-msg').textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden gestionar pagos fijos.')
+      ? (e.message || 'Tu rol no tiene permiso para gestionar pagos fijos.')
       : 'Error: ' + e.message;
     V('pg-msg').style.color = 'var(--red)';
   }

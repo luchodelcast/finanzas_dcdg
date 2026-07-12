@@ -78,7 +78,7 @@ async function guardar() {
     await cargar();
   } catch (e) {
     msg.textContent = (e.status === 401 || e.status === 403)
-      ? (e.message || 'Solo Luis o Carolina pueden fijar el presupuesto.')
+      ? (e.message || 'Tu rol no tiene permiso para fijar el presupuesto.')
       : 'Error: ' + e.message;
     msg.style.color = 'var(--red)';
   }

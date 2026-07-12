@@ -294,7 +294,7 @@ export async function pwaCorregirMovimientoHandler(req) {
   const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   let auth;
   try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden corregir movimientos.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para corregir movimientos.', 403);
   const body = await parseBody(req);
   const id = Number(body.id);
   if (!id) return bad('Falta el id del movimiento.');
@@ -338,7 +338,7 @@ export async function pwaPlanCuentasHandler(req) {
   try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'POST') {
-    if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden agregar cuentas.', 403);
+    if (!esOwner(auth)) return bad('Tu rol no tiene permiso para agregar cuentas.', 403);
     const body = await parseBody(req);
     try {
       const cuenta = await insertPlanCuenta({ nombre: body.nombre, clase: body.clase, cuenta_padre: body.cuenta_padre });
@@ -371,7 +371,7 @@ export async function pwaCuentasMetaHandler(req) {
   try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
 
   if (req.method === 'POST') {
-    if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden editar los metadatos de una cuenta.', 403);
+    if (!esOwner(auth)) return bad('Tu rol no tiene permiso para editar los metadatos de una cuenta.', 403);
     const body = await parseBody(req);
     try {
       const meta = await upsertCuentaMeta(body);
@@ -397,12 +397,15 @@ export async function pwaCuentasMetaHandler(req) {
 }
 
 /**
- * ¿El usuario autenticado puede escribir? (T8, issue #97). `auth.rol` viene de
- * `verifyFinanceUser` — hoy solo `owner` (Luis/Carolina) escribe; el resto del
- * equipo (admin_financiero/tesoreria/contador/solo_lectura) es de lectura.
+ * ¿El usuario autenticado puede escribir? (T8, issue #97). Tienen acceso completo
+ * (captura, edición, correcciones, pagos, etc.) los dueños (`owner`: Luis/Carolina)
+ * y el equipo financiero/contable (`admin_financiero`, `tesoreria`, `contador`) —
+ * Luis pidió que el equipo pueda ingresar datos manualmente además de consultar.
+ * Solo `solo_lectura` (o roles desconocidos) queda restringido a consulta.
  */
+const ROLES_ESCRITURA = new Set(['owner', 'admin_financiero', 'tesoreria', 'contador']);
 function esOwner(auth) {
-  return String((auth && auth.rol) || '').toLowerCase() === 'owner';
+  return ROLES_ESCRITURA.has(String((auth && auth.rol) || '').toLowerCase());
 }
 
 /**
@@ -428,7 +431,7 @@ export async function pwaAsientoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden crear asientos manuales.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para crear asientos manuales.', 403);
 
   const body = await parseBody(req);
   try {
@@ -464,7 +467,7 @@ export async function pwaAperturaHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden montar la apertura.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para montar la apertura.', 403);
 
   const body = await parseBody(req);
   const entidad_id = body.entidad_id || null;
@@ -494,7 +497,7 @@ export async function pwaRecontabilizarHandler(req) {
   let auth;
   try { auth = await resolvePwaUser(bearer); } catch (e) { return bad(e.message, e.status || 401); }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden recontabilizar.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para recontabilizar.', 403);
 
   const body = await parseBody(req);
   const limite = Math.min(Math.max(Number(body.limite) || 40, 1), 100);
@@ -668,7 +671,7 @@ export async function pwaMetasHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden crear o editar metas.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para crear o editar metas.', 403);
 
   const body = await parseBody(req);
   try {
@@ -719,7 +722,7 @@ export async function pwaPresupuestoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden fijar el presupuesto.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para fijar el presupuesto.', 403);
 
   const body = await parseBody(req);
   try {
@@ -788,7 +791,7 @@ export async function pwaIngresoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar ingresos.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para registrar ingresos.', 403);
 
   const body = await parseBody(req);
   const entidad_id = Number(body.entidad_id);
@@ -908,7 +911,7 @@ export async function pwaExtractoHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden cargar extractos.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para cargar extractos.', 403);
 
   const body = await parseBody(req);
   const cuenta = String(body.cuenta || '').trim();
@@ -1030,7 +1033,7 @@ export async function conciliacionHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden confirmar cruces de conciliación.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para confirmar cruces de conciliación.', 403);
   const body = await parseBody(req);
   const linea_id = Number(body.linea_id);
   const id = Number(body.id);
@@ -1140,7 +1143,7 @@ export async function pwaBackfillHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden materializar líneas de extracto.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para materializar líneas de extracto.', 403);
   const body = await parseBody(req);
   const extracto_id = Number(body.extracto_id) || null;
   if (!extracto_id) return bad('extracto_id requerido');
@@ -1287,7 +1290,7 @@ export async function pwaAportesHogarHandler(req) {
     }
   }
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar aportes al fondo común.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para registrar aportes al fondo común.', 403);
 
   const body = await parseBody(req);
   const entidad_id = Number(body.entidad_id);
@@ -1387,7 +1390,7 @@ export async function pwaPagosHandler(req) {
   const body = await parseBody(req);
   const accion = String(body.accion || '');
 
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden gestionar pagos fijos.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para gestionar pagos fijos.', 403);
 
   try {
     if (accion === 'marcar') {
@@ -1466,7 +1469,7 @@ export async function pwaPrestamosHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden registrar préstamos.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para registrar préstamos.', 403);
 
   const body = await parseBody(req);
   const accion = String(body.accion || 'crear');
@@ -1522,7 +1525,7 @@ export async function pwaSolicitudesHandler(req) {
   }
 
   if (req.method !== 'POST') return bad('Método no permitido', 405);
-  if (!esOwner(auth)) return bad('Solo Luis o Carolina pueden enviar solicitudes de mejoras.', 403);
+  if (!esOwner(auth)) return bad('Tu rol no tiene permiso para enviar solicitudes de mejoras.', 403);
 
   const body = await parseBody(req);
   try {

@@ -8,6 +8,9 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-13
+- **Acceso completo para el equipo financiero/contable**: los roles del equipo (`admin_financiero`, `tesoreria`, `contador` — Angela, María Isabel, Santiago, ya sembrados en `usuarios`) tenían acceso de **solo lectura** porque el gate de escritura (`esOwner`) solo aceptaba `owner`. Luis pidió que el equipo pueda **ingresar datos manualmente y consultarlos** (red de seguridad ante errores del proceso automático). Ahora hay un conjunto `ROLES_ESCRITURA = {owner, admin_financiero, tesoreria, contador}` que habilita captura/edición/correcciones/pagos tanto en el backend (`handlers.js`) como en el frontend (`dashboard.js` — botón "Corregir"). Solo `solo_lectura` (y roles desconocidos) queda restringido a consulta. Los mensajes 403 pasan de "Solo Luis o Carolina…" a "Tu rol no tiene permiso…". `handlers.js` + `dashboard.js` (+ textos en varias pantallas). ✅
+
 ## 2026-07-12 (autobuild, corrida nueva)
 - 🔎 **Cola revisada otra vez, sin item elegible — sin cambios desde la corrida
   anterior de hoy**: los 6 issues `autobuild` abiertos siguen igual —
