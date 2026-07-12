@@ -12,6 +12,25 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 - **Acceso completo para el equipo financiero/contable**: los roles del equipo (`admin_financiero`, `tesoreria`, `contador` — Angela, María Isabel, Santiago, ya sembrados en `usuarios`) tenían acceso de **solo lectura** porque el gate de escritura (`esOwner`) solo aceptaba `owner`. Luis pidió que el equipo pueda **ingresar datos manualmente y consultarlos** (red de seguridad ante errores del proceso automático). Ahora hay un conjunto `ROLES_ESCRITURA = {owner, admin_financiero, tesoreria, contador}` que habilita captura/edición/correcciones/pagos tanto en el backend (`handlers.js`) como en el frontend (`dashboard.js` — botón "Corregir"). Solo `solo_lectura` (y roles desconocidos) queda restringido a consulta. Los mensajes 403 pasan de "Solo Luis o Carolina…" a "Tu rol no tiene permiso…". `handlers.js` + `dashboard.js` (+ textos en varias pantallas). ✅
 
 ## 2026-07-12 (autobuild, corrida nueva)
+- 🧹 **Limpieza: cerré #98 y #51 (obsoletos)** — el PR #193 (acceso completo del
+  equipo financiero/contable, fusionado en la corrida interactiva de anoche)
+  hizo explícito que el portal solo-lectura ya no se quiere: Luis mismo cerró
+  el PR #103 (que construía #98) con el comentario "cerrado por decisión de
+  Luis... este portal solo-lectura queda descartado". Cerré **#98** (T8b,
+  portal solo-lectura) con `not_planned` referenciando esa decisión, y cerré
+  **#51** (el padre, T8/roles+portal) como `completed` — su otra mitad (T8a,
+  roles de backend, #97) ya estaba fusionada desde el PR #99. Con esto la cola
+  de `autobuild` baja de 6 a 4 issues abiertos.
+- 🔎 **Cola revisada, sin item elegible nuevo — quedan 4 issues, todos
+  esperando revisión**: `#40`/`#41`/`#92` con `autobuild-espera` y PR borrador
+  `#58`/`#55`/`#96` (revisé los comentarios de los tres: solo el automático de
+  deploy preview de Netlify, cero actividad nueva de Luis desde 2026-07-07/08)
+  y `#52` sigue siendo el issue "padre" ya dividido en sub-issues (`#91`
+  fusionado, `#92` es el que sigue en espera). Cero `propuesta` nueva, cero
+  `autofix` abierto — sigo sin proponer una quinta funcionalidad mientras las
+  tres sensibles (`#58`/`#55`/`#96`) siguen sin tu OK. La rama designada
+  (`claude/zealous-brown-mec7te`) no existía todavía en el remoto — la creé
+  limpia desde `main` (sin commits sueltos que arrastrar esta vez).
 - 🔎 **Cola revisada otra vez, sin item elegible — sin cambios desde la corrida
   anterior de hoy**: los 6 issues `autobuild` abiertos siguen igual —
   `#40`/`#41`/`#92`/`#98` con `autobuild-espera` y PR borrador
