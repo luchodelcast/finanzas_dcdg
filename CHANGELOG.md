@@ -8,6 +8,25 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-12 (autobuild, corrida nueva)
+- 🔎 **Cola revisada, sin item elegible — mismo estado, ahora van 5 días
+  (2026-07-08 → 2026-07-12) sin que Luis toque los 4 PR borrador**: verifiqué
+  de nuevo los 6 issues `autobuild` abiertos — `#40`/`#41`/`#92`/`#98` siguen
+  `autobuild-espera` con PR borrador abierto (`#58`/`#55`/`#96`/`#103`, todos
+  `SENSIBLE`/candado) y sin ningún comentario nuevo de Luis (solo el
+  automático de deploy preview de Netlify en los cuatro). `#51`/`#52` siguen
+  siendo los issues "padre" ya divididos en sub-issues (`#91`/`#97`
+  fusionados, `#92`/`#98` son justo los PR en espera de arriba). Cero issues
+  con label `propuesta` abiertos y cero `autofix` abiertos, así que no
+  propongo una quinta funcionalidad mientras cuatro siguen sin revisar.
+  `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` siguen sin estar en el
+  entorno de esta sesión, así que el WhatsApp de SilvIA no se puede mandar
+  desde aquí; este registro y una notificación por el canal nativo de esta
+  sesión son el aviso real que le llega a Luis esta vez. La rama designada
+  (`claude/zealous-brown-ncs8yr`) traía un commit suelto no fusionado de otra
+  rama (`69f95d7`, el de PR #193 en curso) — la recreé limpia desde `main`
+  para no arrastrarlo a un PR ajeno a esta corrida.
+
 ## 2026-07-11 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado, ahora van 4 días
   (2026-07-08 → 2026-07-11) sin que Luis toque los 4 PR borrador**: verifiqué
