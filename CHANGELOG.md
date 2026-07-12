@@ -11,6 +11,26 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ## 2026-07-12 (autobuild, corrida nueva)
 - 🔎 **Cola revisada otra vez, sin item elegible — mismo estado, sin novedad de
   Luis**: los 4 issues `autobuild` abiertos siguen igual — `#40`/`#41`/`#92`
+  con `autobuild-espera` y PR borrador `#58`/`#55`/`#96` (revisé los
+  comentarios de los tres: sin nada nuevo de Luis) y `#52` sigue bloqueado
+  como issue "padre" ya dividido (`#91` fusionado, `#92` en espera con PR
+  abierto — tomarlo directo duplicaría ese trabajo). Cero issues `propuesta`
+  abiertos y cero issues `autobuild` sin `autobuild-espera`/PR, así que no
+  propongo una quinta funcionalidad mientras las tres sensibles siguen sin tu
+  OK. Lo único nuevo desde la última corrida es el PR `#211` (Autofix, no
+  Autobuild — fix de la regla `mercado-ara` en borrador esperando tu OK, no
+  afecta esta cola). Como el estado de la cola de features es idéntico al de
+  las corridas anteriores de hoy (que ya avisaron por este mismo motivo), no
+  repito notificación para no duplicar el aviso; este registro es la
+  constancia de la re-verificación. La rama designada
+  (`claude/zealous-brown-l8fgr5`) volvía a traer el mismo commit suelto no
+  fusionado del acceso completo del equipo (`5b93f81`, árbol idéntico al ya
+  fusionado en PR #193/`301a06c`) — la recreé limpia desde `main`, igual que
+  en corridas anteriores con el mismo problema.
+
+## 2026-07-12 (autobuild, corrida nueva)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo estado, sin novedad de
+  Luis**: los 4 issues `autobuild` abiertos siguen igual — `#40`/`#41`/`#92`
   con `autobuild-espera` y PR borrador `#58`/`#55`/`#96` (revisé de nuevo los
   comentarios de los tres: nada nuevo de Luis) y `#52` sigue siendo el issue
   "padre" ya dividido en sub-issues (`#91` fusionado, `#92` en espera con PR
