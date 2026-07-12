@@ -12,6 +12,22 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 - **Acceso completo para el equipo financiero/contable**: los roles del equipo (`admin_financiero`, `tesoreria`, `contador` — Angela, María Isabel, Santiago, ya sembrados en `usuarios`) tenían acceso de **solo lectura** porque el gate de escritura (`esOwner`) solo aceptaba `owner`. Luis pidió que el equipo pueda **ingresar datos manualmente y consultarlos** (red de seguridad ante errores del proceso automático). Ahora hay un conjunto `ROLES_ESCRITURA = {owner, admin_financiero, tesoreria, contador}` que habilita captura/edición/correcciones/pagos tanto en el backend (`handlers.js`) como en el frontend (`dashboard.js` — botón "Corregir"). Solo `solo_lectura` (y roles desconocidos) queda restringido a consulta. Los mensajes 403 pasan de "Solo Luis o Carolina…" a "Tu rol no tiene permiso…". `handlers.js` + `dashboard.js` (+ textos en varias pantallas). ✅
 
 ## 2026-07-12 (autobuild, corrida nueva)
+- 🔎 **Cola revisada otra vez, sin item elegible — sin novedad desde la corrida
+  anterior**: los 3 issues `autobuild` abiertos con PR borrador siguen igual —
+  `#40`/`#41`/`#92` con `autobuild-espera` y PR `#58`/`#55`/`#96` (revisé los
+  comentarios de los tres: solo el automático de deploy preview de Netlify,
+  cero actividad nueva de Luis desde 2026-07-07/08). `#52` sigue de tracking
+  (padre ya dividido: `#91` fusionado, `#92` es el que sigue en espera). Cero
+  `propuesta` nueva, cero `autofix` abierto — no propongo una quinta
+  funcionalidad mientras las tres sensibles siguen sin tu OK. Como el estado
+  es idéntico al de la corrida anterior (que ya avisó por este mismo motivo),
+  no repito notificación para no duplicar el aviso; este registro es la
+  constancia de la re-verificación. La rama designada
+  (`claude/zealous-brown-l3sqfq`) traía un commit suelto no fusionado
+  (acceso completo del equipo, ya integrado a `main` vía PR #193) y venía
+  atrás en el CHANGELOG — la recreé limpia desde `main`.
+
+## 2026-07-12 (autobuild, corrida nueva)
 - 🧹 **Limpieza: cerré #98 y #51 (obsoletos)** — el PR #193 (acceso completo del
   equipo financiero/contable, fusionado en la corrida interactiva de anoche)
   hizo explícito que el portal solo-lectura ya no se quiere: Luis mismo cerró
