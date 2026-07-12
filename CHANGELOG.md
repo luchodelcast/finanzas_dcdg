@@ -8,6 +8,24 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-12 (autobuild, corrida nueva)
+- 🔎 **Cola revisada otra vez, sin item elegible — mismo estado, sin novedad de
+  Luis**: los 4 issues `autobuild` abiertos siguen igual — `#40`/`#41`/`#92`
+  con `autobuild-espera` y PR borrador `#58`/`#55`/`#96` (revisé los
+  comentarios de los tres: solo el automático de deploy preview de Netlify,
+  cero actividad nueva de Luis desde 2026-07-07/08, ya van 5 días esperando
+  revisión) y `#52` sigue siendo el issue "padre" ya dividido en sub-issues
+  (`#91` fusionado, `#92` es el que sigue en espera). Cero issues `propuesta`
+  abiertos y cero `autofix` abiertos, así que no propongo una quinta
+  funcionalidad mientras las tres sensibles siguen sin tu OK. Como el estado
+  es idéntico al de las corridas anteriores de hoy (que ya avisaron por este
+  mismo motivo), no repito notificación para no duplicar el aviso; este
+  registro es la constancia de la re-verificación. La rama designada
+  (`claude/zealous-brown-zoo792`) volvía a traer el commit suelto no
+  fusionado del acceso completo del equipo (`5b93f81`, idéntico al ya
+  fusionado en PR #193) — la recreé limpia desde `main`, igual que en
+  corridas anteriores con el mismo problema.
+
 ## 2026-07-13
 - **Acceso completo para el equipo financiero/contable**: los roles del equipo (`admin_financiero`, `tesoreria`, `contador` — Angela, María Isabel, Santiago, ya sembrados en `usuarios`) tenían acceso de **solo lectura** porque el gate de escritura (`esOwner`) solo aceptaba `owner`. Luis pidió que el equipo pueda **ingresar datos manualmente y consultarlos** (red de seguridad ante errores del proceso automático). Ahora hay un conjunto `ROLES_ESCRITURA = {owner, admin_financiero, tesoreria, contador}` que habilita captura/edición/correcciones/pagos tanto en el backend (`handlers.js`) como en el frontend (`dashboard.js` — botón "Corregir"). Solo `solo_lectura` (y roles desconocidos) queda restringido a consulta. Los mensajes 403 pasan de "Solo Luis o Carolina…" a "Tu rol no tiene permiso…". `handlers.js` + `dashboard.js` (+ textos en varias pantallas). ✅
 
