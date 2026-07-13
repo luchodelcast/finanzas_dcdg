@@ -9,6 +9,26 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-13 (autobuild, corrida nueva)
+- 🔎 **Decimotercera revisión del día, sin item elegible — mismo estado exacto,
+  cero novedad de Luis**: reconfirmé todo lo de las doce corridas anteriores de
+  hoy. Los 4 issues `autobuild` abiertos siguen igual — `#40`/`#41`/`#92` con
+  `autobuild-espera` y PR borrador `#58`/`#55`/`#96` (revisé comentarios de
+  los tres: solo el bot de deploy preview de Netlify, cero comentario nuevo
+  de Luis) y `#52` sigue siendo el issue "padre" ya dividido (`#91`
+  fusionado, `#92` en espera con PR abierto — tomarlo directo duplicaría ese
+  trabajo). Cero issues `propuesta` abiertos, así que no propongo una
+  decimotercera funcionalidad mientras ya hay 3 construidas esperando tu OK.
+  El PR de Autofix `#211` sigue en borrador sin comentario nuevo.
+  **Nota de proceso**: los tres PR de features llevan **6 días** esperando
+  revisión (creados el 07/07-07/08) y el de Autofix **1 día** (creado el
+  07/12) — ninguno se moverá solo, necesitan tu decisión. Además, esta es ya
+  la 13ª corrida de Autobuild **hoy**, muy por encima de la cadencia de
+  ~3 horas prevista en AUTOBUILD.md — vale la pena revisar el cron que la
+  dispara. No repito notificación por WhatsApp por el estado del backlog en
+  sí (ya avisado en corridas previas), pero sí aviso aparte sobre la cadencia
+  y la antigüedad de la revisión pendiente.
+
+## 2026-07-13 (autobuild, corrida nueva)
 - 🔎 **Duodécima revisión del día, sin item elegible — mismo estado exacto,
   cero novedad de Luis**: reconfirmé todo lo de las once corridas anteriores
   de hoy. Los 4 issues `autobuild` abiertos siguen igual — `#40`/`#41`/`#92`
