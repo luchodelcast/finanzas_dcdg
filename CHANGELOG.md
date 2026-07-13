@@ -9,6 +9,23 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-13 (autobuild, corrida nueva)
+- 🔎 **Octava revisión del día, sin item elegible — mismo estado exacto, cero
+  novedad de Luis**: los 4 issues `autobuild` abiertos siguen igual —
+  `#40`/`#41`/`#92` con `autobuild-espera` y PR borrador `#58`/`#55`/`#96`
+  (revisé comentarios: solo el bot de deploy preview de Netlify, cero
+  comentario nuevo) y `#52` sigue siendo el issue "padre" ya dividido (`#91`
+  fusionado, `#92` en espera con PR abierto). Cero issues `propuesta`
+  abiertos, así que no propongo una octava funcionalidad mientras ya hay 3
+  construidas esperando tu OK. El PR de Autofix `#211` sigue en borrador
+  esperando tu OK, sin cambios. **Corrección de proceso**: el PR de la
+  séptima revisión (`#220`) había quedado creado en **borrador** por error
+  (rompiendo el patrón de auto-merge de estas entradas solo-CHANGELOG,
+  sin riesgo) — lo pasé a listo para revisión y lo fusioné (CI verde,
+  `Tests y build` ✅) antes de esta corrida. Como el estado de fondo es
+  idéntico al de las corridas anteriores (que ya avisaron por WhatsApp), no
+  repito notificación — este registro es la constancia.
+
+## 2026-07-13 (autobuild, corrida nueva)
 - 🔎 **Séptima revisión del día, sin item elegible — mismo estado exacto, cero
   novedad de Luis**: reconfirmé todo lo de las seis corridas anteriores de
   hoy. Los 4 issues `autobuild` abiertos siguen igual — `#40`/`#41`/`#92` con
