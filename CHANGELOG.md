@@ -9,6 +9,24 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 ---
 
 ## 2026-07-13 (autobuild, corrida nueva)
+- 🔎 **Segunda revisión del día, sin item elegible — mismo estado, sin novedad
+  de Luis**: reconfirmé todo lo de la corrida anterior de hoy. Los 4 issues
+  `autobuild` abiertos siguen igual — `#40`/`#41`/`#92` con `autobuild-espera`
+  y PR borrador `#58`/`#55`/`#96` (sin comentario nuevo de Luis) y `#52` sigue
+  siendo el issue "padre" ya dividido (`#91` fusionado, `#92` en espera con PR
+  abierto — tomarlo directo duplicaría ese trabajo). Cero issues `propuesta`
+  abiertos; los 7 sub-issues de la épica `#111` (`#112`-`#118`) siguen todos
+  fusionados, sin trabajo nuevo que sembrar de ahí. No propongo una quinta
+  funcionalidad mientras las tres sensibles siguen sin tu OK. El PR `#211`
+  (Autofix, fix de la regla `mercado-ara`) sigue en borrador esperando tu OK,
+  sin cambios. Como el estado es idéntico al de la corrida anterior de hoy
+  (que ya avisó), no repito notificación. La rama designada
+  (`claude/zealous-brown-ybvr1n`) volvía a traer el mismo commit suelto no
+  fusionado del acceso completo del equipo (`5b93f81`, árbol idéntico al ya
+  fusionado en PR #193/`301a06c`) — la recreé limpia desde `main`, igual que
+  en corridas anteriores con el mismo problema.
+
+## 2026-07-13 (autobuild, corrida nueva)
 - 🔎 **Cola revisada, sin item elegible — mismo estado desde hace 6 días
   (2026-07-08 → 2026-07-13), sin novedad de Luis**: los 4 issues `autobuild`
   abiertos siguen igual — `#40`/`#41`/`#92` con `autobuild-espera` y PR
