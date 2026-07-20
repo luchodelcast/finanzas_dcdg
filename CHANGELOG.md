@@ -8,6 +8,36 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-20 (autobuild, corrida nueva)
+- 🔎 **Primera corrida en 7 días — sin item elegible, backlog sin novedad de
+  Luis pero envejeciendo.** La última entrada de este changelog es del
+  2026-07-13 (15 corridas ese día, todas "sin item elegible"); no hay ninguna
+  entrada entre el 07-13 y hoy 07-20, lo que sugiere que la rutina programada
+  no disparó durante una semana completa (o disparó sin dejar registro, lo
+  cual sería igual de anómalo dado que hasta las corridas vacías siempre
+  escribieron aquí). Vale la pena que Luis revise el cron que dispara esta
+  rutina.
+  Reconfirmé el estado de la cola `autobuild` desde cero (no asumí nada de
+  hace 7 días): los mismos 4 issues abiertos —
+  - `#40`, `#41`, `#92` siguen con `autobuild-espera` y PR borrador
+    (`#58`, `#55`, `#96` respectivamente) sin comentario nuevo de Luis desde
+    su creación (07-07/07-08) — **ahora 12-13 días** esperando revisión.
+  - `#52` sigue siendo el issue "padre" ya dividido (`#91` fusionado, `#92`
+    en espera con PR abierto) — tomarlo directo duplicaría ese trabajo.
+  - Confirmé que la dependencia de `#52` (T5 `#48`) sigue fusionada en
+    `main`.
+  - Cero issues `propuesta` abiertos.
+  El PR de Autofix `#211` (fuera del alcance de este procedimiento, pero
+  visible en la misma revisión) también sigue en borrador, sin comentario
+  nuevo, ahora **8 días** esperando revisión.
+  Como ya hay 3 PRs de features + 1 de Autofix esperando el visto bueno de
+  Luis, **no propongo una funcionalidad nueva** (mismo criterio que las
+  corridas del 07-13): apilar más propuestas no ayuda mientras esas cuatro
+  siguen sin revisión. `AUTOBUILD_NOTIFY_URL`/`AUTOBUILD_NOTIFY_SECRET` no
+  están en el entorno de esta corrida — aviso queda solo aquí y por la
+  notificación de la rutina (push/email) que sí tengo disponible en esta
+  sesión.
+
 ## 2026-07-13 (autobuild, corrida nueva)
 - 🔎 **Decimoquinta revisión del día, sin item elegible — mismo estado exacto,
   cero novedad de Luis**: reconfirmé todo lo de las catorce corridas
