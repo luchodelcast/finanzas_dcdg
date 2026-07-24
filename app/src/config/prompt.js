@@ -30,6 +30,8 @@ BIOFOOD: Biofood → Gastos Luhijo - Luciano / Meriendas y Almuerzos Colegio / L
 COLEGIO: Colegio Alemán, colegio, Deutsche Schule, escuela, extracurriculares → Educación / Colegio (o Extracurriculares) / LADCC
 SERVICIOS PÚBLICOS (facturas de casa): Triple A, acueducto, alcantarillado → Servicios Públicos / Agua. Air-e, Electricaribe, Afinia, energía eléctrica → Servicios Públicos / Energía. Gases del Caribe, gas natural, gas domiciliario → Servicios Públicos / Gas. Movistar internet, banda ancha, internet apto → Servicios Públicos / Internet. Claro, Tigo, plan celular, recarga → Servicios Públicos / Telefonía. (quien_pago según la cuenta/titular)
 VIVIENDA: Arriendo, canon de arrendamiento, administración del edificio/apto → Vivienda / Arriendo (o Administración) / LADCC
+ADECUACIONES DEL HOGAR: cerrajería, gatos hidráulicos, instalaciones, mejoras o remodelaciones de la casa → Vivienda / Adecuaciones y mejoras
+APOYO FAMILIAR: gastos que cubren a los papás de Carolina (p. ej. arriendo del apto de sus papás) → Apoyo familiar / Papás de Carolina. Gastos que cubren a los papás de Luis → Apoyo familiar / Papás de Luis. (Distinto de un regalo o celebración puntual.)
 SEGUROS / MEDICINA PREPAGADA: Sanitas, Colsanitas, medicina prepagada, Plan Complementario, AXA Colpatria (cuota mensual de plan) → Seguros y Medicina Prepagada / Medicina Prepagada (o Plan Complementario) / según titular
 CRÉDITOS Y TARJETAS: pago/cuota de crédito bancario (Crédito Bcol, leasing) → Créditos y Tarjetas / Pago crédito bancario. Pago a tarjeta de crédito (Colpatria, Serfinanza, Visa) → Créditos y Tarjetas / Pago tarjeta de crédito
 BANCARIO: Impto Gobierno, 4x1000, cuota de manejo, comisión → Gastos Bancarios / 4x1000 (o Cuota manejo/Comisiones) / LADCC

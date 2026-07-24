@@ -12,7 +12,7 @@
 export const CATS = {
   'Alimentación': ['Mercado', 'Restaurante', 'Domicilios'],
   'Servicios Públicos': ['Agua', 'Gas', 'Energía', 'Internet', 'Telefonía', 'Aseo/Basuras'],
-  'Vivienda': ['Arriendo', 'Administración', 'Reparaciones y mantenimiento'],
+  'Vivienda': ['Arriendo', 'Administración', 'Reparaciones y mantenimiento', 'Adecuaciones y mejoras'],
   'Transporte': ['Uber/Taxi', 'Gasolina/EDS', 'Vehículos/Lavado', 'SOAT Vehículo', 'Parqueadero', 'Peajes', 'Bus/Metro'],
   'Salud': ['Salud: Medicamentos', 'Salud: Citas Médicas', 'Salud: Otros'],
   'Seguros y Medicina Prepagada': ['Medicina Prepagada', 'Plan Complementario', 'Seguro Vehículo', 'Otros seguros'],
@@ -22,6 +22,7 @@ export const CATS = {
   'Ropa': ['Ropa adultos', 'Ropa niños', 'Calzado'],
   'Hogar/Aseo': ['Artículos del hogar', 'Productos de aseo'],
   'Regalos y celebraciones': ['Regalo', 'Celebración'],
+  'Apoyo familiar': ['Papás de Carolina', 'Papás de Luis', 'Otros familiares'],
   'Viajes': ['Tiquetes', 'Hotel', 'Gastos en viaje'],
   'Créditos y Tarjetas': ['Pago crédito bancario', 'Pago tarjeta de crédito'],
   'Gastos Bancarios': ['4x1000', 'Cuota manejo', 'Comisiones'],
