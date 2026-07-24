@@ -8,6 +8,9 @@ El formato: fecha · qué se añadió · PR · estado (✅ en firme / 🔎 en re
 
 ---
 
+## 2026-07-24
+- **Captura por correo (base): parser de notificaciones bancarias + taxonomía nueva**. Primera pieza del sistema que leerá las notificaciones bancarias del correo y registrará los movimientos solo (el asiento sale automático). `_lib/email-parse.js` (función pura, 16 tests con correos reales): convierte una notificación de **Bancolombia** ("Compraste/Pagaste/Transferiste/Recibiste…") o **DolarApp/ARQ** ("Enviaste COP / Recibiste USD") en una transacción estructurada (clase gasto/ingreso/transferencia, monto en los dos formatos COP + US, cuenta por últimos 4 → dueño Luis/Carolina/Hijo, comercio/remitente/destino, fecha ISO), y **descarta** el ruido de seguridad (OTP, cambios de clave, "sospechosa") y las operaciones de **iWin** (PSE/proveedores/cuentas 5401/2997). Taxonomía: **Apoyo familiar** (Papás de Carolina / Papás de Luis / Otros familiares) y **Vivienda / Adecuaciones y mejoras**. Próximas piezas: endpoint de captura (dedup por message-id + contra SilvIA), rutina horaria, backfill de julio y hand-off a SilvIA para preguntar por WhatsApp lo no identificado. Solo `config` + `_lib` nuevo. ✅
+
 ## 2026-07-13 (autobuild, corrida nueva)
 - 🔎 **Decimoquinta revisión del día, sin item elegible — mismo estado exacto,
   cero novedad de Luis**: reconfirmé todo lo de las catorce corridas
