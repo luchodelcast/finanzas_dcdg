@@ -10,6 +10,7 @@ import {
   csvLibroDiario, csvLibroMayor, csvComprobacion, csvEstadoResultados, csvBalanceGeneral, csvRentaAnual,
 } from './exports.js';
 import { registrarMovimiento, resumen } from './finanzas.js';
+import { capturarCorreo } from './captura-correo.js';
 import {
   queryMovimientos, listEntidades, listTerceros, findOrCreateTercero,
   insertIngreso, queryIngresos, listPlanCuentas, insertPlanCuenta,
@@ -81,6 +82,28 @@ export function makeRegistrarHandler(tipo) {
     try {
       const result = await registrarMovimiento({ ...body, tipo, origen: body.origen || 'SilvIA' });
       await contabilizarMovSafe(result);
+      return ok(result);
+    } catch (e) {
+      return bad(e.message, 422);
+    }
+  };
+}
+
+/**
+ * Handler de captura por correo (carril token). Body: { message_id, from,
+ * subject, body }. Parsea la notificación bancaria y, si es un gasto reconocido,
+ * lo registra + contabiliza (idempotente por message-id). Ingresos/transferencias
+ * vuelven como `pendiente` para que la rutina los rutee.
+ */
+export function makeCapturarCorreoHandler() {
+  return async (req) => {
+    if (req.method !== 'POST') return bad('Método no permitido', 405);
+    const auth = authorize(req);
+    if (!auth.ok) return auth.response;
+    const body = await parseBody(req);
+    try {
+      const result = await capturarCorreo(body);
+      if (result.registrado) await contabilizarMovSafe(result);
       return ok(result);
     } catch (e) {
       return bad(e.message, 422);
